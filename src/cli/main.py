@@ -1,80 +1,100 @@
 """Main CLI entry point."""
 import sys
-from typing import Optional
 
-from src.cli.commands import add_command
+from src.cli.commands import (
+    add_command,
+    delete_tasks_command,
+    mark_complete_command,
+    update_task_command,
+    view_tasks_command,
+)
+from src.cli.exceptions import ValidationError
+from src.cli.validators import validate_description, validate_title
 from src.storage.memory_store import MemoryStore
 
 
-def main() -> int:
-    """Main interactive CLI entry point."""
-    store = MemoryStore()  # Single store instance for the session
+def display_menu() -> None:
+    """Display the interactive menu options."""
+    print("\n" + "=" * 50)
+    print("TODO APP - Main Menu")
+    print("=" * 50)
+    print("1. Add Task")
+    print("2. View Tasks")
+    print("3. Mark Task Complete")
+    print("4. Delete Task(s)")
+    print("5. Update Task Description")
+    print("6. Quit")
+    print("=" * 50)
 
-    print("Welcome to the Todo App!")
-    print("Available commands:")
-    print("1. add <title> [description] - Add a new task")
-    print("2. view - View all tasks")
-    print("3. complete <id> - Mark task as complete")
-    print("4. delete <id> - Delete a task")
-    print("5. quit - Exit the application")
-    print()
+
+def add_task_interactive(store: MemoryStore) -> None:
+    """Interactive add task flow.
+
+    Args:
+        store: MemoryStore instance
+    """
+    try:
+        title_input = input("Enter task title: ").strip()
+        title = validate_title(title_input)
+
+        desc_input = input("Enter task description (optional, press Enter to skip): ").strip()
+        description = validate_description(desc_input if desc_input else None)
+
+        # Use the existing add_command which handles the task creation
+        add_command(title, description, store)
+
+    except ValidationError as e:
+        print(f"✗ Error: {str(e)}")
+    except Exception as e:
+        print(f"✗ Error: {str(e)}")
+
+
+def run_interactive_menu(store: MemoryStore) -> None:
+    """Run the interactive menu loop.
+
+    Args:
+        store: MemoryStore instance
+    """
+    print("\nWelcome to the Todo App!")
 
     while True:
-        try:
-            command_input = input("Enter command: ").strip()
-            if not command_input:
-                continue
+        display_menu()
 
-            # Initialize variables to avoid UnboundLocalError
-            command = ""
-            title = None
-            description = None
+        choice = input("\nSelect option (1-6): ").strip()
 
-            # Parse command: first word is command, rest is arguments
-            # For add command, we want to support "add <title>" or "add <title> -d <description>"
-            if command_input.startswith("add "):
-                # Extract everything after "add "
-                command = "add"
-                args_str = command_input[4:].strip()  # Remove "add " prefix
-
-                # Support "add title -d description" format
-                if " -d " in args_str:
-                    parts = args_str.split(" -d ", 1)  # Split only on first occurrence
-                    title = parts[0].strip()
-                    description = parts[1].strip() if len(parts) > 1 else None
-                else:
-                    # If no -d flag, treat entire remainder as title
-                    title = args_str
-                    description = None
-            else:
-                # For other commands, split by whitespace
-                parts = command_input.split()
-                if not parts:
-                    continue
-                command = parts[0].lower()
-                # Other commands will be handled below if we add them
-
-            if command == "quit":
-                print("Goodbye!")
-                return 0
-            elif command == "add":
-                if not title:
-                    print("✗ Error: Please provide a title for the task")
-                    continue
-
-                # For interactive mode, we'll call add_command with store parameter
-                result = add_command(title, description, store)
-                if result != 0:
-                    return result  # Exit if there was an error
-            else:
-                print(f"✗ Error: Unknown command '{command}'. Use 'quit' to exit.")
-
-        except KeyboardInterrupt:
+        if choice == "1":
+            add_task_interactive(store)
+        elif choice == "2":
+            view_tasks_command(store)
+        elif choice == "3":
+            mark_complete_command(store)
+        elif choice == "4":
+            delete_tasks_command(store)
+        elif choice == "5":
+            update_task_command(store)
+        elif choice == "6":
             print("\nGoodbye!")
-            return 0
-        except EOFError:
-            print("\nGoodbye!")
-            return 0
+            break
+        else:
+            print("✗ Invalid option. Please select 1-6.")
+
+
+def main() -> int:
+    """Main entry point.
+
+    Returns:
+        int: Exit code (0 for success)
+    """
+    try:
+        store = MemoryStore()
+        run_interactive_menu(store)
+        return 0
+    except KeyboardInterrupt:
+        print("\n\nGoodbye!")
+        return 0
+    except EOFError:
+        print("\n\nGoodbye!")
+        return 0
 
 
 if __name__ == "__main__":

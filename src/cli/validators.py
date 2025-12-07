@@ -69,3 +69,33 @@ def validate_description(description: str | None, confirm_func: Callable[[str, i
         return description[:1000]
     else:
         raise ValidationError("Description too long and user declined truncation")
+
+
+def parse_task_ids(id_string: str) -> list[int]:
+    """Parse comma-separated task IDs with whitespace tolerance.
+
+    Args:
+        id_string: Comma-separated task IDs (e.g., "1, 2, 3" or "1,2,3")
+
+    Returns:
+        list[int]: List of unique task IDs
+
+    Raises:
+        ValidationError: If any ID is non-numeric or if input is empty
+    """
+    if not id_string or not id_string.strip():
+        raise ValidationError("Task IDs cannot be empty")
+
+    # Split by comma and strip whitespace from each part
+    parts = [p.strip() for p in id_string.split(",") if p.strip()]
+
+    if not parts:
+        raise ValidationError("Task IDs cannot be empty")
+
+    try:
+        ids = [int(p) for p in parts]
+    except ValueError:
+        raise ValidationError("Task IDs must be numeric")
+
+    # Remove duplicates while preserving order
+    return list(dict.fromkeys(ids))

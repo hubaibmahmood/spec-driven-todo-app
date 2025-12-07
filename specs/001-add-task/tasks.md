@@ -26,15 +26,15 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize UV project with `uv init --package .`, configure pyproject.toml with Python 3.12+ and dev dependencies (pytest>=7.4.0, pytest-cov>=4.1.0, ruff>=0.1.0, mypy>=1.7.0), and install with `uv pip install -e ".[dev]"`
+- [X] T001 Initialize UV project with `uv init --package .`, configure pyproject.toml with Python 3.12+ and dev dependencies (pytest>=7.4.0, pytest-cov>=4.1.0, ruff>=0.1.0, mypy>=1.7.0), and install with `uv pip install -e ".[dev]"`
   - **Acceptance**: `uv run pytest --version`, `uv run ruff --version`, `uv run mypy --version` all work
   - **Time**: 25-30 min
 
-- [ ] T002 Create project directory structure: src/ with models/, services/, cli/, storage/ subdirectories; tests/ with contract/, integration/, unit/ subdirectories; all with __init__.py files
+- [X] T002 Create project directory structure: src/ with models/, services/, cli/, storage/ subdirectories; tests/ with contract/, integration/, unit/ subdirectories; all with __init__.py files
   - **Acceptance**: All directories exist, Python can import from src.models, src.services, etc.
   - **Time**: 15-20 min
 
-- [ ] T003 [P] Configure development tools in pyproject.toml: ruff (line-length=100, target-version=py312), mypy (python_version=3.12, strict=true), pytest (testpaths=["tests"])
+- [X] T003 [P] Configure development tools in pyproject.toml: ruff (line-length=100, target-version=py312), mypy (python_version=3.12, strict=true), pytest (testpaths=["tests"])
   - **Acceptance**: `uv run ruff check src/`, `uv run mypy src/`, `uv run pytest` all execute without config errors
   - **Time**: 20-25 min
 
@@ -46,11 +46,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 [P] Create exception classes ValidationError and StorageError in src/cli/exceptions.py and src/storage/exceptions.py; create MemoryStore class skeleton in src/storage/memory_store.py with __init__ method initializing _tasks dict and _next_id counter
+- [X] T004 [P] Create exception classes ValidationError and StorageError in src/cli/exceptions.py and src/storage/exceptions.py; create MemoryStore class skeleton in src/storage/memory_store.py with __init__ method initializing _tasks dict and _next_id counter
   - **Acceptance**: Can import exceptions, MemoryStore instantiates without errors
   - **Time**: 15-20 min
 
-- [ ] T005 [P] Create pytest conftest.py in tests/ with fixtures: empty_store() returning fresh MemoryStore, sample_task() returning Task with test data, mock_confirm() returning mock confirmation function
+- [X] T005 [P] Create pytest conftest.py in tests/ with fixtures: empty_store() returning fresh MemoryStore, sample_task() returning Task with test data, mock_confirm() returning mock confirmation function
   - **Acceptance**: Fixtures available in all test files, `uv run pytest --fixtures` shows custom fixtures
   - **Time**: 15-20 min
 
@@ -68,20 +68,20 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US1] Write contract tests for Task model in tests/contract/test_task_model.py: (1) creation with all fields, (2) creation with minimal fields (title only), (3) empty title raises ValueError, (4) whitespace-only title raises ValueError, (5) 201-char title raises ValueError, (6) invalid ID (<1) raises ValueError
+- [X] T006 [P] [US1] Write contract tests for Task model in tests/contract/test_task_model.py: (1) creation with all fields, (2) creation with minimal fields (title only), (3) empty title raises ValueError, (4) whitespace-only title raises ValueError, (5) 201-char title raises ValueError, (6) invalid ID (<1) raises ValueError
   - **Acceptance**: 6 test functions written, all FAIL when run (Task model not implemented)
   - **Time**: 25-30 min
 
-- [ ] T007 [P] [US1] Write unit tests for title validation in tests/unit/test_validators.py: (1) valid input returns unchanged, (2) empty input raises ValidationError, (3) whitespace-only raises ValidationError, (4) 200 chars returns unchanged, (5) 201 chars prompts and truncates if confirmed, (6) 201 chars raises if user declines
-  - **Acceptance**: 6 test functions written, all FAIL (validators not implemented)
+- [X] T007 [P] [US1] Write unit tests for title validation in tests/unit/test_validators.py: (1) valid input returns unchanged, (2) empty input raises ValidationError, (3) whitespace-only raises ValidationError, (4) 200 chars returns unchanged, (5) 201 chars prompts and truncates if confirmed, (6) 201 chars raises if user declines
+  - **Acceptance**: 6 test functions written, all FAIL when run (validators not implemented)
   - **Time**: 25-30 min
 
-- [ ] T008 [P] [US1] Write unit tests for MemoryStore in tests/unit/test_memory_store.py: (1) add_task assigns sequential ID, (2) get_task retrieves by ID, (3) get_task returns None for nonexistent ID
-  - **Acceptance**: 3 test functions written, all FAIL (MemoryStore methods not implemented)
+- [X] T008 [P] [US1] Write unit tests for MemoryStore in tests/unit/test_memory_store.py: (1) add_task assigns sequential ID, (2) get_task retrieves by ID, (3) get_task returns None for nonexistent ID
+  - **Acceptance**: 3 test functions written, all FAIL when run (MemoryStore methods not implemented)
   - **Time**: 15-20 min
 
-- [ ] T009 [P] [US1] Write integration tests for add task CLI in tests/integration/test_add_task_flow.py: (1) add task with title only succeeds, (2) add task with empty title shows error, (3) multiple tasks receive sequential IDs
-  - **Acceptance**: 3 test functions written, all FAIL (CLI not implemented)
+- [X] T009 [P] [US1] Write integration tests for interactive add task flow in tests/integration/test_add_task_flow.py: (1) add task with title only succeeds, (2) add task with empty title shows error, (3) multiple tasks receive sequential IDs
+  - **Acceptance**: 3 test functions written, all FAIL when run (CLI not implemented)
   - **Time**: 20-25 min
 
 **Run tests - ALL SHOULD FAIL**:
@@ -92,36 +92,36 @@ uv run pytest tests/ -v
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement Task dataclass in src/models/task.py with fields (id: int, title: str, completed: bool = False, created_at: datetime), __post_init__ validation for positive ID, non-empty title, title length ≤200
+- [X] T010 [US1] Implement Task dataclass in src/models/task.py with fields (id: int, title: str, completed: bool = False, created_at: datetime), __post_init__ validation for positive ID, non-empty title, title length ≤200
   - **Acceptance**: Contract tests (T006) pass, can create valid Task, invalid Tasks raise ValueError
   - **Time**: 25-30 min
 
-- [ ] T011 [P] [US1] Implement confirm_truncation function in src/cli/validators.py: displays warning with field name and limit, prompts for y/n input, returns bool (accepts 'y'/'yes' case-insensitive)
+- [X] T011 [P] [US1] Implement confirm_truncation function in src/cli/validators.py: displays warning with field name and limit, prompts for y/n input, returns bool (accepts 'y'/'yes' case-insensitive)
   - **Acceptance**: Function callable, returns True/False, displays formatted warning message
   - **Time**: 10-15 min
 
-- [ ] T012 [US1] Implement validate_title function in src/cli/validators.py with empty/whitespace check, length validation with confirm_truncation callback, truncation to 200 chars if confirmed
+- [X] T012 [US1] Implement validate_title function in src/cli/validators.py with empty/whitespace check, length validation with confirm_truncation callback, truncation to 200 chars if confirmed
   - **Acceptance**: Unit tests (T007) pass, empty title raises ValidationError, >200 chars prompts user
   - **Time**: 15-20 min
 
-- [ ] T013 [US1] Implement MemoryStore add and get methods in src/storage/memory_store.py: add() assigns sequential ID and stores task, get() retrieves by ID or returns None
+- [X] T013 [US1] Implement MemoryStore add and get methods in src/storage/memory_store.py: add() assigns sequential ID and stores task, get() retrieves by ID or returns None
   - **Acceptance**: Unit tests (T008) pass, sequential IDs work (1, 2, 3...), get retrieves correct task
   - **Time**: 20-25 min
 
-- [ ] T014 [US1] Implement create_task service in src/services/task_service.py: validates title with validate_title, creates Task with next ID from store, stores task, returns created Task
+- [X] T014 [US1] Implement create_task service in src/services/task_service.py: validates title with validate_title, creates Task with next ID from store, stores task, returns created Task
   - **Acceptance**: Can create task end-to-end, task has ID, validation works, task stored in MemoryStore
   - **Time**: 20-25 min
 
-- [ ] T015 [US1] Implement add_command CLI handler in src/cli/commands.py: setup argparse with title positional argument, call create_task service, display success message with Unicode symbols and task details
+- [X] T015 [US1] Implement add_command CLI handler in src/cli/commands.py: handle interactive add command, call create_task service, display success message with Unicode symbols and task details
   - **Acceptance**: Integration tests (T009) pass, CLI displays "✓ Task created successfully (ID: 1)"
   - **Time**: 20-25 min
 
-- [ ] T016 [US1] Create main CLI entry point in src/cli/main.py: setup ArgumentParser with subcommand routing, wire 'add' subcommand to add_command handler, handle errors with proper exit codes
-  - **Acceptance**: Can run `uv run python -m src.cli.main add "Test"`, exit code 0 on success, 1 on error
+- [X] T016 [US1] Create main interactive CLI entry point in src/cli/main.py: implement command loop with add, view, complete, delete, and quit commands, handle errors with proper exit codes
+  - **Acceptance**: Can run `uv run python -m src.cli.main` to start interactive CLI, supports add command with title and optional description
   - **Time**: 15-20 min
 
-- [ ] T017 [P] [US1] Configure CLI entry point in pyproject.toml under [project.scripts]: add `todo = "src.cli.main:main"` to enable `uv run todo` command
-  - **Acceptance**: Can run `uv run todo add "Test"` instead of `python -m src.cli.main`
+- [X] T017 [P] [US1] Configure CLI entry point in pyproject.toml under [project.scripts]: add `todo = "src.cli.main:main"` to enable `uv run todo` command
+  - **Acceptance**: Can run `uv run todo` to start interactive CLI
   - **Time**: 10-15 min
 
 **Run tests - ALL SHOULD PASS**:
@@ -148,16 +148,16 @@ uv run mypy src/
 
 ### Tests for User Story 2 (TDD - Write FIRST, ensure FAIL) ⚠️
 
-- [ ] T018 [P] [US2] Write contract test in tests/contract/test_task_model.py: Task with 1001-char description raises ValueError
-  - **Acceptance**: 1 test function written, FAILS (description validation not implemented)
+- [X] T018 [P] [US2] Write contract test in tests/contract/test_task_model.py: Task with 1001-char description raises ValueError
+  - **Acceptance**: 1 test function written, FAILS when run (description validation not implemented)
   - **Time**: 10-15 min
 
-- [ ] T019 [P] [US2] Write unit tests for description validation in tests/unit/test_validators.py: (1) None returns None, (2) valid input returns unchanged, (3) 1000 chars returns unchanged, (4) 1001 chars prompts and truncates if confirmed, (5) 1001 chars raises if user declines
-  - **Acceptance**: 5 test functions written, all FAIL (validate_description not implemented)
+- [X] T019 [P] [US2] Write unit tests for description validation in tests/unit/test_validators.py: (1) None returns None, (2) valid input returns unchanged, (3) 1000 chars returns unchanged, (4) 1001 chars prompts and truncates if confirmed, (5) 1001 chars raises if user declines
+  - **Acceptance**: 5 test functions written, all FAIL when run (validate_description not implemented)
   - **Time**: 20-25 min
 
-- [ ] T020 [P] [US2] Write integration tests in tests/integration/test_add_task_flow.py: (1) add task with title and description succeeds, (2) add task with title only (no description) succeeds
-  - **Acceptance**: 2 test functions written, FAIL (CLI description support not implemented)
+- [X] T020 [P] [US2] Write integration tests in tests/integration/test_add_task_flow.py: (1) add task with title and description succeeds, (2) add task with title only (no description) succeeds
+  - **Acceptance**: 2 test functions written, FAIL when run (CLI description support not implemented)
   - **Time**: 15-20 min
 
 **Run tests - NEW TESTS SHOULD FAIL**:
@@ -168,20 +168,20 @@ uv run pytest tests/ -v
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Add description field to Task dataclass in src/models/task.py: description: Optional[str] = None, update __post_init__ to validate description length ≤1000 if provided
+- [X] T021 [US2] Add description field to Task dataclass in src/models/task.py: description: Optional[str] = None, update __post_init__ to validate description length ≤1000 if provided
   - **Acceptance**: Contract test (T018) passes, Task accepts None or ≤1000 char description
   - **Time**: 15-20 min
 
-- [ ] T022 [US2] Implement validate_description function in src/cli/validators.py: returns None for empty/None input, validates length with confirm_truncation callback, truncates to 1000 chars if confirmed
+- [X] T022 [US2] Implement validate_description function in src/cli/validators.py: returns None for empty/None input, validates length with confirm_truncation callback, truncates to 1000 chars if confirmed
   - **Acceptance**: Unit tests (T019) pass, None/empty handled, >1000 chars prompts user
   - **Time**: 15-20 min
 
-- [ ] T023 [US2] Update create_task service in src/services/task_service.py to accept description parameter, validate with validate_description, pass to Task creation
+- [X] T023 [US2] Update create_task service in src/services/task_service.py to accept description parameter, validate with validate_description, pass to Task creation
   - **Acceptance**: Can create task with description, description stored correctly
   - **Time**: 10-15 min
 
-- [ ] T024 [US2] Add description argument to CLI in src/cli/commands.py: add --description/-d optional argument to argparse, pass to create_task, update success message to show description
-  - **Acceptance**: Integration tests (T020) pass, `todo add "title" -d "desc"` works, output shows description
+- [X] T024 [US2] Support description in interactive CLI in src/cli/main.py: parse "add title -d description" format in command loop, pass to create_task, update success message to show description
+  - **Acceptance**: Integration tests (T020) pass, `add "title" -d "desc"` works in interactive mode, output shows description
   - **Time**: 15-20 min
 
 **Run tests - ALL SHOULD PASS**:

@@ -208,3 +208,10 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+
+## Active Technologies
+- Python 3.12+ + argparse (CLI), dataclasses (models), pytest (testing), ruff (linting), mypy (type checking) (001-add-task)
+- In-memory (list/dict-based storage) (001-add-task)
+
+## Recent Changes
+- 001-add-task: Added Python 3.12+ + argparse (CLI), dataclasses (models), pytest (testing), ruff (linting), mypy (type checking)

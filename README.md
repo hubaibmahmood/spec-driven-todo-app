@@ -99,7 +99,7 @@ spec-driven-todo-app/
 
 ## Development Workflow
 
-This project follows **Spec-Driven Development (SDD)** using [SpecKit Plus](https://github.com/cyanheads/speckit-plus):
+This project follows **Spec-Driven Development (SDD)** using [SpecKit Plus](https://github.com/panaversity/spec-kit-plus):
 
 ### Feature Development Lifecycle
 
@@ -195,7 +195,7 @@ uv run mypy src/
 - **Type Checking**: mypy
 - **Storage**: In-memory (dict-based, no persistence)
 - **Data Models**: Python dataclasses
-- **Development Framework**: [SpecKit Plus](https://github.com/cyanheads/speckit-plus)
+- **Development Framework**: [SpecKit Plus](https://github.com/panaversity/spec-kit-plus)
 
 ## Architecture Decisions
 
@@ -263,7 +263,7 @@ This project is a demonstration of Spec-Driven Development methodology.
 
 ## Acknowledgments
 
-- Built with [SpecKit Plus](https://github.com/cyanheads/speckit-plus) - Spec-Driven Development framework
+- Built with [SpecKit Plus](https://github.com/panaversity/spec-kit-plus) - Spec-Driven Development framework
 - Developed with [Claude Code](https://claude.com/claude-code) - AI-powered development assistant
 
 ## Project Status
@@ -272,8 +272,7 @@ This project is a demonstration of Spec-Driven Development methodology.
 
 ### Completed Features
 
-- ✅ 001-add-task - Add tasks with validation
-- ✅ 002-crud-operations - Full CRUD with interactive menu
+- ✅ Full CRUD with interactive menu
 
 ### In Progress
 
@@ -286,5 +285,3 @@ This project is a demonstration of Spec-Driven Development methodology.
 - Filtering and search capabilities
 
 ---
-
-**Note**: This is a learning project demonstrating Spec-Driven Development. The focus is on the development process and documentation rather than production-ready features.

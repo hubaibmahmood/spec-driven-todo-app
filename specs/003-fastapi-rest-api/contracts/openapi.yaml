@@ -1,0 +1,631 @@
+openapi: 3.1.0
+info:
+  title: Todo API
+  description: RESTful API for todo task management with session authentication and rate limiting
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: tasks
+    description: Task management operations
+  - name: health
+    description: Health check endpoints
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: Check API health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /tasks:
+    get:
+      tags: [tasks]
+      summary: List all tasks
+      description: Retrieve all tasks for the authenticated user
+      operationId: getTasks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tasks
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Rate limit (requests per minute)
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Requests remaining in current window
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+              description: Unix timestamp when rate limit resets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+              examples:
+                emptyList:
+                  summary: No tasks
+                  value: []
+                multipleTasks:
+                  summary: Multiple tasks
+                  value:
+                    - id: 1
+                      user_id: 123e4567-e89b-12d3-a456-426614174000
+                      title: Buy groceries
+                      description: Milk, eggs, bread
+                      completed: false
+                      created_at: '2025-12-10T12:00:00Z'
+                      updated_at: '2025-12-10T12:00:00Z'
+                    - id: 2
+                      user_id: 123e4567-e89b-12d3-a456-426614174000
+                      title: Finish report
+                      description: null
+                      completed: true
+                      created_at: '2025-12-09T10:00:00Z'
+                      updated_at: '2025-12-10T11:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+    post:
+      tags: [tasks]
+      summary: Create a new task
+      description: Create a new task for the authenticated user
+      operationId: createTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+            examples:
+              withDescription:
+                summary: Task with description
+                value:
+                  title: Buy groceries
+                  description: Milk, eggs, bread
+              titleOnly:
+                summary: Task without description
+                value:
+                  title: Quick task
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: 1
+                user_id: 123e4567-e89b-12d3-a456-426614174000
+                title: Buy groceries
+                description: Milk, eggs, bread
+                completed: false
+                created_at: '2025-12-10T12:00:00Z'
+                updated_at: '2025-12-10T12:00:00Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /tasks/{task_id}:
+    get:
+      tags: [tasks]
+      summary: Get a single task
+      description: Retrieve task details by ID (user can only access their own tasks)
+      operationId: getTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Task ID
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+    put:
+      tags: [tasks]
+      summary: Update a task
+      description: Update task details (title, description, completion status)
+      operationId: updateTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Task ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+            examples:
+              updateTitle:
+                summary: Update title only
+                value:
+                  title: Updated task title
+              updateCompletion:
+                summary: Mark as complete
+                value:
+                  completed: true
+              fullUpdate:
+                summary: Update all fields
+                value:
+                  title: Buy groceries
+                  description: Updated description
+                  completed: false
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+    patch:
+      tags: [tasks]
+      summary: Partially update a task
+      description: Update task completion status or other fields
+      operationId: patchTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Task ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdate'
+            examples:
+              toggleCompletion:
+                summary: Toggle completion status
+                value:
+                  completed: true
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+    delete:
+      tags: [tasks]
+      summary: Delete a task
+      description: Delete a task by ID (user can only delete their own tasks)
+      operationId: deleteTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Task ID
+      responses:
+        '204':
+          description: Task deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /tasks/bulk-delete:
+    post:
+      tags: [tasks]
+      summary: Bulk delete tasks
+      description: Delete multiple tasks by IDs
+      operationId: bulkDeleteTasks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_ids:
+                  type: array
+                  items:
+                    type: integer
+                  minItems: 1
+                  description: List of task IDs to delete
+              required:
+                - task_ids
+            example:
+              task_ids: [1, 2, 3]
+      responses:
+        '200':
+          description: Bulk delete results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: array
+                    items:
+                      type: integer
+                    description: IDs of successfully deleted tasks
+                  not_found:
+                    type: array
+                    items:
+                      type: integer
+                    description: IDs of tasks not found or not owned by user
+              example:
+                deleted: [1, 3]
+                not_found: [2]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Session token from better-auth server
+
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique task identifier
+          example: 1
+        user_id:
+          type: string
+          format: uuid
+          description: Owner user ID
+          example: 123e4567-e89b-12d3-a456-426614174000
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title
+          example: Buy groceries
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Task description (optional)
+          example: Milk, eggs, bread
+        completed:
+          type: boolean
+          description: Completion status
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp (UTC)
+          example: '2025-12-10T12:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (UTC)
+          example: '2025-12-10T12:00:00Z'
+      required:
+        - id
+        - user_id
+        - title
+        - completed
+        - created_at
+        - updated_at
+
+    TaskCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Task title (required, 1-200 characters)
+          example: Buy groceries
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Task description (optional, max 1000 characters)
+          example: Milk, eggs, bread
+      required:
+        - title
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Updated task title
+          example: Buy groceries
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Updated task description
+          example: Milk, eggs, bread
+        completed:
+          type: boolean
+          description: Updated completion status
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Error type identifier
+          example: validation_error
+        title:
+          type: string
+          description: Human-readable error title
+          example: Request validation failed
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: Detailed error message
+          example: One or more validation errors occurred
+        instance:
+          type: string
+          nullable: true
+          description: Affected resource path
+          example: /tasks
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp (UTC)
+          example: '2025-12-10T12:34:56Z'
+        request_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Unique request identifier for logging
+          example: 550e8400-e29b-41d4-a716-446655440000
+        errors:
+          type: array
+          nullable: true
+          description: Detailed validation errors (400 only)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: title
+              message:
+                type: string
+                example: String should have at least 1 character
+              code:
+                type: string
+                example: string_too_short
+              value:
+                nullable: true
+                example: ''
+        retry_after:
+          type: integer
+          nullable: true
+          description: Seconds to wait before retry (429 only)
+          example: 45
+        rate_limit_info:
+          type: object
+          nullable: true
+          description: Rate limit details (429 only)
+          properties:
+            limit:
+              type: integer
+              description: Total requests allowed in window
+              example: 100
+            remaining:
+              type: integer
+              description: Requests remaining
+              example: 0
+            reset:
+              type: integer
+              description: Unix timestamp when limit resets
+              example: 1702226696
+            window_seconds:
+              type: integer
+              description: Rate limit window in seconds
+              example: 60
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - timestamp
+
+  responses:
+    ValidationError:
+      description: Validation error (400)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: validation_error
+            title: Request validation failed
+            status: 400
+            detail: One or more validation errors occurred
+            instance: /tasks
+            timestamp: '2025-12-10T12:34:56Z'
+            errors:
+              - field: title
+                message: String should have at least 1 character
+                code: string_too_short
+                value: ''
+
+    UnauthorizedError:
+      description: Authentication error (401)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: authentication_error
+            title: Authentication failed
+            status: 401
+            detail: Invalid or missing authentication credentials
+            timestamp: '2025-12-10T12:34:56Z'
+
+    ForbiddenError:
+      description: Authorization error (403)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: authorization_error
+            title: Access denied
+            status: 403
+            detail: You do not have permission to access this task
+            instance: /tasks/42
+            timestamp: '2025-12-10T12:34:56Z'
+
+    NotFoundError:
+      description: Resource not found (404)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: not_found_error
+            title: Resource not found
+            status: 404
+            detail: Task with ID 999 not found
+            instance: /tasks/999
+            timestamp: '2025-12-10T12:34:56Z'
+
+    RateLimitError:
+      description: Rate limit exceeded (429)
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retry
+          example: 45
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Rate limit
+          example: 100
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requests remaining
+          example: 0
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when limit resets
+          example: 1702226696
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            type: rate_limit_exceeded
+            title: Rate limit exceeded
+            status: 429
+            detail: Too many requests. Retry after 45 seconds.
+            timestamp: '2025-12-10T12:34:56Z'
+            retry_after: 45
+            rate_limit_info:
+              limit: 100
+              remaining: 0
+              reset: 1702226696
+              window_seconds: 60

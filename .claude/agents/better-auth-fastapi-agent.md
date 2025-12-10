@@ -11,6 +11,8 @@ tools:
   - TodoWrite
   - AskUserQuestion
   - Skill
+  - mcp__context7__resolve-library-id
+  - mcp__context7__get-library-docs
 model: inherit
 color: blue
 ---

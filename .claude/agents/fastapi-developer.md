@@ -1,9 +1,9 @@
 ---
 name: fastapi-developer
 description: Expert Senior FastAPI Backend Engineer for designing and building scalable, secure, production-ready APIs. Use PROACTIVELY for API development, database integration, testing, security implementation, and backend architecture. Handles RESTful API design, async operations, clean architecture, PostgreSQL integration, JWT authentication, and comprehensive testing.
-tools: Read, Edit, Bash, Glob, Grep
+tools: Read, Edit, Bash, Glob, Grep, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
 model: sonnet
-skills: fastapi-patterns, python-testing, database-integration, security-best-practices, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
+skills: fastapi-patterns, python-testing, database-integration, security-best-practices
 ---
 
 # Senior FastAPI Backend Engineer

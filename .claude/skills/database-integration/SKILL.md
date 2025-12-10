@@ -40,8 +40,72 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 ### Installing Dependencies
 
 ```bash
-pip install sqlalchemy[asyncio] asyncpg alembic
+# Core dependencies (list all explicitly including transitives)
+pip install \
+  sqlalchemy[asyncio]>=2.0.0 \
+  asyncpg>=0.29.0 \
+  alembic>=1.13.0 \
+  greenlet>=3.0.0
+
+# Or with poetry
+poetry add sqlalchemy[asyncio] asyncpg alembic greenlet
+
+# Or with uv
+uv add sqlalchemy asyncpg alembic greenlet
 ```
+
+**Note**: `greenlet` is required for SQLAlchemy async operations. Some package managers install it automatically, but explicitly listing it prevents installation issues.
+
+### Neon Serverless PostgreSQL
+
+Neon provides connection strings with SSL query parameters that asyncpg doesn't support directly. Here's how to configure it properly:
+
+#### Connection URL Configuration
+
+```python
+import ssl
+from sqlalchemy.ext.asyncio import create_async_engine
+
+# Neon connection string (from dashboard)
+NEON_URL = "postgresql+asyncpg://user:pass@ep-xxx.neon.tech/db?sslmode=require&channel_binding=require"
+
+# Strip query parameters for asyncpg
+db_url = NEON_URL.split("?")[0] if "?" in NEON_URL else NEON_URL
+
+# Configure SSL via connect_args
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
+engine = create_async_engine(
+    db_url,
+    connect_args={
+        "ssl": ssl_context,
+        "server_settings": {"application_name": "your-app"},
+    },
+    pool_pre_ping=True,  # Critical for serverless
+    pool_recycle=3600,   # Recycle after 1 hour
+)
+```
+
+#### Neon-Specific Connection Pool Settings
+
+```python
+engine = create_async_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,     # Verify connections before use (detects cold starts)
+    pool_size=10,           # Keep connections warm
+    max_overflow=20,        # Handle traffic spikes
+    pool_recycle=3600,      # Force reconnect every hour (prevents stale connections)
+    pool_timeout=30,        # Wait time for available connection
+)
+```
+
+**Why these settings for Neon?**
+- `pool_pre_ping=True`: Neon can terminate idle connections during cold starts
+- `pool_recycle=3600`: Prevents stale connections in serverless environment
+- SSL via `connect_args`: asyncpg doesn't support `sslmode` query parameters
+- Smaller pool sizes work well with Neon's serverless scaling
 
 ## SQLAlchemy 2.0 Async Setup
 
@@ -72,12 +136,20 @@ async_session_maker = async_sessionmaker(
     autocommit=False          # Manual transaction control
 )
 
-# Dependency for FastAPI
+# Dependency for FastAPI with automatic transaction management
 async def get_db() -> AsyncSession:
-    """Get database session for dependency injection."""
+    """
+    Get database session for dependency injection.
+
+    Commits transaction on success, rolls back on error.
+    """
     async with async_session_maker() as session:
         try:
             yield session
+            await session.commit()  # Commit transaction on success
+        except Exception:
+            await session.rollback()  # Rollback on any error
+            raise
         finally:
             await session.close()
 
@@ -103,6 +175,94 @@ class Settings(BaseSettings):
 
 settings = Settings()
 ```
+
+### Transaction Management Patterns
+
+FastAPI applications should follow a consistent transaction management pattern. Here are the recommended approaches:
+
+#### Pattern 1: Commit in Dependency (Recommended for FastAPI)
+
+**Best for**: Most FastAPI applications where one request = one transaction
+
+```python
+# Dependency (shown above in get_db function)
+async def get_db() -> AsyncSession:
+    """Commit transaction automatically per request."""
+    async with async_session_maker() as session:
+        try:
+            yield session
+            await session.commit()  # Automatic commit on success
+        except Exception:
+            await session.rollback()  # Automatic rollback on error
+            raise
+        finally:
+            await session.close()
+
+# Repository methods use flush() instead of commit()
+async def create(self, user_data: dict) -> User:
+    """Create user - transaction commits in dependency."""
+    user = User(**user_data)
+    self.db.add(user)
+    await self.db.flush()  # Persist to get ID and defaults
+    await self.db.refresh(user)  # Refresh with database-generated values
+    return user  # Transaction commits when request ends
+```
+
+**Why this pattern?**
+- ✅ Single transaction per HTTP request
+- ✅ Automatic rollback on any error (including validation, business logic, or database errors)
+- ✅ Simpler repository code (no need to remember to commit)
+- ✅ Consistent error handling across all endpoints
+- ✅ Prevents partial commits (all-or-nothing per request)
+
+**When to use**: Default choice for FastAPI applications
+
+#### Pattern 2: Commit in Repository (Alternative)
+
+**Best for**: Complex workflows requiring multiple independent transactions per request
+
+```python
+# Dependency yields session without committing
+async def get_db() -> AsyncSession:
+    """Session without automatic commit."""
+    async with async_session_maker() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+# Repository methods commit explicitly
+async def create(self, user_data: dict) -> User:
+    """Create user with explicit commit."""
+    user = User(**user_data)
+    self.db.add(user)
+    await self.db.commit()  # Explicit commit
+    await self.db.refresh(user)
+    return user
+```
+
+**When to use**:
+- Need multiple independent transactions per request
+- Implementing CQRS patterns (separate read/write transactions)
+- Require fine-grained control over transaction boundaries
+- Building complex workflows with savepoints
+
+**Trade-offs**:
+- ⚠️ Must remember to commit in every repository method
+- ⚠️ Risk of forgetting commits (silent data loss)
+- ⚠️ More complex error handling
+
+#### Summary
+
+| Aspect | Commit in Dependency | Commit in Repository |
+|--------|----------------------|----------------------|
+| **Complexity** | Simple | Complex |
+| **Safety** | High (automatic) | Medium (manual) |
+| **Use Case** | Standard CRUD APIs | Complex workflows |
+| **Error Handling** | Automatic rollback | Manual handling |
+| **Recommendation** | ✅ Default choice | ⚠️ Only when needed |
+
+**This guide uses Pattern 1 (Commit in Dependency) throughout all examples.**
 
 ## Creating Models
 

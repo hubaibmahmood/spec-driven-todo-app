@@ -618,6 +618,219 @@ async def get_user(id: int):
     ...
 ```
 
+## Development and Testing Patterns
+
+### Mock Authentication for Development
+
+During development, before implementing real authentication, use consistent mock user IDs:
+
+```python
+# src/api/routers/tasks.py or src/api/dependencies.py
+
+from uuid import UUID
+
+# Fixed user ID for testing - all requests use the same user
+MOCK_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
+
+async def get_current_user() -> UUID:
+    """
+    Temporary mock authentication dependency.
+
+    Returns consistent user ID so all operations belong to the same user during testing.
+    Replace with real authentication (session validation, JWT, etc.) in production.
+    """
+    return MOCK_USER_ID
+
+# Usage in endpoints
+@router.get("/tasks")
+async def get_tasks(
+    repository: TaskRepository = Depends(get_task_repository),
+    current_user: UUID = Depends(get_current_user)  # ← Mock dependency
+):
+    return await repository.get_all_by_user(current_user)
+```
+
+**Why consistent mock IDs?**
+- ✅ Ensures created resources can be retrieved in subsequent requests
+- ✅ Prevents user isolation issues during manual testing
+- ✅ Simplifies debugging (all test data belongs to known user)
+- ✅ Makes Swagger UI testing seamless
+
+**❌ Don't use random UUIDs:**
+```python
+# ❌ Bad: Different UUID on every request
+async def get_current_user() -> UUID:
+    return uuid4()  # Creates tasks you can't retrieve!
+```
+
+### Overriding Dependencies in Tests
+
+FastAPI's dependency override system allows replacing dependencies during testing:
+
+```python
+# tests/conftest.py
+
+import pytest
+from uuid import UUID
+from fastapi import FastAPI
+
+@pytest.fixture
+def test_user_id():
+    """Fixed user ID for test isolation."""
+    return UUID("test-user-0000-0000-0000-000000000001")
+
+@pytest.fixture
+def app_with_test_user(app: FastAPI, test_user_id: UUID):
+    """Override authentication to use test user."""
+    async def mock_current_user():
+        return test_user_id
+
+    # Override the dependency
+    app.dependency_overrides[get_current_user] = mock_current_user
+    yield app
+
+    # Clean up after test
+    app.dependency_overrides.clear()
+
+# Usage in tests
+async def test_create_task(client: AsyncClient, app_with_test_user, test_user_id):
+    """Test uses overridden authentication."""
+    response = await client.post("/tasks", json={"title": "Test"})
+    assert response.status_code == 201
+    assert response.json()["user_id"] == str(test_user_id)
+```
+
+### Development vs Production Auth
+
+Use environment-based configuration to switch between mock and real authentication:
+
+```python
+# src/api/dependencies.py
+
+from src.config import settings
+
+if settings.ENVIRONMENT == "development":
+    # Mock authentication for local development
+    async def get_current_user() -> UUID:
+        return UUID("00000000-0000-0000-0000-000000000001")
+else:
+    # Real authentication for production
+    async def get_current_user(
+        token: str = Depends(oauth2_scheme),
+        db: AsyncSession = Depends(get_db)
+    ) -> UUID:
+        # Validate token, query database, return user_id
+        return await auth_service.validate_token(token, db)
+```
+
+### Testing with Multiple Users
+
+When testing multi-user scenarios:
+
+```python
+# tests/test_user_isolation.py
+
+async def test_user_cannot_access_other_user_tasks(
+    client: AsyncClient,
+    app: FastAPI
+):
+    """Test user isolation - users can only see their own tasks."""
+
+    # Create task as user 1
+    user1_id = UUID("11111111-1111-1111-1111-111111111111")
+    app.dependency_overrides[get_current_user] = lambda: user1_id
+
+    response = await client.post("/tasks", json={"title": "User 1 task"})
+    task_id = response.json()["id"]
+
+    # Try to access as user 2
+    user2_id = UUID("22222222-2222-2222-2222-222222222222")
+    app.dependency_overrides[get_current_user] = lambda: user2_id
+
+    response = await client.get(f"/tasks/{task_id}")
+    assert response.status_code == 404  # Not found for user 2
+
+    app.dependency_overrides.clear()
+```
+
+### Common Development Patterns
+
+#### 1. Health Check Endpoint
+
+Always include a health check for monitoring:
+
+```python
+@router.get("/health", tags=["system"])
+async def health_check(db: AsyncSession = Depends(get_db)):
+    """
+    Health check endpoint for monitoring and deployment validation.
+
+    Returns:
+        dict: Health status and database connectivity
+    """
+    try:
+        # Test database connectivity
+        await db.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
+
+    return {
+        "status": "healthy",
+        "database": db_status,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+```
+
+#### 2. Request ID Middleware for Debugging
+
+Add correlation IDs to track requests across logs:
+
+```python
+import uuid
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        request_id = str(uuid.uuid4())
+        request.state.request_id = request_id
+
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+# Add to app
+app.add_middleware(RequestIDMiddleware)
+```
+
+#### 3. Development-Only Endpoints
+
+Conditional endpoints for debugging:
+
+```python
+if settings.ENVIRONMENT == "development":
+    @router.get("/debug/db-info", tags=["debug"])
+    async def debug_db_info(db: AsyncSession = Depends(get_db)):
+        """Development-only endpoint to inspect database state."""
+        # Return database stats, pool info, etc.
+        return {"environment": "development", "debug": True}
+```
+
+### Best Practices for Development
+
+✅ **DO:**
+- Use consistent mock IDs during development
+- Override dependencies in tests
+- Include health check endpoints
+- Add request correlation IDs
+- Use environment variables for feature flags
+
+❌ **DON'T:**
+- Generate random UUIDs in mock authentication
+- Hardcode authentication in endpoints
+- Skip authentication during development (use mocks instead)
+- Leave debug endpoints enabled in production
+
 ## Reference
 
 For complete examples and templates, see:

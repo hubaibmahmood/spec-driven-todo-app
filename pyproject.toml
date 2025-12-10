@@ -39,6 +39,9 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 
+[tool.uv.workspace]
+members = ["backend"]
+
 [dependency-groups]
 dev = [
     "mypy>=1.19.0",

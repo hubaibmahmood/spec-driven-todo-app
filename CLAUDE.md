@@ -212,6 +212,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 ## Active Technologies
 - Python 3.12+ + dataclasses (models), pytest (testing), ruff (linting), mypy (type checking) (001-add-task)
 - In-memory (MemoryStore with dict-based storage, no persistence) (001-add-task, 002-crud-operations)
+- Python 3.12+ + FastAPI 0.104+, SQLAlchemy 2.0+ (async ORM), Pydantic 2.0+, Uvicorn (ASGI server) (003-fastapi-rest-api)
+- Neon serverless PostgreSQL (shared with better-auth Node.js server) (003-fastapi-rest-api)
 
 ## Recent Changes
 - 002-crud-operations: Confirmed interactive CLI pattern (no argparse - uses input() for interactive menu)

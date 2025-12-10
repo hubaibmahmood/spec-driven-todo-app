@@ -1,9 +1,9 @@
 """Task endpoints for CRUD operations."""
 
 from fastapi import APIRouter, Depends, status
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from src.api.dependencies import get_task_repository
+from src.api.dependencies import get_task_repository, get_current_user
 from src.api.schemas.task import (
     TaskCreate,
     TaskResponse,
@@ -16,20 +16,6 @@ from src.database.repository import TaskRepository
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
-
-
-# Temporary mock authentication dependency (replaced in US8)
-# Fixed user ID for testing - all requests use the same user
-MOCK_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
-
-async def get_current_user() -> UUID:
-    """
-    Temporary mock authentication dependency.
-
-    This will be replaced with actual session validation in US8.
-    For testing, returns a consistent user ID so all tasks belong to same user.
-    """
-    return MOCK_USER_ID
 
 
 @router.get("/", response_model=list[TaskResponse], status_code=status.HTTP_200_OK)

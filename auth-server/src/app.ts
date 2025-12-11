@@ -14,9 +14,8 @@ export const app = express();
 app.set('trust proxy', true);
 
 // Initialize better-auth
-const auth = betterAuth(authConfig);
-console.log('[DEBUG] Initialized authConfig:', JSON.stringify(authConfig, null, 2));
-console.log('[DEBUG] Initialized betterAuth instance (partial):', auth.api ? Object.keys(auth.api) : 'N/A');
+export const auth = betterAuth(authConfig);
+
 
 // Configure CORS
 

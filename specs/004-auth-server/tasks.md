@@ -96,13 +96,13 @@
 
 ### Integration Tasks
 
-- [ ] T033 [US2] Review existing FastAPI auth dependency in backend/src/api/dependencies.py (get_current_user function)
-- [ ] T034 [US2] Update backend/.env.example to document AUTH_SERVER_URL variable for reference
-- [ ] T035 [US2] Create integration test in backend/tests/integration/test_better_auth_integration.py (test signup on auth server → signin → extract token → call FastAPI /tasks with token → verify 200)
-- [ ] T036 [US2] Test auth server session token works with existing FastAPI /tasks endpoints (GET, POST, PUT, DELETE)
-- [ ] T037 [US2] Verify user isolation: User A cannot access User B's tasks using their own valid token (403)
-- [ ] T038 [US2] Test token expiration: Expired token from auth server returns 401 on FastAPI endpoints
-- [ ] T039 [US2] Document token flow in specs/004-auth-server/contracts/fastapi-integration.md (signup → signin → extract session.token → Authorization: Bearer header → FastAPI validates)
+- [x] T033 [US2] Review existing FastAPI auth dependency in backend/src/api/dependencies.py (get_current_user function)
+- [x] T034 [US2] Update backend/.env.example to document AUTH_SERVER_URL variable for reference
+- [x] T035 [US2] Create integration test in backend/tests/integration/test_better_auth_integration.py (test signup on auth server → signin → extract token → call FastAPI /tasks with token → verify 200)
+- [x] T036 [US2] Test auth server session token works with existing FastAPI /tasks endpoints (GET, POST, PUT, DELETE)
+- [x] T037 [US2] Verify user isolation: User A cannot access User B's tasks using their own valid token (403)
+- [x] T038 [US2] Test token expiration: Expired token from auth server returns 401 on FastAPI endpoints
+- [x] T039 [US2] Document token flow in specs/004-auth-server/contracts/fastapi-integration.md (signup → signin → extract session.token → Authorization: Bearer header → FastAPI validates)
 
 **Checkpoint**: FastAPI integration complete - auth server tokens work with existing backend
 

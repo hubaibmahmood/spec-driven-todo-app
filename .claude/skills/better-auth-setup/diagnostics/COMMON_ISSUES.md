@@ -12,6 +12,7 @@ This document covers all 6 common issues encountered when implementing better-au
 | [4. Cross-Site Cookies](#issue-4-cross-site-cookie-configuration) | Cookies not sent cross-domain | ✅ Yes |
 | [5. Vercel Deployment](#issue-5-vercel-deployment-config) | 404 on Vercel | ✅ Yes |
 | [6. Email Verification](#issue-6-email-verification-flow) | Emails not sent | ⚠️ Manual |
+| [7. Prisma Validation Error](#issue-7-prisma-validation-error) | Argument `type` is missing | ✅ Yes |
 
 ---
 
@@ -482,6 +483,66 @@ curl -X POST http://localhost:3000/api/auth/signup \
 
 ---
 
+## Issue 7: Prisma Validation Error
+
+### Symptom
+```
+Invalid `prisma.verification.create()` invocation:
+Argument `type` is missing.
+```
+or
+```
+Argument `user` is missing.
+```
+
+### Root Cause
+`better-auth`'s Prisma adapter attempts to create verification records (for password resets or email verification) without providing fields that are defined as required in your Prisma schema (like `type` or `userId`).
+
+### Detection
+Check your `schema.prisma` for the `Verification` model:
+```bash
+grep -A 10 "model Verification" {{PRISMA_SCHEMA_PATH}}
+```
+If `type` or `userId` are not optional (don't have `?`), this issue will occur.
+
+### Solution
+
+Make `type` and `userId` optional in your Prisma schema.
+
+**Correct Schema**:
+```prisma
+model Verification {
+  id         String    @id @default(cuid())
+  // ...
+  type       String?   // ✅ Optional
+  userId     String?   // ✅ Optional
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+```
+
+**Incorrect Schema**:
+```prisma
+model Verification {
+  id         String    @id @default(cuid())
+  // ...
+  type       String    // ❌ Required (causes error)
+  userId     String    // ❌ Required (causes error)
+}
+```
+
+### Auto-Fix (Manual)
+1. Open `{{PRISMA_SCHEMA_PATH}}`
+2. Change `type String` to `type String?`
+3. Change `userId String` to `userId String?`
+4. Run `npx prisma db push` and `npx prisma generate`
+
+### Verification
+```bash
+# Retry the action that caused the error (e.g., password reset request)
+```
+
+---
+
 ## Summary
 
 | Issue | Severity | Fix Complexity | Auto-Fix |
@@ -492,6 +553,7 @@ curl -X POST http://localhost:3000/api/auth/signup \
 | Cross-Site Cookies | 🟠 Medium | Easy | ✅ Yes |
 | Vercel Config | 🟡 Low | Easy | ✅ Yes |
 | Email Verification | 🟡 Low | Medium | ⚠️ Manual |
+| Prisma Validation | 🟠 Medium | Easy | ✅ Yes |
 
 ## Troubleshooting Workflow
 

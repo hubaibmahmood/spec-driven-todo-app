@@ -69,6 +69,15 @@ export const auth = betterAuth({
     requireEmailVerification: {{EMAIL_VERIFICATION_REQUIRED}},
     minPasswordLength: {{MIN_PASSWORD_LENGTH}},
     maxPasswordLength: {{MAX_PASSWORD_LENGTH}},
+    // Handlers for sending emails (required if email verification is enabled)
+    sendVerificationEmail: async ({ user, url, token }) => {
+      // TODO: Implement email sending logic (e.g., using Resend, SendGrid)
+      console.log('Verify email url:', url);
+    },
+    sendResetPassword: async ({ user, url, token }) => {
+      // TODO: Implement password reset email logic
+      console.log('Reset password url:', url);
+    },
   },
 
   // Session configuration

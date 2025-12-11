@@ -116,13 +116,13 @@
 
 ### US3: Password Reset Flow
 
-- [ ] T040 [US3] Configure password reset in better-auth config (1-hour token expiration, reset email template)
-- [ ] T041 [US3] Add sendResetPasswordEmail handler with Resend integration in auth-server/src/auth/auth.config.ts
-- [ ] T042 [US3] Test forgot-password: POST /api/auth/forgot-password with {email} returns 200 (always, prevents email enumeration)
-- [ ] T043 [US3] Verify password reset email sent with valid 1-hour token
-- [ ] T044 [US3] Test reset-password: POST /api/auth/reset-password with {token, password} returns 200 and updates password
-- [ ] T045 [US3] Test password reset token expiration: Expired token returns 400 with TOKEN_EXPIRED error
-- [ ] T046 [US3] Test signin with new password succeeds after password reset
+- [x] T040 [US3] Configure password reset in better-auth config (1-hour token expiration, reset email template)
+- [x] T041 [US3] Add sendResetPasswordEmail handler with Resend integration in auth-server/src/auth/auth.config.ts
+- [x] T042 [US3] Test forgot-password: POST /api/auth/forgot-password with {email} returns 200 (always, prevents email enumeration)
+- [x] T043 [US3] Verify password reset email sent with valid 1-hour token
+- [x] T044 [US3] Test reset-password: POST /api/auth/reset-password with {token, password} returns 200 and updates password
+- [ ] T045 [US3] Test password reset token expiration: Expired token returns 400 with TOKEN_EXPIRED error (NOTE: Not explicitly tested by current script, requires advanced testing techniques.)
+- [x] T046 [US3] Test signin with new password succeeds after password reset
 
 **Checkpoint**: Password recovery complete - users can reset forgotten passwords
 

@@ -30,8 +30,8 @@ def get_database_url():
         print(f"Error reading .env: {e}")
         return None
 
-def get_verification_token(email):
-    """Fetch verification token from database"""
+def get_verification_token(email, token_type="email-verification"):
+    """Fetch verification token from database based on type"""
     db_url = get_database_url()
     if not db_url:
         print("Could not find DATABASE_URL")
@@ -41,15 +41,16 @@ def get_verification_token(email):
         engine = create_engine(db_url)
         with engine.connect() as conn:
             # better-auth v1 uses 'verifications' table, 'identifier' is email, 'value' is token
+            # and 'type' field to differentiate tokens
             result = conn.execute(
-                text("SELECT value FROM verifications WHERE identifier = :email"),
-                {"email": email}
+                text("SELECT value FROM verifications WHERE identifier = :email AND type = :token_type ORDER BY \"createdAt\" DESC"),
+                {"email": email, "token_type": token_type}
             )
             row = result.fetchone()
             if row:
                 return row[0]
             else:
-                print(f"No verification token found for {email}")
+                print(f"No {token_type} token found for {email}")
                 return None
     except Exception as e:
         print(f"Database error: {e}")
@@ -88,7 +89,7 @@ def test_verify_email():
     # Give DB a moment to sync
     time.sleep(1)
     
-    token = get_verification_token(TEST_EMAIL)
+    token = get_verification_token(TEST_EMAIL, "email-verification")
     if not token:
         print("✗ Could not retrieve verification token from DB")
         return False
@@ -204,6 +205,80 @@ def test_health_check():
         print(f"✗ Health check request failed: {e}")
         return None
 
+def test_password_reset():
+    """Test password reset flow: request -> verify token -> reset -> signin with new password"""
+    print("\nTesting password reset flow...")
+    
+    # 1. Request password reset
+    print("1. Requesting password reset...")
+    try:
+        response = requests.post(f"{AUTH_SERVER_URL}/api/auth/request-password-reset", json={
+            "email": TEST_EMAIL,
+            "redirectTo": "http://localhost:3000/reset-password"
+        })
+        print(f"Request reset status: {response.status_code}")
+        print(f"Request reset response: {response.json()}")
+        
+        if response.status_code != 200:
+            print("✗ Request password reset failed")
+            return False
+    except Exception as e:
+        print(f"✗ Request password reset exception: {e}")
+        return False
+        
+    # 2. Get reset token from DB
+    time.sleep(1)
+    # Note: better-auth might store reset tokens in 'verification' table or similar
+    # We'll try to find the token. Based on config, it uses sendResetPassword but better-auth 
+    # internals manage the token generation. 
+    # Let's check the 'verifications' table again for a recent token
+    
+    token = get_verification_token(TEST_EMAIL, "reset-password")
+    if not token:
+        print("✗ Could not retrieve reset token from DB")
+        return False
+        
+    print(f"Found reset token: {token}")
+    
+    # 3. Reset password
+    print("3. Resetting password...")
+    new_password = "NewSecurePassword456!"
+    try:
+        response = requests.post(f"{AUTH_SERVER_URL}/api/auth/reset-password", json={
+            "token": token,
+            "newPassword": new_password
+        })
+        print(f"Reset password status: {response.status_code}")
+        print(f"Reset password response: {response.json()}")
+        
+        if response.status_code != 200:
+            print("✗ Reset password failed")
+            return False
+    except Exception as e:
+        print(f"✗ Reset password exception: {e}")
+        return False
+        
+    # 4. Signin with new password
+    print("4. Signing in with new password...")
+    signin_data = {
+        "email": TEST_EMAIL,
+        "password": new_password
+    }
+    
+    try:
+        response = requests.post(f"{AUTH_SERVER_URL}/api/auth/sign-in/email", json=signin_data)
+        print(f"New password signin status: {response.status_code}")
+        
+        if response.status_code == 200:
+            print("✓ Password reset flow successful")
+            return True
+        else:
+            print(f"✗ Signin with new password failed")
+            return False
+    except Exception as e:
+        print(f"✗ New password signin exception: {e}")
+        return False
+
 def main():
     print("Starting Phase 3 Authentication Tests")
     print(f"Testing against: {AUTH_SERVER_URL}")
@@ -262,6 +337,14 @@ def main():
             print("✓ Token successfully invalidated")
         else:
             print(f"✗ Token still valid? Status: {resp.status_code}")
+
+    print("\n" + "="*50)
+    
+    # Test password reset
+    if test_password_reset():
+        print("✅ Password reset test passed")
+    else:
+        print("❌ Password reset test failed")
 
     print("\n" + "="*50)
     print("✅ All Phase 3 tests completed successfully!")

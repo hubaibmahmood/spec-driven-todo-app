@@ -28,6 +28,33 @@ export const authConfig = {
     enabled: true,
     requireEmailVerification: true,
     minPasswordLength: 8,
+    sendResetPassword: async ({ user, url, token }: { user: any; url: string; token: string }) => {
+      // Manually save the reset token to the database with type 'reset-password'
+      const expiresAt = new Date(Date.now() + (authConfig.emailAndPassword.resetPasswordTokenExpiresIn || 3600) * 1000);
+      await prisma.verification.create({
+        data: {
+          identifier: user.email,
+          value: token,
+          userId: user.id,
+          expiresAt: expiresAt,
+          type: "reset-password",
+        },
+      });
+
+      await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: user.email,
+        subject: "Reset your password",
+        html: `
+          <h2>Password Reset</h2>
+          <p>You requested to reset your password. Click the link below to continue:</p>
+          <a href="${url}">Reset Password</a>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        `,
+      });
+    },
+    resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
   },
 
   // Social providers
@@ -44,6 +71,7 @@ export const authConfig = {
           value: token,
           userId: user.id,
           expiresAt: expiresAt,
+          type: "email-verification",
         },
       });
 
@@ -62,25 +90,6 @@ export const authConfig = {
     },
     sendOnSignUp: true, // <--- Add this line
     emailVerificationTokenExpiresIn: 15 * 60, // 15 minutes
-  },
-
-  // Account recovery
-  accountRecovery: {
-    sendResetPasswordEmail: async ({ user, url, token }: { user: any; url: string; token: string }) => {
-      await resend.emails.send({
-        from: env.EMAIL_FROM,
-        to: user.email,
-        subject: "Reset your password",
-        html: `
-          <h2>Password Reset</h2>
-          <p>You requested to reset your password. Click the link below to continue:</p>
-          <a href="${url}">Reset Password</a>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you didn't request this, please ignore this email.</p>
-        `,
-      });
-    },
-    resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
   },
   advanced: {
     // disableOriginCheck: true, // WARNING: Re-enable for production to prevent CSRF attacks!

@@ -12,6 +12,7 @@ This document covers all 6 common issues encountered when implementing better-au
 | [4. Cross-Site Cookies](#issue-4-cross-site-cookie-configuration) | Cookies not sent cross-domain | ✅ Yes |
 | [5. Vercel Deployment](#issue-5-vercel-deployment-config) | 404 on Vercel | ✅ Yes |
 | [6. Email Verification](#issue-6-email-verification-flow) | Emails not sent | ⚠️ Manual |
+| [7. Prisma Validation Error](#issue-7-prisma-validation-error) | Argument `type` is missing | ✅ Yes |
 
 ---
 
@@ -27,9 +28,10 @@ Cannot require better-auth/node
 better-auth is an ES Module but your Node.js project is configured for CommonJS.
 
 ### Detection
-Check `auth-server/package.json` for missing `"type": "module"`:
+Check auth server's `package.json` for missing `"type": "module"`:
 ```bash
-grep '"type"' auth-server/package.json
+# Replace {{AUTH_SERVER_DIR}} with your auth server directory
+grep '"type"' {{AUTH_SERVER_DIR}}/package.json
 ```
 
 ### Solution
@@ -64,15 +66,21 @@ import { auth } from './auth/auth.config';
 import { env } from './config/env';
 ```
 
-### Auto-Fix
-```bash
-# Add "type": "module" to package.json
-node -e "const pkg = require('./auth-server/package.json'); pkg.type = 'module'; require('fs').writeFileSync('./auth-server/package.json', JSON.stringify(pkg, null, 2));"
+### Auto-Fix (Orchestrator Should Execute)
+```typescript
+// Read package.json
+const pkg = JSON.parse(await read('{{AUTH_SERVER_DIR}}/package.json'));
+
+// Add type: module if missing
+if (!pkg.type) {
+  pkg.type = 'module';
+  await write('{{AUTH_SERVER_DIR}}/package.json', JSON.stringify(pkg, null, 2));
+}
 ```
 
 ### Verification
 ```bash
-cd auth-server
+cd {{AUTH_SERVER_DIR}}
 npm run dev
 # Should start without ERR_REQUIRE_ESM
 ```
@@ -83,47 +91,64 @@ npm run dev
 
 ### Symptom
 ```
-POST /api/auth/signup → 404 Not Found
-POST /api/auth/signin → 404 Not Found
-GET /api/auth/me → 404 Not Found
+POST /api/auth/me → 404 Not Found
+GET /api/auth/verify-token → 404 Not Found
 ```
 
-Custom endpoints return 404 even though better-auth built-in endpoints work.
-
 ### Root Cause
-Express middleware order matters! If better-auth catch-all is registered before custom routes, it captures all `/api/auth/*` requests before they reach your custom handlers.
+Custom routes registered AFTER better-auth catch-all handler.
+
+Express processes middleware in order. If `app.all('/api/auth/*', ...)` comes before custom routes, it captures everything.
 
 ### Detection
-Check route order in `auth-server/src/app.ts`:
-```typescript
-// ❌ WRONG ORDER (causes 404s)
-app.all('/api/auth/*', toNodeHandler(auth));  // Catches everything first
-app.use('/api/auth', authRoutes);             // Never reached!
-
-// ✅ CORRECT ORDER
-app.use('/api/auth', authRoutes);             // Custom routes first
-app.all('/api/auth/*', toNodeHandler(auth));  // Catch-all last
+Check route registration order in auth server's Express app:
+```bash
+# Look for route ordering in app.ts or main server file
+grep -A 5 -B 5 "/api/auth" {{AUTH_SERVER_DIR}}/src/app.ts
 ```
 
 ### Solution
 
-**Correct middleware order**:
+**Correct Order**:
 ```typescript
-// Custom auth routes (MUST come first)
-app.use('/api/auth', authRoutes);
+// ✅ Custom routes FIRST
+app.use('/api/auth/me', getMeRoute);
+app.use('/api/auth/verify-token', verifyTokenRoute);
+app.use('/api/auth', customAuthRoutes);
 
-// better-auth catch-all (MUST come last)
+// ✅ better-auth catch-all AFTER
 app.all('/api/auth/*', toNodeHandler(auth));
 ```
 
-### Auto-Fix
-Edit `auth-server/src/app.ts` and move custom routes before better-auth handler.
+**Incorrect Order**:
+```typescript
+// ❌ Catch-all FIRST (captures everything)
+app.all('/api/auth/*', toNodeHandler(auth));
+
+// ❌ Custom routes AFTER (never reached)
+app.use('/api/auth', customAuthRoutes);
+```
+
+### Auto-Fix (Orchestrator Should Execute)
+```typescript
+// Read app.ts file
+const appFile = await read('{{AUTH_SERVER_DIR}}/src/app.ts');
+
+// Check if route ordering is incorrect
+const catchAllIndex = appFile.indexOf("app.all('/api/auth/*'");
+const customRoutesIndex = appFile.indexOf("app.use('/api/auth'");
+
+if (catchAllIndex !== -1 && customRoutesIndex !== -1 && catchAllIndex < customRoutesIndex) {
+  // Auto-fix: Reorder routes (move custom routes before catch-all)
+  // Implementation depends on file structure
+}
+```
 
 ### Verification
 ```bash
-curl -X POST http://localhost:3000/api/auth/me \
-  -H "Authorization: Bearer your-token"
-# Should return user info, not 404
+# Test custom endpoint
+curl http://localhost:3000/api/auth/me
+# Should return 200 or 401, not 404
 ```
 
 ---
@@ -132,74 +157,72 @@ curl -X POST http://localhost:3000/api/auth/me \
 
 ### Symptom
 ```
-Error related to IP address type mismatch (e.g., AddrParseError, INET type error)
-```
-
-Or:
-
-```
-sqlalchemy.exc.ProgrammingError: column "ip_address" is of type inet
-but expression is of type text
+sqlalchemy.exc.ProgrammingError:
+column "ip_address" is of type inet but expression is of type text
 ```
 
 ### Root Cause
-Database schema definitions (auth-server) and Alembic (backend) use different column types for the same field:
+Type mismatch between Prisma (auth server) and Alembic (FastAPI backend):
+- Prisma uses `String` or `@db.Text`
+- Alembic migration uses `postgresql.INET`
 
-| Field | Schema Definition | Alembic | Issue |
-|-------|-------------------|---------|-------|
-| `ip_address` | `String` / `@db.Text` (Prisma) or TEXT (custom) | `postgresql.INET` | ❌ Type mismatch |
-| `user_agent` | `String` / `@db.Text` (Prisma) or TEXT (custom) | `sa.Text` | ✅ Compatible |
-
-PostgreSQL `INET` type is strict and requires valid IP addresses. Text-based field types (Prisma `String`, custom TEXT) accept any text.
+PostgreSQL's `INET` type expects IP addresses in a specific format, but better-auth stores them as plain text.
 
 ### Detection
 ```bash
 # Check Prisma schema
-grep "ip_address" auth-server/prisma/schema.prisma
+grep "ip_address" {{PRISMA_SCHEMA_PATH}}
 
-# Check Alembic migration
-grep "ip_address" backend/src/database/migrations/*.py
+# Check Alembic migrations
+grep "ip_address" {{ALEMBIC_MIGRATIONS_PATH}}/*.py
 ```
 
 ### Solution
 
-**Option A: Change Alembic to Text** (Recommended)
+**Option 1: Change Alembic to Text** (recommended):
 ```python
-# backend/src/database/migrations/001_create_auth_tables.py
-
-# ❌ WRONG (causes mismatch)
-sa.Column('ip_address', postgresql.INET, nullable=True)
-
-# ✅ CORRECT (compatible with Prisma)
-sa.Column('ip_address', sa.Text, nullable=True)
+# In your Alembic migration file
+sa.Column('ip_address', sa.Text, nullable=True)  # ✅ Compatible with Prisma
 ```
 
-**Option B: Change Prisma to validate IPs** (Not recommended)
+**Option 2: Change Prisma to INET** (not recommended):
 ```prisma
-// More complex - requires validation logic
+// In Prisma schema
+ipAddress String? @map("ip_address") @db.Inet  // ⚠️ May cause issues with better-auth
 ```
 
-### Auto-Fix
+### Auto-Fix (Use Script)
 ```bash
-# Run sync-schemas.sh script
+# Run the sync-schemas.sh script with auto-fix
 bash .claude/skills/better-auth-setup/scripts/sync-schemas.sh --auto-fix
 ```
 
+### Manual Fix
+1. Find latest Alembic migration:
+   ```bash
+   ls -t {{ALEMBIC_MIGRATIONS_PATH}}/*.py | head -1
+   ```
+
+2. Edit migration file:
+   ```python
+   # Change from:
+   sa.Column('ip_address', postgresql.INET, nullable=True)
+
+   # To:
+   sa.Column('ip_address', sa.Text, nullable=True)
+   ```
+
+3. Run migration:
+   ```bash
+   cd {{BACKEND_DIR}}
+   alembic upgrade head
+   ```
+
 ### Verification
 ```bash
-# Recreate database with correct types
-cd backend
-alembic downgrade base
-alembic upgrade head
-
-# OR use custom Python migration (for projects using custom migration scripts)
-# python src/database/run_migration.py
-
-# Test creation
-curl -X POST http://localhost:3000/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"Test1234"}'
-# Should succeed without AddrParseError
+# Check database schema
+psql $DATABASE_URL -c "\d user_sessions"
+# ip_address should be type 'text', not 'inet'
 ```
 
 ---
@@ -207,56 +230,79 @@ curl -X POST http://localhost:3000/api/auth/signup \
 ## Issue 4: Cross-Site Cookie Configuration
 
 ### Symptom
-- Frontend on `https://yourdomain.github.io` cannot authenticate with auth server on `https://auth.vercel.app`
-- Cookies not sent with cross-origin requests
-- Session appears valid on auth server but frontend receives 401
+- Cookies not sent in cross-domain requests
+- Browser console: "Cookie blocked due to SameSite policy"
+- Auth works on same domain but fails cross-domain
 
 ### Root Cause
-Cross-site cookies require `SameSite=none` and `Secure=true` in production.
+Incorrect `sameSite` or `secure` cookie attributes for production deployment.
 
-Default configuration (`SameSite=lax`) blocks cookies on cross-origin requests.
+For cross-domain setups (e.g., frontend at `app.example.com`, auth at `auth.example.com`):
+- Cookies must have `sameSite: 'none'`
+- Cookies must have `secure: true` (HTTPS only)
 
 ### Detection
-Check cookie configuration in `auth-server/src/auth/auth.config.ts`:
-```typescript
-// ❌ WRONG (blocks cross-site cookies)
-sameSite: 'lax'  // Only works for same-domain
-
-// ✅ CORRECT (allows cross-site)
-sameSite: env.nodeEnv === 'production' ? 'none' : 'lax'
+Check auth server cookie configuration:
+```bash
+grep -A 10 "defaultCookieAttributes" {{AUTH_SERVER_DIR}}/src/auth/auth.config.ts
 ```
 
 ### Solution
 
-Update `auth-server/src/auth/auth.config.ts`:
+**For Production (Cross-Domain)**:
 ```typescript
 advanced: {
-  useSecureCookies: env.nodeEnv === 'production',
   defaultCookieAttributes: {
     httpOnly: true,
-    secure: env.nodeEnv === 'production',  // HTTPS required
-    sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',  // Critical!
+    secure: true,              // ✅ Required for SameSite=none
+    sameSite: 'none',          // ✅ Required for cross-domain
     path: '/',
   },
 }
 ```
 
-**Important**:
-- `SameSite=none` REQUIRES `Secure=true` (HTTPS only)
-- In development (localhost), use `SameSite=lax`
+**For Development (Same Domain)**:
+```typescript
+advanced: {
+  defaultCookieAttributes: {
+    httpOnly: true,
+    secure: false,             // ✅ Can be false on localhost
+    sameSite: 'lax',          // ✅ Lax is fine for same domain
+    path: '/',
+  },
+}
+```
 
-### Auto-Fix
-Edit auth.config.ts to set correct SameSite policy based on environment.
+**Dynamic (Recommended)**:
+```typescript
+advanced: {
+  defaultCookieAttributes: {
+    httpOnly: true,
+    secure: env.nodeEnv === 'production',
+    sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',
+    path: '/',
+  },
+}
+```
+
+### Auto-Fix (Orchestrator Should Execute)
+```typescript
+// Read auth.config.ts
+const configFile = await read('{{AUTH_SERVER_DIR}}/src/auth/auth.config.ts');
+
+// Check if sameSite is hardcoded
+if (configFile.includes("sameSite: 'lax'") && !configFile.includes("env.nodeEnv")) {
+  // Suggest fix: Use dynamic configuration based on environment
+}
+```
 
 ### Verification
 ```bash
-# Test cross-origin request
-curl -X POST https://your-auth-server.vercel.app/api/auth/signin \
-  -H "Content-Type: application/json" \
-  -H "Origin: https://yourdomain.github.io" \
-  -d '{"email":"test@example.com","password":"Test1234"}' \
-  -v
-# Check Set-Cookie header includes: SameSite=none; Secure
+# Start auth server
+cd {{AUTH_SERVER_DIR}} && npm run dev
+
+# Check Set-Cookie headers
+curl -v http://localhost:3000/api/auth/session | grep "Set-Cookie"
 ```
 
 ---
@@ -264,64 +310,83 @@ curl -X POST https://your-auth-server.vercel.app/api/auth/signin \
 ## Issue 5: Vercel Deployment Config
 
 ### Symptom
-```
-404 - NOT_FOUND
-All routes return 404 on Vercel
-Health endpoint works but auth endpoints don't
-```
+- Auth endpoints work locally
+- 404 errors on all auth endpoints when deployed to Vercel
+- `/api/auth/signup` → 404
 
 ### Root Cause
-Complex `vercel.json` rewrite rules or missing entry point configuration.
+Vercel requires specific routing configuration for dynamic routes.
+
+Common mistakes:
+- Multiple rewrite rules (confusing precedence)
+- Missing catch-all rewrite
+- Incorrect `dest` path in vercel.json
 
 ### Detection
-Check `auth-server/vercel.json` for multiple rewrites:
-```json
-{
-  "rewrites": [
-    { "source": "/api/auth/(.*)", "destination": "/api/auth.js" },
-    { "source": "/health", "destination": "/api/health.js" },
-    { "source": "/(.*)", "destination": "/api/index.js" }
-  ]
-}
+Check if `vercel.json` exists and has correct structure:
+```bash
+cat {{AUTH_SERVER_DIR}}/vercel.json
 ```
-Multiple specific rewrites can cause conflicts.
 
 ### Solution
 
-**Simplify to single catch-all**:
+**Simplified Vercel Configuration** (recommended):
 ```json
 {
   "version": 2,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index.js"
+      "src": "src/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/src/index.ts"
     }
   ]
 }
 ```
 
-**Ensure `api/index.ts` exists**:
-```typescript
-// auth-server/api/index.ts
-import app from '../src/app.js';
+**Alternative (Serverless Function)**:
+```json
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}
+```
 
+With corresponding serverless function:
+```typescript
+// {{AUTH_SERVER_DIR}}/api/index.ts
+import app from '../src/app';
 export default app;
 ```
 
-### Auto-Fix
-Replace vercel.json with simplified configuration.
+### Auto-Fix (Orchestrator Should Execute)
+```typescript
+// Check if vercel.json needs simplification
+const vercelConfig = JSON.parse(await read('{{AUTH_SERVER_DIR}}/vercel.json'));
+
+if (vercelConfig.routes && vercelConfig.routes.length > 1) {
+  // Simplify to single catch-all
+  vercelConfig.routes = [
+    { src: "/(.*)", dest: "/src/index.ts" }
+  ];
+  await write('{{AUTH_SERVER_DIR}}/vercel.json', JSON.stringify(vercelConfig, null, 2));
+}
+```
 
 ### Verification
 ```bash
 # Deploy to Vercel
-vercel deploy
+vercel --prod
 
-# Test endpoints
-curl https://your-deployment.vercel.app/health
-curl -X POST https://your-deployment.vercel.app/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"Test1234"}'
+# Test endpoint
+curl https://your-auth-server.vercel.app/api/auth/session
 ```
 
 ---
@@ -329,35 +394,49 @@ curl -X POST https://your-deployment.vercel.app/api/auth/signup \
 ## Issue 6: Email Verification Flow
 
 ### Symptom
-- `requireEmailVerification: true` but no emails sent
-- Users can't verify their accounts
-- "Email verification required" error
+- Signup completes but no email sent
+- Console shows no errors
+- Email verification links don't arrive
 
 ### Root Cause
-Email service not configured while email verification is enabled.
+Missing or incorrect email service configuration.
+
+better-auth requires email service setup for:
+- Email verification during signup
+- Password reset emails
+- Magic link authentication
 
 ### Detection
-Check `auth-server/src/auth/auth.config.ts`:
-```typescript
-emailAndPassword: {
-  enabled: true,
-  requireEmailVerification: true,  // ⚠️ Requires email service
-}
-```
-
-Check for email configuration:
-```typescript
-// Missing email configuration!
-// No Resend, SendGrid, or SMTP setup
+Check environment variables:
+```bash
+grep -E "(EMAIL_|RESEND_)" {{AUTH_SERVER_DIR}}/.env
 ```
 
 ### Solution
 
-**Option A: Configure Email Service** (Production)
+**Step 1: Choose Email Service**
 
-1. Choose email provider (Resend, SendGrid, AWS SES)
-2. Get API key
-3. Add to better-auth config:
+Popular options:
+- **Resend** (recommended): https://resend.com
+- **SendGrid**: https://sendgrid.com
+- **Mailgun**: https://mailgun.com
+- **AWS SES**: https://aws.amazon.com/ses
+
+**Step 2: Configure Environment Variables**
+
+For Resend:
+```env
+RESEND_API_KEY=re_123456789abcdef
+EMAIL_FROM=noreply@yourdomain.com
+```
+
+For SendGrid:
+```env
+SENDGRID_API_KEY=SG.123456789abcdef
+EMAIL_FROM=noreply@yourdomain.com
+```
+
+**Step 3: Update Auth Configuration**
 
 ```typescript
 import { Resend } from 'resend';
@@ -369,124 +448,155 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
-    sendVerificationEmail: async (email, verificationUrl) => {
+    requireEmailVerification: true,  // ✅ Enable verification
+
+    async sendVerificationEmail({ user, url }) {
       await resend.emails.send({
-        from: 'noreply@yourdomain.com',
-        to: email,
+        from: env.emailFrom,
+        to: user.email,
         subject: 'Verify your email',
-        html: `<a href="${verificationUrl}">Verify Email</a>`,
+        html: `<p>Click <a href="${url}">here</a> to verify your email.</p>`,
       });
     },
   },
 });
 ```
 
-**Option B: Disable Verification** (Testing)
+### Manual Fix Only
+This issue requires manual configuration:
 
-```typescript
-emailAndPassword: {
-  enabled: true,
-  requireEmailVerification: false,  // Disabled for testing
-}
-```
-
-### Manual Steps Required
-1. Choose email provider
-2. Create account and get API key
-3. Add API key to `.env`
-4. Implement `sendVerificationEmail` function
-5. Test email delivery
+1. Sign up for email service
+2. Get API keys
+3. Add to `.env` file
+4. Update auth configuration
+5. Test email sending
 
 ### Verification
 ```bash
-# Test signup
+# Test signup with email verification
 curl -X POST http://localhost:3000/api/auth/signup \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"Test1234"}'
+  -d '{"email":"test@example.com","password":"password123","name":"Test User"}'
 
 # Check email inbox for verification link
-# Or check email service logs
 ```
 
 ---
 
-## Diagnostic Checklist
+## Issue 7: Prisma Validation Error
 
-Run through this checklist when debugging auth issues:
-
+### Symptom
 ```
-□ ESM Configuration
-  □ "type": "module" in package.json?
-  □ .js extensions on all imports?
-  □ tsconfig.json module: "ESNext"?
+Invalid `prisma.verification.create()` invocation:
+Argument `type` is missing.
+```
+or
+```
+Argument `user` is missing.
+```
 
-□ Route Ordering
-  □ Custom routes before better-auth catch-all?
-  □ app.use('/api/auth', authRoutes) comes first?
-  □ app.all('/api/auth/*', ...) comes last?
+### Root Cause
+`better-auth`'s Prisma adapter attempts to create verification records (for password resets or email verification) without providing fields that are defined as required in your Prisma schema (like `type` or `userId`).
 
-□ Database Schema
-  □ Prisma and Alembic use compatible types?
-  □ ip_address field uses Text, not INET?
-  □ Nullable fields match?
+### Detection
+Check your `schema.prisma` for the `Verification` model:
+```bash
+grep -A 10 "model Verification" {{PRISMA_SCHEMA_PATH}}
+```
+If `type` or `userId` are not optional (don't have `?`), this issue will occur.
 
-□ Cookie Configuration
-  □ SameSite=none for production cross-domain?
-  □ Secure=true in production?
-  □ CORS origins include frontend URL?
+### Solution
 
-□ Deployment (Vercel)
-  □ Single catch-all rewrite in vercel.json?
-  □ api/index.ts entry point exists?
-  □ All routes tested after deployment?
+Make `type` and `userId` optional in your Prisma schema.
 
-□ Email Verification
-  □ Email service configured if required?
-  □ Or verification disabled for testing?
-  □ Verification emails being sent?
+**Correct Schema**:
+```prisma
+model Verification {
+  id         String    @id @default(cuid())
+  // ...
+  type       String?   // ✅ Optional
+  userId     String?   // ✅ Optional
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+```
+
+**Incorrect Schema**:
+```prisma
+model Verification {
+  id         String    @id @default(cuid())
+  // ...
+  type       String    // ❌ Required (causes error)
+  userId     String    // ❌ Required (causes error)
+}
+```
+
+### Auto-Fix (Manual)
+1. Open `{{PRISMA_SCHEMA_PATH}}`
+2. Change `type String` to `type String?`
+3. Change `userId String` to `userId String?`
+4. Run `npx prisma db push` and `npx prisma generate`
+
+### Verification
+```bash
+# Retry the action that caused the error (e.g., password reset request)
 ```
 
 ---
 
-## Quick Fixes Summary
+## Summary
+
+| Issue | Severity | Fix Complexity | Auto-Fix |
+|-------|----------|----------------|----------|
+| ESM/CommonJS | 🔴 High | Easy | ✅ Yes |
+| Route Ordering | 🔴 High | Easy | ✅ Yes |
+| Schema Sync | 🟠 Medium | Medium | ✅ Yes |
+| Cross-Site Cookies | 🟠 Medium | Easy | ✅ Yes |
+| Vercel Config | 🟡 Low | Easy | ✅ Yes |
+| Email Verification | 🟡 Low | Medium | ⚠️ Manual |
+| Prisma Validation | 🟠 Medium | Easy | ✅ Yes |
+
+## Troubleshooting Workflow
+
+1. **Check logs** for error messages
+2. **Match error** to one of the 6 common issues above
+3. **Run detection** command for that issue
+4. **Apply solution** (auto-fix if available)
+5. **Verify fix** with verification command
+6. **Repeat** if issue persists
+
+## Prevention
+
+Add these checks to your pre-commit hooks or CI/CD:
 
 ```bash
-# Fix 1: Add ESM support
-echo '{"type":"module",...}' > auth-server/package.json
+# Check ESM configuration
+grep '"type": "module"' {{AUTH_SERVER_DIR}}/package.json
 
-# Fix 2: Reorder routes (manual edit required)
-# Move custom routes before better-auth in app.ts
+# Check route ordering
+# (Custom script to verify route order)
 
-# Fix 3: Sync schemas
-bash .claude/skills/better-auth-setup/scripts/sync-schemas.sh --auto-fix
+# Check schema sync
+bash .claude/skills/better-auth-setup/scripts/sync-schemas.sh
 
-# Fix 4: Fix cookie config (manual edit required)
-# Set sameSite: 'none' in auth.config.ts
-
-# Fix 5: Simplify Vercel config
-echo '{"rewrites":[{"source":"/(.*)", "destination":"/api/index.js"}]}' > vercel.json
-
-# Fix 6: Disable email verification (for testing)
-# Set requireEmailVerification: false in auth.config.ts
+# Check Vercel config
+# (Validate vercel.json structure)
 ```
-
----
 
 ## Getting Help
 
 If you encounter an issue not covered here:
 
-1. Check better-auth documentation: https://docs.better-auth.com
+1. Check better-auth documentation: https://better-auth.com
 2. Search GitHub issues: https://github.com/better-auth/better-auth/issues
-3. Check this skill's examples: `.claude/skills/better-auth-setup/examples/`
-4. Run diagnostics: Use the better-auth-fastapi-agent's validation phase
+3. Join Discord community: https://discord.gg/better-auth
+4. Review diagnostic script output: `bash scripts/sync-schemas.sh`
 
 ## Contributing
 
-Found a new issue? Document it here with:
+Found a new common issue? Please document it following this format:
 - Symptom (error message)
-- Root cause (why it happens)
-- Solution (how to fix)
-- Auto-fix (if possible)
-- Verification (how to test)
+- Root Cause (technical explanation)
+- Detection (how to identify)
+- Solution (step-by-step fix)
+- Auto-Fix (if possible)
+- Verification (how to confirm fix)

@@ -3,7 +3,6 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-from uuid import UUID
 
 from src.models.database import Task
 
@@ -23,13 +22,13 @@ class TaskRepository:
         """
         self.session = session
     
-    async def get_all_by_user(self, user_id: UUID) -> list[Task]:
+    async def get_all_by_user(self, user_id: str) -> list[Task]:
         """
         Get all tasks for a specific user.
-        
+
         Args:
-            user_id: UUID of the task owner
-            
+            user_id: ID of the task owner (string format from better-auth)
+
         Returns:
             List of Task objects
         """
@@ -41,14 +40,14 @@ class TaskRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
-    async def get_by_id(self, task_id: int, user_id: UUID) -> Optional[Task]:
+    async def get_by_id(self, task_id: int, user_id: str) -> Optional[Task]:
         """
         Get a task by ID (with user ownership check).
-        
+
         Args:
             task_id: Task ID
-            user_id: UUID of the task owner
-            
+            user_id: ID of the task owner (string format from better-auth)
+
         Returns:
             Task object if found and owned by user, None otherwise
         """
@@ -56,12 +55,12 @@ class TaskRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
-    async def create(self, user_id: UUID, title: str, description: Optional[str] = None) -> Task:
+    async def create(self, user_id: str, title: str, description: Optional[str] = None) -> Task:
         """
         Create a new task.
 
         Args:
-            user_id: UUID of the task owner
+            user_id: ID of the task owner (string format from better-auth)
             title: Task title
             description: Optional task description
 
@@ -82,7 +81,7 @@ class TaskRepository:
     async def update(
         self,
         task_id: int,
-        user_id: UUID,
+        user_id: str,
         title: Optional[str] = _UNSET,
         description: Optional[str] = _UNSET,
         completed: Optional[bool] = _UNSET
@@ -92,7 +91,7 @@ class TaskRepository:
 
         Args:
             task_id: Task ID
-            user_id: UUID of the task owner
+            user_id: ID of the task owner (string format from better-auth)
             title: Optional new title (use None to keep current, explicit None not supported)
             description: Optional new description (use None to clear, _UNSET to keep current)
             completed: Optional new completion status
@@ -123,13 +122,13 @@ class TaskRepository:
         await self.session.flush()
         return result.scalar_one_or_none()
     
-    async def delete(self, task_id: int, user_id: UUID) -> bool:
+    async def delete(self, task_id: int, user_id: str) -> bool:
         """
         Delete a task.
 
         Args:
             task_id: Task ID
-            user_id: UUID of the task owner
+            user_id: ID of the task owner (string format from better-auth)
 
         Returns:
             True if deleted, False if not found or not owned by user
@@ -139,14 +138,14 @@ class TaskRepository:
         await self.session.flush()
         return result.rowcount > 0
     
-    async def bulk_delete(self, task_ids: list[int], user_id: UUID) -> tuple[list[int], list[int]]:
+    async def bulk_delete(self, task_ids: list[int], user_id: str) -> tuple[list[int], list[int]]:
         """
         Delete multiple tasks.
-        
+
         Args:
             task_ids: List of task IDs to delete
-            user_id: UUID of the task owner
-            
+            user_id: ID of the task owner (string format from better-auth)
+
         Returns:
             Tuple of (deleted_ids, not_found_ids)
         """

@@ -1,0 +1,703 @@
+openapi: 3.1.0
+info:
+  title: Better Auth Server API
+  description: |
+    Authentication API using better-auth library for the FastAPI todo application.
+
+    This API provides:
+    - Email/password authentication with verification
+    - Google OAuth2 authentication
+    - Session management with device tracking
+    - Password reset functionality
+
+    **Base URL**: `https://auth.yourdomain.com/api/auth`
+
+    **Authentication**: All protected endpoints require a Bearer token in the Authorization header.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@yourdomain.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://auth.yourdomain.com/api/auth
+    description: Production auth server
+  - url: http://localhost:3000/api/auth
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints (signup, signin, signout)
+  - name: Session Management
+    description: Session management and validation
+  - name: Account Recovery
+    description: Password reset and email verification
+  - name: OAuth
+    description: OAuth2 provider authentication
+
+paths:
+  /signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Create a new user account with email and password.
+        Sends email verification link if `requireEmailVerification` is enabled.
+
+        **FR-001**: Email verification required
+        **FR-002**: Password hashing with bcrypt
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+            examples:
+              basic:
+                value:
+                  email: user@example.com
+                  password: SecurePass123
+                  name: John Doe
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            Set-Cookie:
+              description: Session token stored in httpOnly cookie
+              schema:
+                type: string
+                example: better-auth.session_token=abc123...; HttpOnly; Secure; SameSite=None
+        '400':
+          description: Invalid request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  value:
+                    error: INVALID_EMAIL
+                    message: Email address is invalid
+                weakPassword:
+                  value:
+                    error: WEAK_PASSWORD
+                    message: Password must be at least 8 characters
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate:
+                  value:
+                    error: USER_EXISTS
+                    message: An account with this email already exists
+
+  /signin:
+    post:
+      tags:
+        - Authentication
+      summary: Sign in with email and password
+      description: |
+        Authenticate user with email and password credentials.
+        Returns session token in httpOnly cookie.
+
+        **FR-002**: Email/password authentication
+        **FR-006**: Session creation with expiration
+      operationId: signin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigninRequest'
+            examples:
+              basic:
+                value:
+                  email: user@example.com
+                  password: SecurePass123
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+          headers:
+            Set-Cookie:
+              description: Session token stored in httpOnly cookie
+              schema:
+                type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCredentials:
+                  value:
+                    error: INVALID_CREDENTIALS
+                    message: Email or password is incorrect
+        '403':
+          description: Email not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notVerified:
+                  value:
+                    error: EMAIL_NOT_VERIFIED
+                    message: Please verify your email address before signing in
+
+  /signout:
+    post:
+      tags:
+        - Authentication
+      summary: Sign out current session
+      description: |
+        Invalidate the current session token.
+        Removes session from database and clears cookie.
+
+        **FR-008**: Session termination
+      operationId: signout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sign out successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+          headers:
+            Set-Cookie:
+              description: Cookie cleared
+              schema:
+                type: string
+                example: better-auth.session_token=; Max-Age=0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me:
+    get:
+      tags:
+        - Session Management
+      summary: Get current user profile
+      description: |
+        Retrieve authenticated user's profile information.
+
+        **FR-007**: User profile retrieval
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions:
+    get:
+      tags:
+        - Session Management
+      summary: List all active sessions
+      description: |
+        Retrieve all active sessions for the authenticated user.
+        Includes device and location information.
+
+        **FR-006a**: Multiple concurrent sessions
+        **FR-006b**: Session listing
+      operationId: listSessions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sessions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}:
+    delete:
+      tags:
+        - Session Management
+      summary: Revoke a specific session
+      description: |
+        Invalidate a specific session by ID.
+        Current session cannot be revoked via this endpoint.
+
+        **FR-006b**: Individual session revocation
+      operationId: revokeSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Session ID to revoke
+          schema:
+            type: string
+            example: clh1234567890
+      responses:
+        '200':
+          description: Session revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Cannot revoke current session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /verify-email:
+    post:
+      tags:
+        - Account Recovery
+      summary: Verify email address
+      description: |
+        Verify user's email address using token sent via email.
+
+        **FR-001**: Email verification with 15-minute expiration
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  description: Email verification token (64-char hex)
+                  example: a1b2c3d4e5f6...
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                expired:
+                  value:
+                    error: TOKEN_EXPIRED
+                    message: Verification token has expired (15 minutes)
+                invalid:
+                  value:
+                    error: INVALID_TOKEN
+                    message: Verification token is invalid
+
+  /resend-verification:
+    post:
+      tags:
+        - Account Recovery
+      summary: Resend verification email
+      description: |
+        Send a new email verification link to the user.
+        Invalidates previous verification token.
+      operationId: resendVerification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /forgot-password:
+    post:
+      tags:
+        - Account Recovery
+      summary: Request password reset
+      description: |
+        Send password reset link to user's email.
+
+        **FR-003**: Password reset with 1-hour token expiration
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: Reset email sent (always returns 200 to prevent email enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /reset-password:
+    post:
+      tags:
+        - Account Recovery
+      summary: Reset password with token
+      description: |
+        Reset user's password using token from reset email.
+
+        **FR-003**: Password reset confirmation
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                  description: Password reset token (64-char hex)
+                  example: a1b2c3d4e5f6...
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  maxLength: 128
+                  example: NewSecurePass456
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid or expired token, or weak password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /oauth/google:
+    get:
+      tags:
+        - OAuth
+      summary: Initiate Google OAuth flow
+      description: |
+        Redirect user to Google OAuth consent screen.
+
+        **FR-009**: Google OAuth2 authentication
+      operationId: googleOAuthInitiate
+      parameters:
+        - name: redirect_uri
+          in: query
+          description: Frontend redirect URL after authentication
+          required: false
+          schema:
+            type: string
+            example: https://yourdomain.com/auth/callback
+      responses:
+        '302':
+          description: Redirect to Google OAuth
+          headers:
+            Location:
+              schema:
+                type: string
+                example: https://accounts.google.com/o/oauth2/v2/auth?client_id=...
+
+  /oauth/google/callback:
+    get:
+      tags:
+        - OAuth
+      summary: Google OAuth callback
+      description: |
+        Handle OAuth callback from Google.
+        Creates or links user account and creates session.
+
+        **FR-009**: OAuth account creation and linking
+      operationId: googleOAuthCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          description: OAuth authorization code from Google
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          description: CSRF protection state parameter
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to frontend with session
+          headers:
+            Location:
+              schema:
+                type: string
+                example: https://yourdomain.com/dashboard
+            Set-Cookie:
+              schema:
+                type: string
+        '400':
+          description: OAuth error (invalid code, state mismatch, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Session token from signin/signup
+
+  schemas:
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          example: SecurePass123
+        name:
+          type: string
+          maxLength: 100
+          example: John Doe
+
+    SigninRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: SecurePass123
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        session:
+          $ref: '#/components/schemas/SessionInfo'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique user identifier (cuid)
+          example: clh1234567890abcdef
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        emailVerified:
+          type: boolean
+          description: Whether email has been verified
+          example: true
+        name:
+          type: string
+          nullable: true
+          example: John Doe
+        image:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatar.jpg
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-01-01T12:00:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-01-10T15:30:00Z'
+
+    SessionInfo:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Session token (also in httpOnly cookie)
+          example: a1b2c3d4e5f6...
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expiration timestamp
+          example: '2025-01-17T12:00:00Z'
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          example: clh9876543210
+        userId:
+          type: string
+          example: clh1234567890
+        token:
+          type: string
+          description: Session token (truncated for security)
+          example: a1b2c3d4...
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2025-01-17T12:00:00Z'
+        ipAddress:
+          type: string
+          nullable: true
+          example: 192.168.1.100
+        userAgent:
+          type: string
+          nullable: true
+          example: Mozilla/5.0 (Windows NT 10.0; Win64; x64)...
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-01-10T12:00:00Z'
+        isCurrent:
+          type: boolean
+          description: Whether this is the current session
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code (snake_case)
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          description: Human-readable error message
+          example: Email or password is incorrect
+        details:
+          type: object
+          description: Additional error context
+          nullable: true
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or expired session token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missingToken:
+              value:
+                error: MISSING_TOKEN
+                message: Authorization header is required
+            invalidToken:
+              value:
+                error: INVALID_TOKEN
+                message: Session token is invalid or expired

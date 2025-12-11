@@ -3,8 +3,8 @@
 import pytest
 from httpx import AsyncClient
 from datetime import datetime, timedelta
-from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
+import secrets
 
 from src.models.database import UserSession, Task
 
@@ -21,27 +21,18 @@ class TestSessionAuthentication:
     ):
         """Test that a valid session token allows access to endpoints."""
         # Create a valid session in the database
-        import hashlib
-        import hmac
-        from src.config import settings
-        
         token = "valid_test_token_12345"
-        token_hash = hmac.new(
-            settings.SESSION_HASH_SECRET.encode(),
-            token.encode(),
-            hashlib.sha256
-        ).hexdigest()
-        
+
         user_session = UserSession(
-            id=uuid4(),
+            id=f"test_{secrets.token_hex(8)}",
             user_id=sample_user_id,
-            token_hash=token_hash,
+            token=token,  # Store plain token (as better-auth would)
             expires_at=datetime.utcnow() + timedelta(hours=1),
             revoked=False
         )
         db_session.add(user_session)
         await db_session.commit()
-        
+
         # Create a task for this user
         task = Task(
             user_id=sample_user_id,
@@ -51,11 +42,11 @@ class TestSessionAuthentication:
         )
         db_session.add(task)
         await db_session.commit()
-        
+
         # Make authenticated request with Bearer token
         headers = {"Authorization": f"Bearer {token}"}
         response = await test_client.get("/tasks/", headers=headers)
-        
+
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -98,22 +89,13 @@ class TestSessionAuthentication:
         sample_user_id
     ):
         """Test that expired session token returns 401."""
-        import hashlib
-        import hmac
-        from src.config import settings
-
         token = "expired_test_token_12345"
-        token_hash = hmac.new(
-            settings.SESSION_HASH_SECRET.encode(),
-            token.encode(),
-            hashlib.sha256
-        ).hexdigest()
 
         # Create session with past expiration date
         expired_session = UserSession(
-            id=uuid4(),
+            id=f"test_{secrets.token_hex(8)}",
             user_id=sample_user_id,
-            token_hash=token_hash,
+            token=token,
             expires_at=datetime.utcnow() - timedelta(hours=1),  # Expired 1 hour ago
             revoked=False
         )
@@ -135,22 +117,13 @@ class TestSessionAuthentication:
         sample_user_id
     ):
         """Test that revoked session token returns 401."""
-        import hashlib
-        import hmac
-        from src.config import settings
-
         token = "revoked_test_token_12345"
-        token_hash = hmac.new(
-            settings.SESSION_HASH_SECRET.encode(),
-            token.encode(),
-            hashlib.sha256
-        ).hexdigest()
 
         # Create revoked session
         revoked_session = UserSession(
-            id=uuid4(),
+            id=f"test_{secrets.token_hex(8)}",
             user_id=sample_user_id,
-            token_hash=token_hash,
+            token=token,
             expires_at=datetime.utcnow() + timedelta(hours=1),  # Valid expiration
             revoked=True  # But revoked
         )
@@ -170,26 +143,17 @@ class TestSessionAuthentication:
         db_session: AsyncSession
     ):
         """Test that user cannot access tasks belonging to another user."""
-        import hashlib
-        import hmac
-        from src.config import settings
-
         # Create two users
-        user1_id = uuid4()
-        user2_id = uuid4()
+        user1_id = f"test_{secrets.token_hex(8)}"
+        user2_id = f"test_{secrets.token_hex(8)}"
 
         # Create session for user1
         token = "user1_token_12345"
-        token_hash = hmac.new(
-            settings.SESSION_HASH_SECRET.encode(),
-            token.encode(),
-            hashlib.sha256
-        ).hexdigest()
 
         user1_session = UserSession(
-            id=uuid4(),
+            id=f"test_{secrets.token_hex(8)}",
             user_id=user1_id,
-            token_hash=token_hash,
+            token=token,
             expires_at=datetime.utcnow() + timedelta(hours=1),
             revoked=False
         )

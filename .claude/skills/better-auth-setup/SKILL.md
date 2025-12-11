@@ -14,7 +14,7 @@ This skill provides comprehensive knowledge for implementing better-auth authent
 ```
 ┌─────────────┐       ┌──────────────┐       ┌─────────────┐
 │   Frontend  │──────▶│ Auth Server  │──────▶│  PostgreSQL │
-│  (React)    │       │  (Node.js)   │       │   (Neon)    │
+│  (React)    │       │  (Node.js)   │       │ (Neon/Other)│
 └─────────────┘       └──────────────┘       └─────────────┘
        │                                              ▲
        │              ┌──────────────┐               │
@@ -26,13 +26,15 @@ This skill provides comprehensive knowledge for implementing better-auth authent
 **Components:**
 - **Auth Server**: Node.js + Express + better-auth (handles authentication)
 - **API Server**: FastAPI (validates JWT tokens, manages business logic)
-- **Database**: Shared PostgreSQL (Neon/Supabase/Railway)
+- **Database**: Shared PostgreSQL (Neon/Supabase/Railway/Local)
 
 ## Core Patterns
 
 ### Pattern 1: Auth Server Configuration
 
-**Location**: `auth-server/src/auth/auth.config.ts`
+**Template**: `templates/auth-server/src/auth/auth.config.ts.template`
+
+**Purpose**: Configure better-auth with database adapter, session settings, and authentication methods.
 
 ```typescript
 import { betterAuth } from 'better-auth';
@@ -63,9 +65,17 @@ export const auth = betterAuth({
 });
 ```
 
+**Key Placeholders**:
+- `{{DATABASE_PROVIDER}}` - postgresql, mysql, sqlite
+- `{{EMAIL_VERIFICATION_REQUIRED}}` - true or false
+- `{{SESSION_EXPIRATION}}` - In seconds (e.g., 604800 = 7 days)
+- `{{CORS_ORIGINS}}` - Array of allowed origins
+
 ### Pattern 2: FastAPI JWT Validation
 
-**Location**: `backend/src/auth/dependencies.py`
+**Template**: `templates/fastapi/{{BACKEND_SRC_DIR}}/auth/dependencies.py.template`
+
+**Purpose**: Validate session tokens from auth server in FastAPI endpoints.
 
 **Database Lookup Method** (recommended for real-time revocation):
 ```python
@@ -93,9 +103,21 @@ async def get_current_user(
             }
 ```
 
+**Key Placeholders**:
+- `{{VALIDATION_METHOD}}` - "database" or "jwt"
+- `{{AUTH_SERVER_URL}}` - URL of auth server
+- `{{BACKEND_SRC_DIR}}` - e.g., "src", "app", "api"
+- `{{DATABASE_IMPORT_PATH}}` - Adjusted to project structure
+
+**Conditional Blocks**:
+- `{{#VALIDATION_METHOD_DATABASE}}...{{/VALIDATION_METHOD_DATABASE}}`
+- `{{#VALIDATION_METHOD_JWT}}...{{/VALIDATION_METHOD_JWT}}`
+
 ### Pattern 3: Route Ordering (Critical!)
 
-**Location**: `auth-server/src/app.ts`
+**Template**: `templates/auth-server/src/app.ts.template`
+
+**Purpose**: Ensure custom routes are registered BEFORE better-auth catch-all handler.
 
 ```typescript
 // IMPORTANT: Custom routes MUST come BEFORE better-auth catch-all
@@ -108,6 +130,8 @@ app.all('/api/auth/*', toNodeHandler(auth)); // better-auth AFTER
 app.all('/api/auth/*', toNodeHandler(auth)); // Catch-all captures everything
 app.use('/api/auth', authRoutes);           // Never reached!
 ```
+
+**Why This Matters**: Express processes middleware in order. If better-auth's catch-all (`/api/auth/*`) comes first, it captures ALL routes and custom endpoints never execute.
 
 ### Pattern 4: Database Schema Sync
 
@@ -123,73 +147,129 @@ app.use('/api/auth', authRoutes);           // Never reached!
 
 ## Templates
 
-All templates are in `templates/` directory with `{{PLACEHOLDER}}` syntax.
+All templates use `{{PLACEHOLDER}}` syntax and are located in `templates/` directory.
 
-### Available Templates
+### Template Structure
 
-**Auth Server** (15 files):
-- `templates/auth-server/src/auth/auth.config.ts.template` - Core configuration
-- `templates/auth-server/src/app.ts.template` - Express app with correct route ordering
-- `templates/auth-server/src/auth/routes.ts.template` - Custom routes (/me, /verify-token)
-- `templates/auth-server/prisma/schema.prisma.template` - Database schema
-- `templates/auth-server/package.json.template` - With "type": "module"
-- `templates/auth-server/tsconfig.json.template` - ESM configuration
-- `templates/auth-server/vercel.json.template` - Simplified rewrites
-- And 8 more...
+Templates are organized by component:
 
-**FastAPI Integration** (8 files):
-- `templates/fastapi/src/auth/dependencies.py.template` - JWT validation
-- `templates/fastapi/src/auth/models.py.template` - Pydantic models
-- `templates/fastapi/src/database/migrations/001_create_auth_tables.py.template` - Alembic migration
-- `templates/fastapi/requirements.txt.template` - Python dependencies
-- And 4 more...
+```
+templates/
+├── auth-server/          # Node.js auth server files
+│   ├── src/
+│   │   ├── auth/         # Authentication config
+│   │   ├── config/       # Environment config
+│   │   └── database/     # Database client
+│   ├── prisma/           # Prisma schema
+│   ├── package.json.template
+│   ├── tsconfig.json.template
+│   └── vercel.json.template
+├── fastapi/              # FastAPI integration files
+│   ├── {{BACKEND_SRC_DIR}}/
+│   │   ├── auth/         # Auth dependencies
+│   │   └── database/     # Migration templates
+│   └── requirements.txt.template
+├── docker/               # Docker compose files
+└── docs/                 # Documentation templates
+```
+
+### Template Categories
+
+**Auth Server** (~15 files):
+- Core configuration (auth.config.ts, env.ts)
+- Express app setup (app.ts, routes.ts)
+- Database (prisma schema, client)
+- Deployment (vercel.json, package.json)
+- Environment (.env.example)
+
+**FastAPI Integration** (~8 files):
+- Auth middleware (dependencies.py)
+- Models (Pydantic schemas)
+- Database migrations (Alembic templates)
+- Requirements (python dependencies)
 
 **Docker** (3 files):
-- `templates/docker/docker-compose.yml.template`
-- `templates/docker/docker-compose.dev.yml.template`
-- `templates/docker/nginx.conf.template`
+- docker-compose.yml (production)
+- docker-compose.dev.yml (development)
+- nginx.conf (reverse proxy)
 
 **Documentation** (4 files):
-- `templates/docs/README.md.template`
-- `templates/docs/API_DOCUMENTATION.md.template`
-- `templates/docs/TROUBLESHOOTING.md.template`
-- `templates/docs/SETUP.md.template`
+- README.md (overview and quick start)
+- API_DOCUMENTATION.md (endpoint reference)
+- TROUBLESHOOTING.md (common issues)
+- SETUP.md (development guide)
 
-### Template Usage
+### Key Placeholders
 
+**Path Placeholders** (adapt to project structure):
+- `{{AUTH_SERVER_DIR}}` - Auth server directory (e.g., "auth-server", "auth", "services/auth")
+- `{{BACKEND_DIR}}` - Backend directory (e.g., "backend", "api", "app")
+- `{{BACKEND_SRC_DIR}}` - Backend source dir (e.g., "src", "app", "api")
+- `{{PRISMA_SCHEMA_PATH}}` - Path to Prisma schema
+- `{{ALEMBIC_MIGRATIONS_PATH}}` - Path to Alembic migrations
+
+**Configuration Placeholders**:
+- `{{DATABASE_PROVIDER}}` - postgresql, mysql, sqlite
+- `{{EMAIL_VERIFICATION_REQUIRED}}` - true or false
+- `{{SESSION_EXPIRATION}}` - In seconds
+- `{{SESSION_EXPIRATION_DAYS}}` - In days (for documentation)
+- `{{CORS_ORIGINS}}` - JSON array of allowed origins
+- `{{DEPLOYMENT_TARGET}}` - vercel, railway, docker
+
+**Feature Toggles** (conditional blocks):
+- `{{#OAUTH_ENABLED}}...{{/OAUTH_ENABLED}}`
+- `{{#GOOGLE_OAUTH}}...{{/GOOGLE_OAUTH}}`
+- `{{#GITHUB_OAUTH}}...{{/GITHUB_OAUTH}}`
+- `{{#MAGIC_LINK_ENABLED}}...{{/MAGIC_LINK_ENABLED}}`
+- `{{#TWO_FACTOR_ENABLED}}...{{/TWO_FACTOR_ENABLED}}`
+- `{{#VALIDATION_METHOD_DATABASE}}...{{/VALIDATION_METHOD_DATABASE}}`
+- `{{#VALIDATION_METHOD_JWT}}...{{/VALIDATION_METHOD_JWT}}`
+
+### Template Usage Pattern
+
+**Step 1: Discover Project Structure**
+```bash
+# Orchestrator discovers these paths dynamically
+BACKEND_DIR=$(find . -maxdepth 1 -type d -name "backend" -o -name "api" -o -name "app")
+AUTH_SERVER_DIR="auth-server"  # Or ask user
+```
+
+**Step 2: Read Template**
 ```typescript
-// Read template
-const template = await readFile('templates/auth-server/src/auth/auth.config.ts.template');
+const template = await read('templates/fastapi/{{BACKEND_SRC_DIR}}/auth/dependencies.py.template');
+```
 
-// Replace placeholders
-const config = template
-  .replace('{{DATABASE_PROVIDER}}', 'postgresql')
-  .replace('{{EMAIL_VERIFICATION_REQUIRED}}', 'false')
-  .replace('{{SESSION_EXPIRATION}}', '604800') // 7 days in seconds
-  .replace('{{CORS_ORIGINS}}', JSON.stringify(['http://localhost:3000']));
+**Step 3: Replace Placeholders**
+```typescript
+const generated = template
+  .replace(/\{\{DATABASE_PROVIDER\}\}/g, 'postgresql')
+  .replace(/\{\{BACKEND_SRC_DIR\}\}/g, 'src')
+  .replace(/\{\{VALIDATION_METHOD\}\}/g, 'database')
+  // Handle conditional blocks
+  .replace(/\{\{#VALIDATION_METHOD_DATABASE\}\}[\s\S]*?\{\{\/VALIDATION_METHOD_DATABASE\}\}/g, (match) => {
+    // Include content if validation method is database
+    return match.replace(/\{\{#VALIDATION_METHOD_DATABASE\}\}|\{\{\/VALIDATION_METHOD_DATABASE\}\}/g, '');
+  });
+```
 
-// Write to destination
-await writeFile('auth-server/src/auth/auth.config.ts', config);
+**Step 4: Write to Destination**
+```typescript
+await write(`${BACKEND_DIR}/src/auth/dependencies.py`, generated);
 ```
 
 ## Common Issues & Solutions
 
-See `diagnostics/` directory for detailed guides on each issue.
+See `diagnostics/COMMON_ISSUES.md` for detailed guides on each issue.
 
 ### Issue 1: ESM/CommonJS Error
 
 **Error**: `ERR_REQUIRE_ESM when importing better-auth/node`
 
-**Cause**: Missing ESM configuration
+**Cause**: Missing ESM configuration in Node.js project.
 
-**Solution**: Add to `package.json`:
-```json
-{
-  "type": "module"
-}
-```
+**Solution**: Add `"type": "module"` to package.json in auth server directory.
 
-**Details**: See `diagnostics/ESM_COMPATIBILITY.md`
+**Details**: See `diagnostics/COMMON_ISSUES.md#issue-1`
 
 ---
 
@@ -197,11 +277,11 @@ See `diagnostics/` directory for detailed guides on each issue.
 
 **Error**: `POST /api/auth/signup → 404 Not Found`
 
-**Cause**: Custom routes placed AFTER better-auth catch-all
+**Cause**: Route ordering - better-auth catch-all registered before custom routes.
 
-**Solution**: Reorder routes (custom first, then better-auth)
+**Solution**: Ensure custom routes registered BEFORE `app.all('/api/auth/*', ...)`.
 
-**Details**: See `diagnostics/ROUTE_ORDERING.md`
+**Details**: See `diagnostics/COMMON_ISSUES.md#issue-2`
 
 ---
 
@@ -209,248 +289,115 @@ See `diagnostics/` directory for detailed guides on each issue.
 
 **Error**: `column "ip_address" is of type inet but expression is of type text`
 
-**Cause**: Prisma uses `String` but Alembic uses `INET`
+**Cause**: Prisma uses `String/Text` but Alembic uses `INET` type.
 
-**Solution**: Change Alembic migration to `sa.Text`:
-```python
-sa.Column('ip_address', sa.Text, nullable=True)
-```
+**Solution**: Run `scripts/sync-schemas.sh --auto-fix` to change INET to Text.
 
-**Details**: See `diagnostics/SCHEMA_SYNC.md`
+**Details**: See `diagnostics/COMMON_ISSUES.md#issue-3`
 
 ---
 
-### Issue 4: Cross-Site Cookie Issues
+### Issue 4: Cross-Site Cookies Not Working
 
-**Error**: Cookies not sent from GitHub Pages to Vercel auth server
+**Error**: Cookies not sent in cross-domain requests.
 
-**Cause**: Missing `SameSite=none` for cross-domain requests
+**Cause**: Incorrect `sameSite` or `secure` cookie attributes.
 
-**Solution**: Update auth.config.ts:
-```typescript
-sameSite: env.nodeEnv === 'production' ? 'none' : 'lax'
-```
+**Solution**: Set `sameSite: 'none'` and `secure: true` in production.
 
-**Details**: See `diagnostics/COOKIE_CONFIGURATION.md`
+**Details**: See `diagnostics/COMMON_ISSUES.md#issue-4`
 
 ---
 
 ### Issue 5: Vercel 404 Errors
 
-**Error**: Routes return 404 on Vercel deployment
+**Error**: 404 on all auth endpoints when deployed to Vercel.
 
-**Cause**: Complex rewrite rules
+**Cause**: Complex rewrite rules or incorrect Vercel configuration.
 
-**Solution**: Simplify `vercel.json`:
-```json
-{
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }]
-}
-```
+**Solution**: Use simplified single catch-all rewrite in vercel.json.
 
-**Details**: See `diagnostics/VERCEL_DEPLOYMENT.md`
+**Details**: See `diagnostics/COMMON_ISSUES.md#issue-5`
 
 ---
 
 ### Issue 6: Email Verification Not Working
 
-**Error**: Email verification required but no emails sent
+**Error**: Emails not sent during signup.
 
-**Cause**: Email service not configured
+**Cause**: Missing email service configuration (RESEND_API_KEY, EMAIL_FROM).
 
-**Solution**: Either configure email service or disable verification:
-```typescript
-requireEmailVerification: false
-```
+**Solution**: Configure email service environment variables.
 
-**Details**: See `diagnostics/EMAIL_VERIFICATION.md`
-
-## Configuration Options
-
-### Database Providers
-
-- **Neon Serverless** (Recommended)
-  - Connection pooling built-in
-  - Auto-scaling
-  - Generous free tier
-
-- **Supabase**
-  - Built-in auth UI
-  - Real-time subscriptions
-  - Storage included
-
-- **Railway**
-  - Simple deployment
-  - Auto-scaling
-  - One-click PostgreSQL
-
-- **Local PostgreSQL**
-  - Development only
-  - Use Docker Compose
-
-### Auth Methods
-
-- **Email/Password** (Standard)
-  - Best for most applications
-  - Optional email verification
-
-- **Google OAuth**
-  - Quick signup
-  - Requires Google Cloud Console setup
-
-- **GitHub OAuth**
-  - Developer-friendly
-  - Requires GitHub OAuth App
-
-- **Magic Links**
-  - Passwordless
-  - Email service required
-
-### Session Validation
-
-- **Database Lookup** (Recommended)
-  - ✅ Real-time revocation
-  - ✅ Audit trail
-  - ❌ ~50ms added latency
-  - ❌ Database load
-
-- **JWT Validation**
-  - ✅ Lower latency
-  - ✅ Stateless
-  - ❌ No real-time revocation
-  - ❌ Tokens valid until expiry
-
-### Deployment Targets
-
-- **Vercel (Auth Server)**
-  - Serverless
-  - Automatic scaling
-  - Edge network
-
-- **Render (API Server)**
-  - Python-friendly
-  - Auto-deploy from git
-  - Free tier available
-
-- **Railway (Both)**
-  - Full-stack platform
-  - Simple configuration
-  - One dashboard
-
-- **Docker (Both)**
-  - Self-hosted
-  - Full control
-  - Docker Compose included
-
-## Best Practices
-
-### 1. Security
-
-- ✅ Use environment variables for secrets
-- ✅ Enable HTTPS in production (`secure: true`)
-- ✅ Set appropriate CORS origins
-- ✅ Enable rate limiting (default: 10 requests/minute)
-- ✅ Use strong password requirements (min 8 characters)
-
-### 2. Session Management
-
-- ✅ 7-day expiration (balance security/convenience)
-- ✅ Daily refresh (`updateAge: 24 hours`)
-- ✅ 5-minute cookie cache (reduce database load)
-- ✅ Database session validation (real-time revocation)
-
-### 3. Database
-
-- ✅ Use connection pooling (Neon, Supabase)
-- ✅ Sync Prisma and Alembic schemas
-- ✅ Add indexes on `email`, `token`, `user_id`
-- ✅ Use transactions for user creation
-
-### 4. Error Handling
-
-- ✅ Return appropriate status codes (401, 403, 400)
-- ✅ Don't leak sensitive information in errors
-- ✅ Log errors with correlation IDs
-- ✅ Provide clear error messages to users
-
-### 5. Testing
-
-- ✅ Test signup/signin flows
-- ✅ Test session expiration
-- ✅ Test CORS from actual frontend URLs
-- ✅ Test OAuth flows in production
-
-## Advanced Topics
-
-For detailed information, see:
-
-- **Authentication Flow**: `patterns/AUTHENTICATION_FLOW.md`
-- **Session Management**: `patterns/SESSION_MANAGEMENT.md`
-- **Database Schema Sync**: `patterns/DATABASE_SYNC.md`
-- **OAuth Integration**: `patterns/OAUTH_INTEGRATION.md`
-- **Deployment Strategies**: `patterns/DEPLOYMENT.md`
+**Details**: See `diagnostics/COMMON_ISSUES.md#issue-6`
 
 ## Scripts
 
-Helper scripts in `scripts/` directory:
+### sync-schemas.sh
 
-- **`sync-schemas.sh`**: Synchronize Prisma and Alembic schemas
-- **`setup-dev.sh`**: Initial development environment setup
-- **`health-check.sh`**: Validate deployment health
+**Purpose**: Detect and fix type mismatches between Prisma and Alembic schemas.
 
-## Examples
-
-Complete working examples in `examples/` directory:
-
-- **`neon-vercel-example/`**: Neon + Vercel + Render deployment
-- **`supabase-railway-example/`**: Supabase + Railway deployment
-- **`local-docker-example/`**: Local development with Docker Compose
-
-## Usage with Agents
-
-This skill is designed to be used with the `better-auth-fastapi-agent`:
-
-```
-Agent: I need to implement better-auth authentication
-Skill: [Provides templates, patterns, and solutions]
-Agent: [Uses skill knowledge to generate code and solve issues]
-```
-
-The agent handles:
-- Interactive configuration
-- Code generation from templates
-- Running diagnostics
-- Creating PHRs and ADRs
-- Workflow orchestration
-
-The skill provides:
-- Reusable knowledge base
-- Production-ready templates
-- Common issue solutions
-- Best practices and patterns
-
-## Portability
-
-This skill is **project-independent** and can be used in any FastAPI project:
-
-### Copy to New Project
+**Usage**:
 ```bash
-cp -r .claude/skills/better-auth-setup /path/to/new-project/.claude/skills/
+# Detect only
+bash scripts/sync-schemas.sh
+
+# Detect and auto-fix
+bash scripts/sync-schemas.sh --auto-fix
 ```
 
-### Install Globally (System-Wide)
-```bash
-cp -r .claude/skills/better-auth-setup ~/.claude/skills/
-```
+**Environment Variables**:
+- `PRISMA_SCHEMA` - Path to Prisma schema (default: auto-discovered)
+- `ALEMBIC_MIGRATIONS` - Path to Alembic migrations dir (default: auto-discovered)
 
-### Share via Git
-```bash
-git clone https://github.com/yourusername/better-auth-setup-skill \
-  .claude/skills/better-auth-setup
-```
+**What It Checks**:
+1. `ip_address` type compatibility (INET vs Text)
+2. Integer size mismatches (Int vs BigInteger)
+3. Nullable field consistency
 
-Once installed, any agent (or Claude directly) can reference this skill's knowledge!
+## Best Practices
 
-## License
+### 1. Always Use Placeholders
+- ❌ DON'T: Hardcode paths like `backend/src/auth/dependencies.py`
+- ✅ DO: Use `{{BACKEND_DIR}}/{{BACKEND_SRC_DIR}}/auth/dependencies.py`
 
-This skill is based on the working implementation of better-auth + FastAPI authentication in this project and follows MIT license principles for maximum reusability.
+### 2. Discover Project Structure
+- ❌ DON'T: Assume directory names
+- ✅ DO: Discover with Glob/Bash and ask user if ambiguous
+
+### 3. Adapt Imports
+- ❌ DON'T: Hardcode `from src.database.postgres import ...`
+- ✅ DO: Use `from {{BACKEND_SRC_DIR}}.database.{{DATABASE_MODULE}} import ...`
+
+### 4. Use Conditional Blocks
+- ❌ DON'T: Generate unused code
+- ✅ DO: Use `{{#FEATURE_ENABLED}}...{{/FEATURE_ENABLED}}`
+
+### 5. Document Assumptions
+- ❌ DON'T: Leave configuration choices unexplained
+- ✅ DO: Add comments explaining tradeoffs and decisions
+
+## Integration with Orchestrator
+
+This skill is designed to work with the `better-auth-fastapi-orchestrator` agent:
+
+1. **Orchestrator discovers** project structure
+2. **Orchestrator gathers** user configuration
+3. **Skill provides** templates and patterns
+4. **Orchestrator adapts** templates to project
+5. **Skill provides** diagnostics and fixes
+
+**Division of Responsibilities**:
+- **Orchestrator**: Workflow, discovery, adaptation, user interaction
+- **Skill**: Domain knowledge, templates, patterns, diagnostics
+
+## Summary
+
+This skill provides:
+- ✅ **Reusable templates** with placeholder syntax
+- ✅ **Adaptable patterns** that work with any project structure
+- ✅ **Diagnostic tools** for common integration issues
+- ✅ **Best practices** for better-auth + FastAPI integration
+- ✅ **Production-ready** configurations and security settings
+
+Use this skill through the orchestrator agent for systematic, reliable, and well-documented authentication implementation.

@@ -5,7 +5,6 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from typing import AsyncGenerator
-from uuid import uuid4
 
 from src.api.main import app
 from src.models.database import Base
@@ -14,6 +13,13 @@ from src.database.connection import get_db
 
 # Test database URL (use SQLite for testing)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+def generate_test_user_id() -> str:
+    """Generate a test user ID that mimics better-auth cuid format."""
+    import secrets
+    # Generate a cuid-like string for testing purposes
+    return f"test_{secrets.token_hex(8)}"
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -82,8 +88,8 @@ async def test_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, N
 
 @pytest.fixture
 def sample_user_id():
-    """Generate a sample user UUID for testing."""
-    return uuid4()
+    """Generate a sample user ID string for testing (mimics better-auth cuid format)."""
+    return generate_test_user_id()
 
 
 @pytest.fixture

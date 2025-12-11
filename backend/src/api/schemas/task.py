@@ -3,7 +3,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
 
 class TaskCreate(BaseModel):
@@ -95,9 +94,9 @@ class TaskUpdate(BaseModel):
 
 class TaskResponse(BaseModel):
     """Schema for task response."""
-    
+
     id: int
-    user_id: UUID
+    user_id: str
     title: str
     description: Optional[str]
     completed: bool
@@ -109,7 +108,7 @@ class TaskResponse(BaseModel):
         "json_schema_extra": {
             "example": {
                 "id": 1,
-                "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                "user_id": "clx123abc456def789ghi012",
                 "title": "Buy groceries",
                 "description": "Milk, eggs, bread",
                 "completed": False,

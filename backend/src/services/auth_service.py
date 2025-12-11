@@ -3,7 +3,6 @@
 import hashlib
 import hmac
 from datetime import datetime, timezone
-from uuid import UUID
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +12,12 @@ from src.config import settings
 
 
 class SessionTokenHasher:
-    """Hash and verify session tokens using HMAC-SHA256."""
+    """Hash and verify session tokens using HMAC-SHA256.
+
+    Note: This is kept for potential future use or if better-auth token
+    storage requirements change. Currently, FastAPI validates tokens directly
+    against the plain token stored by better-auth.
+    """
 
     def __init__(self, secret: str):
         """
@@ -55,12 +59,12 @@ class SessionTokenHasher:
         return hmac.compare_digest(computed_hash, token_hash)
 
 
-async def validate_session(token: str, db: AsyncSession) -> Optional[UUID]:
+async def validate_session(token: str, db: AsyncSession) -> Optional[str]:
     """
     Validate a session token and return the user ID.
 
     Queries user_sessions table for:
-    - token_hash matches the hashed token
+    - token matches the provided token (better-auth stores plain tokens)
     - expires_at > now (not expired)
     - revoked = False (not revoked)
 
@@ -69,15 +73,11 @@ async def validate_session(token: str, db: AsyncSession) -> Optional[UUID]:
         db: Database session
 
     Returns:
-        User UUID if session is valid, None otherwise
+        User ID string if session is valid, None otherwise
     """
-    # Hash the token
-    hasher = SessionTokenHasher(settings.SESSION_HASH_SECRET)
-    token_hash = hasher.hash_token(token)
-
-    # Query for valid session
+    # Query for valid session - better-auth stores tokens in plain text
     stmt = select(UserSession).where(
-        UserSession.token_hash == token_hash,
+        UserSession.token == token,
         UserSession.expires_at > datetime.now(timezone.utc),
         UserSession.revoked == False  # noqa: E712
     )

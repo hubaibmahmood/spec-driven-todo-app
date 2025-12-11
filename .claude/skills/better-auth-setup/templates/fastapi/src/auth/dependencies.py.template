@@ -11,11 +11,11 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 {{#VALIDATION_METHOD_DATABASE}}
-from src.database.postgres import postgres_db
+from {{BACKEND_SRC_DIR}}.database.{{DATABASE_MODULE}} import {{DATABASE_CONNECTION_NAME}}
 {{/VALIDATION_METHOD_DATABASE}}
 {{#VALIDATION_METHOD_JWT}}
 import jwt
-from src.config import settings
+from {{BACKEND_SRC_DIR}}.config import settings
 {{/VALIDATION_METHOD_JWT}}
 
 # HTTP Bearer token security scheme
@@ -54,7 +54,7 @@ async def get_current_user(
 
     {{#VALIDATION_METHOD_DATABASE}}
     try:
-        async with postgres_db.get_connection() as conn:
+        async with {{DATABASE_CONNECTION_NAME}}.get_connection() as conn:
             async with conn.cursor() as cur:
                 # Query user_sessions table directly for real-time validation
                 await cur.execute(

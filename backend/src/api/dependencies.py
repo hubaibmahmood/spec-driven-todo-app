@@ -3,7 +3,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import UUID
 
 from src.database.connection import get_db
 from src.database.repository import TaskRepository
@@ -17,19 +16,19 @@ security = HTTPBearer()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
-) -> UUID:
+) -> str:
     """
     Authenticate user via session token and return user ID.
 
     Extracts Bearer token from Authorization header, validates it against
-    the user_sessions table, and returns the authenticated user's UUID.
+    the user_sessions table, and returns the authenticated user's ID.
 
     Args:
         credentials: HTTP Authorization credentials (Bearer token)
         db: Database session
 
     Returns:
-        User UUID if session is valid
+        User ID string if session is valid
 
     Raises:
         HTTPException: 401 if token is missing, invalid, expired, or revoked

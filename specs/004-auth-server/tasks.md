@@ -22,14 +22,14 @@
 
 **Purpose**: Initialize Node.js auth server project structure
 
-- [ ] T001 Create auth-server directory and initialize Node.js project with package.json (type: module, name: auth-server, version: 1.0.0)
-- [ ] T002 Install auth server dependencies: better-auth@^1.0.0, express@^4.18.0, cors@^2.8.5, dotenv@^16.3.0, @prisma/client@^5.7.0, resend@^2.0.0
-- [ ] T003 [P] Install dev dependencies: typescript@^5.3.0, tsx@^4.7.0, @types/node@^20.10.0, @types/express@^4.17.0, @types/cors@^2.8.0, prisma@^5.7.0
-- [ ] T004 [P] Create tsconfig.json with ESM config (module: ESNext, target: ES2022, esModuleInterop: true, moduleResolution: node)
-- [ ] T005 Initialize Prisma in auth-server/prisma/ with datasource postgresql
-- [ ] T006 Create auth-server/.env.example with DATABASE_URL, NODE_ENV, PORT, JWT_SECRET, CORS_ORIGINS, RESEND_API_KEY, EMAIL_FROM, FRONTEND_URL
-- [ ] T007 Create auth-server/src directory structure: auth/, config/, database/, middleware/, utils/
-- [ ] T008 Create .gitignore excluding node_modules, dist, .env, *.log, .DS_Store, prisma/*.db
+- [x] T001 Create auth-server directory and initialize Node.js project with package.json (type: module, name: auth-server, version: 1.0.0)
+- [x] T002 Install auth server dependencies: better-auth@^1.0.0, express@^4.18.0, cors@^2.8.5, dotenv@^16.3.0, @prisma/client@^5.7.0, resend@^2.0.0
+- [x] T003 [P] Install dev dependencies: typescript@^5.3.0, tsx@^4.7.0, @types/node@^20.10.0, @types/express@^4.17.0, @types/cors@^2.8.0, prisma@^5.7.0
+- [x] T004 [P] Create tsconfig.json with ESM config (module: ESNext, target: ES2022, esModuleInterop: true, moduleResolution: node)
+- [x] T005 Initialize Prisma in auth-server/prisma/ with datasource postgresql
+- [x] T006 Create auth-server/.env.example with DATABASE_URL, NODE_ENV, PORT, JWT_SECRET, CORS_ORIGINS, RESEND_API_KEY, EMAIL_FROM, FRONTEND_URL
+- [x] T007 Create auth-server/src directory structure: auth/, config/, database/, middleware/, utils/
+- [x] T008 Create .gitignore excluding node_modules, dist, .env, *.log, .DS_Store, prisma/*.db
 
 ---
 
@@ -43,25 +43,25 @@
 
 **Note**: Must be compatible with existing FastAPI backend's UserSession model
 
-- [ ] T009 Initialize Prisma schema in auth-server/prisma/schema.prisma with datasource and generator
-- [ ] T010 Define User model in Prisma schema (id String @id @default(cuid()), email String @unique, emailVerified Boolean @default(false), password String?, name String?, image String?, createdAt DateTime @default(now()), updatedAt DateTime @updatedAt)
-- [ ] T011 [P] Add Session model compatible with FastAPI UserSession (id String @id @default(cuid()), userId String, token String @unique, expiresAt DateTime, ipAddress String?, userAgent String?, createdAt DateTime @default(now()), updatedAt DateTime @updatedAt) with table name "user_sessions"
-- [ ] T012 [P] Add VerificationToken model (id String @id @default(cuid()), identifier String, token String @unique, type String, expiresAt DateTime, createdAt DateTime @default(now()))
-- [ ] T013 Add indexes and relations to User and Session models (@map for snake_case columns, @@index on userId/token/expiresAt, CASCADE delete)
-- [ ] T014 Push Prisma schema to Neon PostgreSQL using npx prisma db push (tables: users, user_sessions, verification_tokens)
-- [ ] T015 Generate Prisma client using npx prisma generate
-- [ ] T016 Verify schema compatibility with FastAPI backend (check user_sessions table matches backend/src/models/database.py UserSession model)
+- [x] T009 Initialize Prisma schema in auth-server/prisma/schema.prisma with datasource and generator
+- [x] T010 Define User model in Prisma schema (id String @id @default(cuid()), email String @unique, emailVerified Boolean @default(false), password String?, name String?, image String?, createdAt DateTime @default(now()), updatedAt DateTime @updatedAt)
+- [x] T011 [P] Add Session model compatible with FastAPI UserSession (id String @id @default(cuid()), userId String, token String @unique, expiresAt DateTime, ipAddress String?, userAgent String?, createdAt DateTime @default(now()), updatedAt DateTime @updatedAt) with table name "user_sessions"
+- [x] T012 [P] Add VerificationToken model (id String @id @default(cuid()), identifier String, token String @unique, type String, expiresAt DateTime, createdAt DateTime @default(now()))
+- [x] T013 Add indexes and relations to User and Session models (@map for snake_case columns, @@index on userId/token/expiresAt, CASCADE delete)
+- [x] T014 Push Prisma schema to Neon PostgreSQL using npx prisma db push (tables: users, user_sessions, verification_tokens)
+- [x] T015 Generate Prisma client using npx prisma generate
+- [x] T016 Verify schema compatibility with FastAPI backend (check user_sessions table matches backend/src/models/database.py UserSession model)
 
 ### Auth Server Core Configuration
 
-- [ ] T017 [P] Create environment validation in auth-server/src/config/env.ts with required/optional field validation
-- [ ] T018 [P] Create Prisma client singleton in auth-server/src/database/client.ts with proper connection pooling
-- [ ] T019 Create better-auth base config in auth-server/src/auth/auth.config.ts with Prisma adapter and database connection
-- [ ] T020 Configure session settings in auth-server/src/auth/auth.config.ts (expiresIn: 7 days, updateAge: 24 hours, cookieCache enabled with 5-minute maxAge)
-- [ ] T021 [P] Create Express app in auth-server/src/app.ts with CORS, JSON parser, and trust proxy middleware
-- [ ] T022 [P] Create server entry point in auth-server/src/index.ts with environment loading and server startup
-- [ ] T023 Add health check endpoint GET /health in auth-server/src/app.ts returning {status, timestamp, database}
-- [ ] T024 Start auth server locally and verify health endpoint responds with database: "connected"
+- [x] T017 [P] Create environment validation in auth-server/src/config/env.ts with required/optional field validation
+- [x] T018 [P] Create Prisma client singleton in auth-server/src/database/client.ts with proper connection pooling
+- [x] T019 Create better-auth base config in auth-server/src/auth/auth.config.ts with Prisma adapter and database connection
+- [x] T020 Configure session settings in auth-server/src/auth/auth.config.ts (expiresIn: 7 days, updateAge: 24 hours, cookieCache enabled with 5-minute maxAge)
+- [x] T021 [P] Create Express app in auth-server/src/app.ts with CORS, JSON parser, and trust proxy middleware
+- [x] T022 [P] Create server entry point in auth-server/src/index.ts with environment loading and server startup
+- [x] T023 Add health check endpoint GET /health in auth-server/src/app.ts returning {status, timestamp, database}
+- [x] T024 Start auth server locally and verify health endpoint responds with database: "connected"
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -75,14 +75,14 @@
 
 ### US1: Email/Password Authentication
 
-- [ ] T025 [US1] Configure emailAndPassword plugin in auth-server/src/auth/auth.config.ts with requireEmailVerification: true and minPasswordLength: 8
-- [ ] T026 [US1] Configure Resend email service for verification emails (15-minute expiration, custom email template)
-- [ ] T027 [US1] Add sendVerificationEmail handler to auth config with Resend API integration
-- [ ] T028 [US1] Integrate better-auth routes using toNodeHandler in auth-server/src/app.ts at /api/auth/*
-- [ ] T029 [US1] Test signup: POST /api/auth/signup with {email, password, name} returns 201 with user and session
-- [ ] T030 [US1] Test email verification: POST /api/auth/verify-email with {token} returns 200 and updates emailVerified
-- [ ] T031 [US1] Test signin: POST /api/auth/signin with {email, password} returns 200 with session token
-- [ ] T032 [US1] Test signout: POST /api/auth/signout invalidates session and clears cookie
+- [x] T025 [US1] Configure emailAndPassword plugin in auth-server/src/auth/auth.config.ts with requireEmailVerification: true and minPasswordLength: 8
+- [x] T026 [US1] Configure Resend email service for verification emails (15-minute expiration, custom email template)
+- [x] T027 [US1] Add sendVerificationEmail handler to auth config with Resend API integration
+- [x] T028 [US1] Integrate better-auth routes using toNodeHandler in auth-server/src/app.ts at /api/auth/*
+- [x] T029 [US1] Test signup: POST /api/auth/signup with {email, password, name} returns 201 with user and session
+- [x] T030 [US1] Test email verification: POST /api/auth/verify-email with {token} returns 200 and updates emailVerified
+- [x] T031 [US1] Test signin: POST /api/auth/signin with {email, password} returns 200 with session token
+- [x] T032 [US1] Test signout: POST /api/auth/signout invalidates session and clears cookie
 
 **Checkpoint**: User Story 1 complete - users can register, verify email, sign in, and sign out
 

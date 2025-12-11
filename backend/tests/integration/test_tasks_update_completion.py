@@ -82,11 +82,11 @@ async def test_patch_other_users_task_returns_404(
     sample_user_id
 ):
     """Test that users cannot update other users' tasks."""
-    from uuid import uuid4
+    import secrets
 
     # Create a task for another user
     repo = TaskRepository(db_session)
-    other_user_id = uuid4()
+    other_user_id = f"test_{secrets.token_hex(8)}"
     task = await repo.create(other_user_id, "Other User's Task", "Description")
 
     # Try to update with different user

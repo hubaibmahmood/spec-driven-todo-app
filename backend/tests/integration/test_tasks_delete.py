@@ -65,10 +65,10 @@ async def test_delete_other_users_task_returns_404(
     sample_user_id
 ):
     """Test that users cannot delete other users' tasks."""
-    from uuid import uuid4
+    import secrets
 
     repo = TaskRepository(db_session)
-    other_user_id = uuid4()
+    other_user_id = f"test_{secrets.token_hex(8)}"
     task = await repo.create(other_user_id, "Other User's Task", "Description")
 
     async def mock_get_current_user():

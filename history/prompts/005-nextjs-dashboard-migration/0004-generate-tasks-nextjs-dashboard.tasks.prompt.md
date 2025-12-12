@@ -28,7 +28,9 @@ tests: []
 
 ## Response snapshot
 
-Generated `tasks.md` for `005-nextjs-dashboard-migration`. Tasks are sized for 15-30m execution. Combined T020/T021 (TodoItem interactions) and split T018/T019 (Modal UI vs Logic) to respect sizing. Identified 26 total tasks across 7 phases.
+Generated `tasks.md` for `005-nextjs-dashboard-migration`. Tasks are sized for 15-30m execution. 
+**Updated:** Split T005 into Base/Service layers and added Middleware (T014) per user review. 
+Total tasks: 28.
 
 ## Outcome
 
@@ -36,7 +38,7 @@ Generated `tasks.md` for `005-nextjs-dashboard-migration`. Tasks are sized for 1
 - 🧪 Tests: N/A
 - 📁 Files: Created tasks.md.
 - 🔁 Next prompts: sp.implement
-- 🧠 Reflection: Tasks are well-structured but rely on manual file creation. Future improvements could automate file scaffolding.
+- 🧠 Reflection: Tasks are well-structured. Splitting API client reduced complexity risk.
 
 ## Evaluation notes (flywheel)
 

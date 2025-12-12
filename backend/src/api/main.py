@@ -165,14 +165,19 @@ async def sqlalchemy_error_handler(
     exc: SQLAlchemyError
 ) -> JSONResponse:
     """Handle general SQLAlchemy errors."""
+    import traceback
+    # Log the full exception in development
+    print(f"SQLAlchemy Error: {exc}")
+    print(f"Traceback: {traceback.format_exc()}")
+
     error_response = ErrorResponse(
         type="database_error",
         title="Database error",
         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="An unexpected database error occurred",
+        detail=f"An unexpected database error occurred: {str(exc)}" if settings.is_development else "An unexpected database error occurred",
         instance=str(request.url.path)
     )
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=error_response.model_dump()
@@ -185,14 +190,19 @@ async def internal_server_error_handler(
     exc: Exception
 ) -> JSONResponse:
     """Handle internal server errors."""
+    import traceback
+    # Log the full exception in development
+    print(f"Internal Server Error: {exc}")
+    print(f"Traceback: {traceback.format_exc()}")
+
     error_response = ErrorResponse(
         type="internal_error",
         title="Internal server error",
         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="An unexpected error occurred",
+        detail=f"An unexpected error occurred: {str(exc)}" if settings.is_development else "An unexpected error occurred",
         instance=str(request.url.path)
     )
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=error_response.model_dump()

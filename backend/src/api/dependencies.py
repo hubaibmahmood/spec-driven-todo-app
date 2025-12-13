@@ -33,9 +33,14 @@ async def get_current_user(
     Raises:
         HTTPException: 401 if token is missing, invalid, expired, or revoked
     """
-    token = credentials.credentials
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # Validate session and get user_id
+    token = credentials.credentials
     user_id = await validate_session(token, db)
 
     if user_id is None:

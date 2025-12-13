@@ -29,24 +29,22 @@ class UserSession(Base):
 
     This table is managed by the better-auth Node.js server.
     FastAPI only reads from this table for session validation.
+
+    Note: better-auth uses camelCase column names, so we map them explicitly.
+    Actual schema: id, userId, token, expiresAt, ipAddress, userAgent, createdAt, updatedAt
     """
 
     __tablename__ = "user_sessions"
 
-    # Using String for id and user_id to match better-auth's cuid() format
+    # Map snake_case Python attributes to camelCase database columns
     id = Column(String(255), primary_key=True)
-    user_id = Column(String(255), nullable=False, index=True)
-    token = Column(String(255), nullable=False, unique=True, index=True)  # Changed from token_hash to token
-    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
-    revoked = Column(Boolean, default=False, nullable=False)
-
-    # Additional fields that better-auth will create
-    refresh_token_hash = Column(String(255), nullable=True)
-    ip_address = Column(Text, nullable=True)
-    user_agent = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), nullable=True)
-    updated_at = Column(DateTime(timezone=True), nullable=True)
-    last_activity_at = Column(DateTime(timezone=True), nullable=True)
+    user_id = Column("userId", String(255), nullable=False, index=True)
+    token = Column(String(255), nullable=False, unique=True, index=True)
+    expires_at = Column("expiresAt", DateTime(timezone=False), nullable=False, index=True)  # timezone=False to match DB
+    ip_address = Column("ipAddress", Text, nullable=True)
+    user_agent = Column("userAgent", Text, nullable=True)
+    created_at = Column("createdAt", DateTime(timezone=False), nullable=True)
+    updated_at = Column("updatedAt", DateTime(timezone=False), nullable=True)
 
     def __repr__(self) -> str:
-        return f"<UserSession(id={self.id}, user_id={self.user_id}, revoked={self.revoked})>"
+        return f"<UserSession(id={self.id}, user_id={self.user_id})>"

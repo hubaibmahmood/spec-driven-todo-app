@@ -66,20 +66,29 @@ async def validate_session(token: str, db: AsyncSession) -> Optional[str]:
     Queries user_sessions table for:
     - token matches the provided token (better-auth stores plain tokens)
     - expires_at > now (not expired)
-    - revoked = False (not revoked)
+
+    Note: better-auth uses a token format of {tokenId}.{signature}, but only
+    stores the tokenId part in the database.
 
     Args:
-        token: Plain session token from Authorization header
+        token: Session token from Authorization header (format: tokenId.signature)
         db: Database session
 
     Returns:
         User ID string if session is valid, None otherwise
     """
-    # Query for valid session - better-auth stores tokens in plain text
+    # Extract token ID from the full token (before the first dot)
+    # better-auth format: {tokenId}.{signature}
+    token_id = token.split('.')[0] if '.' in token else token
+
+    # Query for valid session - better-auth stores only the token ID
+    # Note: Database stores timestamps without timezone, but they are in UTC
+    # So we use datetime.now(timezone.utc).replace(tzinfo=None) to get naive UTC time
+    current_time_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
     stmt = select(UserSession).where(
-        UserSession.token == token,
-        UserSession.expires_at > datetime.now(timezone.utc),
-        UserSession.revoked == False  # noqa: E712
+        UserSession.token == token_id,
+        UserSession.expires_at > current_time_utc
     )
 
     result = await db.execute(stmt)

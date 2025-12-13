@@ -39,6 +39,20 @@ class TaskRepository:
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_all_unprotected(self) -> list[Task]:
+        """
+        Get all tasks without user ownership check. For testing purposes.
+
+        Returns:
+            List of Task objects
+        """
+        stmt = (
+            select(Task)
+            .order_by(Task.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
     
     async def get_by_id(self, task_id: int, user_id: str) -> Optional[Task]:
         """

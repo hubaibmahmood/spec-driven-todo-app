@@ -48,9 +48,9 @@ export function Sidebar({ isOpen, onClose, onLogout, user }: SidebarProps) {
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             <Link 
-              href="/" 
+              href="/dashboard" 
               className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                isActive('/') 
+                isActive('/dashboard') 
                   ? 'text-indigo-600 bg-indigo-50' 
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}

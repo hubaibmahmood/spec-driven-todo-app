@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Priority, Todo } from '@/types';
-import { X, Sparkles, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface AddTodoModalProps {
   isOpen: boolean;
@@ -17,7 +17,6 @@ export function AddTodoModal({ isOpen, onClose, onSave, initialData }: AddTodoMo
   const [priority, setPriority] = useState<Priority>(Priority.MEDIUM);
   const [dueDate, setDueDate] = useState('');
   const [tags, setTags] = useState<string>('');
-  const [isEnhancing, setIsEnhancing] = useState(false);
 
   const resetForm = () => {
     setTitle('');
@@ -56,15 +55,7 @@ export function AddTodoModal({ isOpen, onClose, onSave, initialData }: AddTodoMo
     onClose();
   };
 
-  const handleAiEnhance = async () => {
-    if (!title) return;
-    setIsEnhancing(true);
-    // Mock implementation
-    setTimeout(() => {
-        setIsEnhancing(false);
-        alert("AI Enhance not implemented in this version yet.");
-    }, 1000);
-  };
+
 
   if (!isOpen) return null;
 
@@ -94,16 +85,6 @@ export function AddTodoModal({ isOpen, onClose, onSave, initialData }: AddTodoMo
                 className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 required
               />
-              <button
-                type="button"
-                onClick={handleAiEnhance}
-                disabled={!title || isEnhancing}
-                className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50 border border-indigo-200"
-                title="Use AI to improve title, add description and tags"
-              >
-                {isEnhancing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                <span className="text-xs font-semibold">Enhance</span>
-              </button>
             </div>
           </div>
 

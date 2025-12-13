@@ -109,20 +109,45 @@ function DashboardContent() {
             // Update
             // Optimistic
             setTodos(prev => prev.map(t => t.id === editingTodo.id ? { ...t, ...taskData } as Todo : t));
-            
+
             // Call API
             const updated = await todoApi.update(editingTodo.id, taskData);
             setTodos(prev => prev.map(t => t.id === editingTodo.id ? updated : t));
         } else {
-            // Create
-            const newTodo = await todoApi.create(taskData);
-            setTodos(prev => [newTodo, ...prev]);
+            // Create - Optimistic Update
+            const tempId = `temp-${Date.now()}`;
+            const optimisticTodo: Todo = {
+                id: tempId,
+                title: taskData.title || '',
+                description: taskData.description || '',
+                status: Status.TODO,
+                priority: taskData.priority || Priority.MEDIUM,
+                dueDate: taskData.dueDate || null,
+                tags: taskData.tags || [],
+                subtasks: [],
+                createdAt: new Date(),
+            };
+
+            // Add optimistic task immediately
+            setTodos(prev => [optimisticTodo, ...prev]);
+
+            try {
+                // Call API
+                const newTodo = await todoApi.create(taskData);
+
+                // Replace optimistic task with real one from server
+                setTodos(prev => prev.map(t => t.id === tempId ? newTodo : t));
+            } catch (apiError) {
+                // Remove optimistic task on error
+                setTodos(prev => prev.filter(t => t.id !== tempId));
+                throw apiError; // Re-throw to be caught by outer catch
+            }
         }
     } catch (err) {
         console.error("Failed to save todo", err);
         alert("Failed to save task.");
     }
-    
+
     setEditingTodo(null);
   };
 
@@ -132,7 +157,6 @@ function DashboardContent() {
   };
 
   const handleAddSubtask = (todoId: string, title: string) => {
-    console.log("Add subtask", todoId, title);
     // Not implemented in backend yet
   };
 

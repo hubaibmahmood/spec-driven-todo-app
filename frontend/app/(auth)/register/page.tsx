@@ -26,7 +26,7 @@ export default function RegisterPage() {
       name,
       fetchOptions: {
         onSuccess: () => {
-             router.push("/");
+             router.push("/dashboard");
         },
         onError: (ctx) => {
              setError(ctx.error.message);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
 import { useSession, signOut } from "@/lib/auth-client";
@@ -13,7 +13,18 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { data: session } = useSession();
+  const [user, setUser] = useState<{ name: string; email: string; image?: string | null } | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (session?.user) {
+      setUser({
+        name: session.user.name,
+        email: session.user.email,
+        image: session.user.image
+      });
+    }
+  }, [session]);
 
   const handleLogout = async () => {
     await signOut();
@@ -26,11 +37,7 @@ export default function DashboardLayout({
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
         onLogout={handleLogout}
-        user={session?.user ? {
-            name: session.user.name,
-            email: session.user.email,
-            image: session.user.image
-        } : null}
+        user={user}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />

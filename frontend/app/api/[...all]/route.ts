@@ -8,8 +8,7 @@ const BACKEND_SERVICE_URL = (
 ).replace(/\/$/, "");
 
 async function proxyRequest(request: NextRequest) {
-  // Debugging incoming request path
-  // console.log('[Proxy Debug] Incoming request.nextUrl.pathname:', request.nextUrl.pathname);
+
 
   const urlParts = request.nextUrl.pathname.split("/").filter(Boolean);
 
@@ -45,7 +44,7 @@ async function proxyRequest(request: NextRequest) {
     // Extract better-auth.session_token from the Cookie header and convert to Authorization: Bearer
     const cookieHeader = headers.get("cookie");
 
-    // console.log('[Proxy Debug] Incoming Cookie Header:', cookieHeader);
+
 
     if (cookieHeader) {
       const sessionTokenMatch = cookieHeader.match(
@@ -54,8 +53,7 @@ async function proxyRequest(request: NextRequest) {
       if (sessionTokenMatch && sessionTokenMatch[1]) {
         const sessionToken = decodeURIComponent(sessionTokenMatch[1]);
         headers.set("Authorization", `Bearer ${sessionToken}`);
-        // console.log('[Proxy Debug] Extracted Session Token:', sessionToken);
-        // console.log('[Proxy Debug] Set Authorization Header:', `Bearer ${sessionToken}`);
+
       }
     }
 
@@ -64,11 +62,7 @@ async function proxyRequest(request: NextRequest) {
         ? await request.blob()
         : undefined;
 
-    // // console.log(`[Proxy Debug] Forwarding ${request.method} request to: ${targetUrl}`);
-    // // console.log('[Proxy Debug] Forwarded Headers (relevant):', {
-    //   'Authorization': headers.get('Authorization'),
-    //   'Cookie': headers.get('cookie')
-    // });
+
 
     const response = await fetch(targetUrl, {
       method: request.method,
@@ -78,8 +72,7 @@ async function proxyRequest(request: NextRequest) {
       cache: "no-store",
     });
 
-    // console.log('[Proxy Debug] Response from Backend Status:', response.status);
-    // console.log('[Proxy Debug] Response from Backend Location Header:', response.headers.get('Location'));
+
 
     // Handle redirects
     if (response.status >= 300 && response.status < 400) {
@@ -130,10 +123,8 @@ async function proxyRequest(request: NextRequest) {
             redirectUrl.pathname + redirectUrl.search,
             request.nextUrl.origin,
           ).toString();
-          // console.log(`[Proxy Debug] Rewriting backend redirect to frontend origin: ${newLocation}`);
           return NextResponse.redirect(newLocation);
         }
-        // console.log(`[Proxy Debug] Redirecting browser to external location: ${location}`);
         return NextResponse.redirect(location);
       }
     }

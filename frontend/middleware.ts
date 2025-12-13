@@ -7,14 +7,14 @@ export async function middleware(request: NextRequest) {
   
   // Define protected routes explicitly or protect everything except auth/public
   // Here we assume everything except auth and static assets is protected
-  const isPublicRoute = isAuthRoute;
+  const isPublicRoute = isAuthRoute || request.nextUrl.pathname === '/';
   
   if (!sessionToken && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (sessionToken && isAuthRoute) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return NextResponse.next();

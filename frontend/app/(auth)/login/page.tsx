@@ -24,7 +24,7 @@ export default function LoginPage() {
       password,
       fetchOptions: {
         onSuccess: () => {
-             router.push("/");
+             router.push("/dashboard");
         },
         onError: (ctx) => {
              setError(ctx.error.message);

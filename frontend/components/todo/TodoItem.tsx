@@ -8,7 +8,6 @@ import {
   MoreVertical, 
   Trash2, 
   Edit3, 
-  Sparkles,
   Calendar
 } from 'lucide-react';
 
@@ -22,7 +21,6 @@ interface TodoItemProps {
 
 export function TodoItem({ todo, onToggleStatus, onDelete, onEdit }: TodoItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
   const priorityColor = {
@@ -32,15 +30,7 @@ export function TodoItem({ todo, onToggleStatus, onDelete, onEdit }: TodoItemPro
     [Priority.URGENT]: 'bg-red-50 text-red-600',
   };
 
-  const handleAiBreakdown = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsAiLoading(true);
-    // Mock implementation for now
-    setTimeout(() => {
-        setIsAiLoading(false);
-        alert("AI Breakdown not implemented in this version yet.");
-    }, 1000);
-  };
+
 
   return (
     <div className={`bg-white rounded-xl border transition-all duration-200 ${todo.status === Status.COMPLETED ? 'border-slate-100 opacity-60' : 'border-slate-200 shadow-sm hover:shadow-md'}`}>
@@ -110,19 +100,7 @@ export function TodoItem({ todo, onToggleStatus, onDelete, onEdit }: TodoItemPro
                 </span>
               ))}
 
-              <div className="flex-1" />
-              
-              <button 
-                onClick={handleAiBreakdown}
-                disabled={isAiLoading || todo.status === Status.COMPLETED}
-                className={`
-                  flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors
-                  ${isAiLoading ? 'bg-indigo-50 border-indigo-100 text-indigo-400 cursor-wait' : 'bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50'}
-                `}
-              >
-                <Sparkles className={`w-3 h-3 ${isAiLoading ? 'animate-spin' : ''}`} />
-                {isAiLoading ? 'Analyzing...' : 'AI Breakdown'}
-              </button>
+
             </div>
           </div>
         </div>

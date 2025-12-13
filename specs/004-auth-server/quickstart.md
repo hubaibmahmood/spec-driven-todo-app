@@ -883,13 +883,21 @@ curl http://localhost:8000/api/todos \
 
 ## Step 6: Production Deployment
 
-### 6.1 Auth Server (Vercel)
+### 6.1 Auth Server Deployment (Vercel)
 
-Create `auth-server/vercel.json`:
+#### Pre-Deployment Checklist
+
+Verify these files exist:
+- ✅ `auth-server/vercel.json` (catch-all routing)
+- ✅ `auth-server/api/index.ts` (serverless entry point)
+- ✅ `auth-server/package.json` has `vercel-build` script
+
+#### Vercel Configuration Files
+
+**File: `auth-server/vercel.json`** (already created in Phase 7):
 
 ```json
 {
-  "version": 2,
   "rewrites": [
     {
       "source": "/(.*)",
@@ -899,33 +907,153 @@ Create `auth-server/vercel.json`:
 }
 ```
 
-Create `auth-server/api/index.ts`:
+**File: `auth-server/api/index.ts`** (already created in Phase 7):
 
 ```typescript
-import app from '../src/app.js';
+import app from '../src/app';
+
+// Export the Express app for Vercel serverless functions
 export default app;
 ```
 
-Deploy:
+**File: `auth-server/package.json`** (verify scripts exist):
 
-```bash
-cd auth-server
-npm install -g vercel
-vercel login
-vercel
+```json
+{
+  "scripts": {
+    "dev": "tsx --env-file=.env src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "vercel-build": "prisma generate && tsc"
+  }
+}
 ```
 
-Set environment variables in Vercel dashboard:
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `RESEND_API_KEY`
-- `CORS_ORIGINS`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
+#### Deploy to Vercel
 
-### 6.2 API Server (Render)
+1. **Install Vercel CLI**:
+   ```bash
+   npm install -g vercel
+   ```
 
-Create `backend/render.yaml`:
+2. **Login to Vercel**:
+   ```bash
+   vercel login
+   ```
+
+3. **Deploy from auth-server directory**:
+   ```bash
+   cd auth-server
+   vercel
+   ```
+
+4. **Follow prompts**:
+   - Set up and deploy? → Yes
+   - Scope? → Your account/team
+   - Link to existing project? → No
+   - Project name? → `todo-auth-server`
+   - Directory? → `./` (current directory)
+   - Override settings? → No
+
+#### Configure Environment Variables in Vercel
+
+Go to Vercel Dashboard → Project Settings → Environment Variables:
+
+**Required Variables**:
+```bash
+DATABASE_URL=postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
+JWT_SECRET=your-32-char-random-string
+NODE_ENV=production
+```
+
+**Email Service (Resend)**:
+```bash
+RESEND_API_KEY=re_your_api_key
+EMAIL_FROM=noreply@yourdomain.com
+```
+
+**CORS Configuration**:
+```bash
+CORS_ORIGINS=https://yourdomain.com,https://api.yourdomain.com
+FRONTEND_URL=https://yourdomain.com
+```
+
+**OAuth (Optional - Phase 9)**:
+```bash
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=https://auth.yourdomain.com/api/auth/callback/google
+```
+
+#### Redeploy After Environment Variables
+
+```bash
+vercel --prod
+```
+
+#### Verify Deployment
+
+1. **Check health endpoint**:
+   ```bash
+   curl https://your-auth-server.vercel.app/health
+   ```
+
+2. **Expected response**:
+   ```json
+   {
+     "status": "ok",
+     "timestamp": "2025-01-10T12:00:00.000Z",
+     "database": "connected"
+   }
+   ```
+
+### 6.2 CORS Configuration for Production
+
+#### Auth Server CORS
+
+Update production `CORS_ORIGINS` to include all frontend domains:
+
+```bash
+# Vercel environment variable
+CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com,https://app.yourdomain.com
+```
+
+The auth server reads this in `src/config/env.ts`:
+
+```typescript
+corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+```
+
+#### FastAPI Backend CORS
+
+Similarly, update backend's `CORS_ORIGINS`:
+
+```bash
+# Render/production environment
+CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+```
+
+#### Cookie Configuration
+
+For cross-domain authentication, cookies require:
+
+```typescript
+// In auth.config.ts - already configured
+advanced: {
+  defaultCookieAttributes: {
+    httpOnly: true,
+    secure: env.nodeEnv === 'production',  // HTTPS only in production
+    sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',  // Cross-site in prod
+    path: '/',
+  },
+}
+```
+
+### 6.3 FastAPI Backend Deployment (Render)
+
+#### Create Render Configuration
+
+**File: `backend/render.yaml`**:
 
 ```yaml
 services:
@@ -938,14 +1066,65 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.0
       - key: DATABASE_URL
-        fromDatabase:
-          name: todo-db
-          property: connectionString
+        sync: false
+      - key: AUTH_SERVER_URL
+        value: https://your-auth-server.vercel.app
       - key: CORS_ORIGINS
+        value: https://yourdomain.com
+      - key: FRONTEND_ORIGIN
         value: https://yourdomain.com
 ```
 
-Connect GitHub repo to Render and deploy.
+#### Deploy to Render
+
+1. **Connect GitHub repository** to Render
+2. **Create new Web Service** from dashboard
+3. **Select repository** and branch
+4. **Configure service**:
+   - Name: `todo-api`
+   - Environment: Python 3.12
+   - Build command: (use render.yaml)
+   - Start command: (use render.yaml)
+5. **Add environment variables** (if not in render.yaml)
+6. **Deploy**
+
+#### Verify Backend Deployment
+
+```bash
+curl https://your-api.onrender.com/health
+```
+
+### 6.4 Production Architecture
+
+```
+┌─────────────┐
+│   Frontend  │ (Vercel/Netlify)
+│   Next.js   │
+└──────┬──────┘
+       │
+       ├──────────────┐
+       │              │
+       v              v
+┌─────────────┐  ┌──────────────┐
+│ Auth Server │  │ API Server   │
+│  (Vercel)   │  │  (Render)    │
+│ better-auth │  │   FastAPI    │
+└──────┬──────┘  └──────┬───────┘
+       │                │
+       └────────┬───────┘
+                v
+       ┌────────────────┐
+       │   PostgreSQL   │
+       │     (Neon)     │
+       └────────────────┘
+```
+
+**Flow**:
+1. User signs up → Frontend → Auth Server → Neon
+2. Auth server returns session token
+3. Frontend stores token
+4. API requests → Frontend → API Server (with token)
+5. API Server validates token against Neon sessions table
 
 ---
 

@@ -3,8 +3,9 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from datetime import datetime
 
-from src.models.database import Task
+from src.models.database import Task, PriorityLevel
 
 # Sentinel value for "not provided" in updates
 _UNSET = object()
@@ -69,7 +70,14 @@ class TaskRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
-    async def create(self, user_id: str, title: str, description: Optional[str] = None) -> Task:
+    async def create(
+        self,
+        user_id: str,
+        title: str,
+        description: Optional[str] = None,
+        priority: PriorityLevel = PriorityLevel.MEDIUM,
+        due_date: Optional[datetime] = None
+    ) -> Task:
         """
         Create a new task.
 
@@ -77,6 +85,8 @@ class TaskRepository:
             user_id: ID of the task owner (string format from better-auth)
             title: Task title
             description: Optional task description
+            priority: Task priority level (default: MEDIUM)
+            due_date: Optional task due date
 
         Returns:
             Created Task object
@@ -85,7 +95,9 @@ class TaskRepository:
             user_id=user_id,
             title=title,
             description=description,
-            completed=False
+            completed=False,
+            priority=priority,
+            due_date=due_date
         )
         self.session.add(task)
         await self.session.flush()  # Flush to get ID without committing
@@ -98,7 +110,9 @@ class TaskRepository:
         user_id: str,
         title: Optional[str] = _UNSET,
         description: Optional[str] = _UNSET,
-        completed: Optional[bool] = _UNSET
+        completed: Optional[bool] = _UNSET,
+        priority: Optional[PriorityLevel] = _UNSET,
+        due_date: Optional[datetime] = _UNSET
     ) -> Optional[Task]:
         """
         Update a task (partial updates supported).
@@ -109,6 +123,8 @@ class TaskRepository:
             title: Optional new title (use None to keep current, explicit None not supported)
             description: Optional new description (use None to clear, _UNSET to keep current)
             completed: Optional new completion status
+            priority: Optional new priority level
+            due_date: Optional new due date (use None to clear, _UNSET to keep current)
 
         Returns:
             Updated Task object if found and owned by user, None otherwise
@@ -121,11 +137,15 @@ class TaskRepository:
             update_data['description'] = description
         if completed is not _UNSET:
             update_data['completed'] = completed
+        if priority is not _UNSET:
+            update_data['priority'] = priority
+        if due_date is not _UNSET:
+            update_data['due_date'] = due_date
 
         if not update_data:
             # No updates provided, just return the task
             return await self.get_by_id(task_id, user_id)
-        
+
         stmt = (
             update(Task)
             .where(Task.id == task_id, Task.user_id == user_id)

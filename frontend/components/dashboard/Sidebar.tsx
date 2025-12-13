@@ -58,11 +58,11 @@ export function Sidebar({ isOpen, onClose, onLogout, user }: SidebarProps) {
               <LayoutDashboard className="w-5 h-5" />
               Dashboard
             </Link>
-            <Link 
-              href="/tasks" 
+            <Link
+              href="/dashboard/tasks"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                isActive('/tasks') 
-                  ? 'text-indigo-600 bg-indigo-50' 
+                isActive('/dashboard/tasks')
+                  ? 'text-indigo-600 bg-indigo-50'
                   : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >

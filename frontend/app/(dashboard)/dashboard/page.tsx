@@ -1,207 +1,120 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
-import { Plus } from "lucide-react";
+import { useMemo, Suspense } from "react";
+import Link from "next/link";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { TaskList } from "@/components/dashboard/TaskList";
-import { AddTodoModal } from "@/components/todo/AddTodoModal";
-import { FilterBar } from "@/components/dashboard/FilterBar";
-import { Todo, TodoFilter, Priority, Status } from "@/types";
-import { todoApi } from "@/lib/api-v2";
-import { ApiRedirectError } from "@/lib/http-client"; // Import the new error type
+import { EmptyPreviewState } from "@/components/dashboard/EmptyStates";
+import { Priority, Status } from "@/types";
 import { useSession } from "@/lib/auth-client";
-import { useSearchParams, useRouter } from "next/navigation"; // Import useRouter
+import { useTasks } from "@/hooks/useTasks";
 
 function DashboardContent() {
   const { data: session } = useSession();
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
-  
-  const searchParams = useSearchParams();
-  const filter = (searchParams.get('filter') as TodoFilter) || 'All';
-  const search = searchParams.get('search') || '';
-  const router = useRouter(); // Initialize router
 
-  // Fetch data
-  useEffect(() => {
-    async function loadTodos() {
-        try {
-            const data = await todoApi.getAll();
-            setTodos(data);
-        } catch (err) {
-            console.error("Failed to load todos", err);
-            if (err instanceof ApiRedirectError) {
-                router.push(err.redirectUrl); // Redirect to the URL provided by the error (which is /login)
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    }
-    loadTodos();
-  }, [filter, search, router]); // Add router to dependencies
+  // Use the tasks hook for all CRUD operations
+  const {
+    todos,
+    isLoading,
+    handleToggleStatus,
+    handleDelete,
+    handleAddSubtask,
+  } = useTasks();
 
-  // Derived State: Stats
+  // Calculate stats
   const stats = useMemo(() => {
     return {
       total: todos.length,
       completed: todos.filter(t => t.status === Status.COMPLETED).length,
       pending: todos.filter(t => t.status !== Status.COMPLETED).length,
-      highPriority: todos.filter(t => t.priority === Priority.HIGH || t.priority === Priority.URGENT).filter(t => t.status !== Status.COMPLETED).length
+      highPriority: todos.filter(t =>
+        (t.priority === Priority.HIGH || t.priority === Priority.URGENT) &&
+        t.status !== Status.COMPLETED
+      ).length
     };
   }, [todos]);
 
-  // Derived State: Filtered Todos
-  const filteredTodos = useMemo(() => {
-    return todos.filter(todo => {
-      const matchesSearch = todo.title.toLowerCase().includes(search.toLowerCase()) || 
-                          todo.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
-      
-      const matchesFilter = 
-        filter === 'All' ? true :
-        filter === 'Completed' ? todo.status === Status.COMPLETED :
-        todo.status !== Status.COMPLETED;
+  // Preview logic: Show today's tasks + overdue (max 8)
+  const previewTodos = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-      return matchesSearch && matchesFilter;
+    // Filter: overdue OR due today, incomplete only
+    const relevantTasks = todos.filter(todo => {
+      if (todo.status === Status.COMPLETED) return false;
+      if (!todo.dueDate) return false;
+      const dueDate = new Date(todo.dueDate);
+      return dueDate < tomorrow; // Overdue or due today
     });
-  }, [todos, filter, search]);
 
-  const handleToggleStatus = async (id: string) => {
-    // Optimistic update
-    const todo = todos.find(t => t.id === id);
-    if (!todo) return;
+    // Sort: overdue first, then high priority, then by due date
+    return relevantTasks
+      .sort((a, b) => {
+        const aDate = new Date(a.dueDate!);
+        const bDate = new Date(b.dueDate!);
 
-    const newStatus = todo.status === Status.COMPLETED ? Status.TODO : Status.COMPLETED;
-    
-    setTodos(prev => prev.map(t => 
-      t.id === id ? { ...t, status: newStatus } : t
-    ));
+        // Overdue first
+        const aOverdue = aDate < today;
+        const bOverdue = bDate < today;
+        if (aOverdue && !bOverdue) return -1;
+        if (!aOverdue && bOverdue) return 1;
 
-    try {
-      await todoApi.toggleStatus(id, todo.status);
-    } catch (error) {
-      // Revert on error
-      console.error("Failed to toggle status", error);
-      setTodos(prev => prev.map(t => 
-        t.id === id ? { ...t, status: todo.status } : t
-      ));
-    }
-  };
+        // Then by priority (HIGH/URGENT first)
+        const aPriority = a.priority === Priority.HIGH || a.priority === Priority.URGENT ? 1 : 0;
+        const bPriority = b.priority === Priority.HIGH || b.priority === Priority.URGENT ? 1 : 0;
+        if (aPriority > bPriority) return -1;
+        if (aPriority < bPriority) return 1;
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-
-    const previousTodos = [...todos];
-    setTodos(prev => prev.filter(t => t.id !== id));
-
-    try {
-      await todoApi.delete(id);
-    } catch (error) {
-      console.error("Failed to delete task", error);
-      setTodos(previousTodos);
-    }
-  };
-
-  const handleSaveTodo = async (taskData: Partial<Todo>) => {
-    try {
-        if (editingTodo) {
-            // Update
-            // Optimistic
-            setTodos(prev => prev.map(t => t.id === editingTodo.id ? { ...t, ...taskData } as Todo : t));
-
-            // Call API
-            const updated = await todoApi.update(editingTodo.id, taskData);
-            setTodos(prev => prev.map(t => t.id === editingTodo.id ? updated : t));
-        } else {
-            // Create - Optimistic Update
-            const tempId = `temp-${Date.now()}`;
-            const optimisticTodo: Todo = {
-                id: tempId,
-                title: taskData.title || '',
-                description: taskData.description || '',
-                status: Status.TODO,
-                priority: taskData.priority || Priority.MEDIUM,
-                dueDate: taskData.dueDate || null,
-                tags: taskData.tags || [],
-                subtasks: [],
-                createdAt: new Date(),
-            };
-
-            // Add optimistic task immediately
-            setTodos(prev => [optimisticTodo, ...prev]);
-
-            try {
-                // Call API
-                const newTodo = await todoApi.create(taskData);
-
-                // Replace optimistic task with real one from server
-                setTodos(prev => prev.map(t => t.id === tempId ? newTodo : t));
-            } catch (apiError) {
-                // Remove optimistic task on error
-                setTodos(prev => prev.filter(t => t.id !== tempId));
-                throw apiError; // Re-throw to be caught by outer catch
-            }
-        }
-    } catch (err) {
-        console.error("Failed to save todo", err);
-        alert("Failed to save task.");
-    }
-
-    setEditingTodo(null);
-  };
-
-  const handleEdit = (todo: Todo) => {
-    setEditingTodo(todo);
-    setIsModalOpen(true);
-  };
-
-  const handleAddSubtask = (todoId: string, title: string) => {
-    // Not implemented in backend yet
-  };
+        // Then by due date
+        return aDate.getTime() - bDate.getTime();
+      })
+      .slice(0, 8); // Show max 8 tasks
+  }, [todos]);
 
   if (isLoading) {
-      return <div className="flex items-center justify-center h-full">Loading tasks...</div>;
+    return <div className="flex items-center justify-center h-full">Loading tasks...</div>;
   }
 
   return (
     <>
       {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Good Morning, {session?.user?.name || 'User'}!</h1>
-          <p className="text-slate-500">Here&apos;s what&apos;s on your plate for today.</p>
-        </div>
-        <button 
-          onClick={() => { setEditingTodo(null); setIsModalOpen(true); }}
-          className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg shadow-sm transition-all"
-        >
-          <Plus className="w-5 h-5" />
-          <span>New Task</span>
-        </button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">
+          Good Morning, {session?.user?.name || 'User'}!
+        </h1>
+        <p className="text-slate-500">Here&apos;s what&apos;s on your plate for today.</p>
       </div>
 
       {/* Stats */}
       <DashboardStats stats={stats} />
 
-      {/* Filters & Search */}
-      <FilterBar />
+      {/* Today's Focus Section */}
+      <section className="mt-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-slate-900">Today&apos;s Focus</h2>
+          <Link
+            href="/dashboard/tasks"
+            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium transition-colors"
+          >
+            View All Tasks →
+          </Link>
+        </div>
 
-      {/* Todo List */}
-      <TaskList 
-        todos={filteredTodos}
-        onToggleStatus={handleToggleStatus}
-        onDelete={handleDelete}
-        onEdit={handleEdit}
-        onAddSubtask={handleAddSubtask}
-      />
-
-      <AddTodoModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={handleSaveTodo}
-        initialData={editingTodo}
-      />
+        {previewTodos.length > 0 ? (
+          <TaskList
+            todos={previewTodos}
+            onToggleStatus={handleToggleStatus}
+            onDelete={handleDelete}
+            onEdit={() => {}} // No edit from dashboard preview
+            onAddSubtask={handleAddSubtask}
+            previewMode={true}
+          />
+        ) : (
+          <EmptyPreviewState taskCount={todos.length} />
+        )}
+      </section>
     </>
   );
 }

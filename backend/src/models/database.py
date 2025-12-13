@@ -1,10 +1,19 @@
 """SQLAlchemy database models."""
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import declarative_base
+import enum
 
 Base = declarative_base()
+
+
+class PriorityLevel(str, enum.Enum):
+    """Priority levels for tasks."""
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+    URGENT = "Urgent"
 
 
 class Task(Base):
@@ -17,6 +26,8 @@ class Task(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     completed = Column(Boolean, default=False, nullable=False)
+    priority = Column(Enum(PriorityLevel, values_callable=lambda x: [e.value for e in x]), default=PriorityLevel.MEDIUM, nullable=False)
+    due_date = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

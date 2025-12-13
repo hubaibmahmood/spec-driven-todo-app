@@ -11,7 +11,10 @@ export const authConfig = {
   secret: env.BETTER_AUTH_SECRET,
   baseURL: process.env.NODE_ENV === 'production'
     ? process.env.FRONTEND_URL
-    : `http://localhost:${env.PORT}/api/auth`,
+    : `http://localhost:${env.PORT}`,
+
+  // Trusted origins for CORS (where requests can come from)
+  trustedOrigins: env.CORS_ORIGINS.split(',').map(origin => origin.trim()),
 
   // Session settings with custom schema to match FastAPI expectations
   session: {
@@ -92,6 +95,8 @@ export const authConfig = {
     emailVerificationTokenExpiresIn: 15 * 60, // 15 minutes
   },
   advanced: {
-    // disableOriginCheck: true, // WARNING: Re-enable for production to prevent CSRF attacks!
+    // Disable origin check in development to allow cross-origin requests from Next.js frontend
+    // In production, this should be removed/commented to enable CSRF protection
+    disableOriginCheck: process.env.NODE_ENV === 'development',
   },
 };

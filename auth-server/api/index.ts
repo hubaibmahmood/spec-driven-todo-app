@@ -11,10 +11,11 @@ async function getApp(): Promise<Express> {
   }
 
   try {
-    // Dynamically import the compiled Express app
-    const { default: app } = await import('../dist/app.js');
-    cachedApp = app;
-    return app;
+    // Dynamically import the compiled Express app getter
+    const { default: getApp } = await import('../dist/app.js');
+    // Call the function to get the app instance
+    cachedApp = getApp();
+    return cachedApp;
   } catch (error) {
     // Re-throw with more context
     if (error instanceof Error && error.message.includes('Missing required environment variables')) {

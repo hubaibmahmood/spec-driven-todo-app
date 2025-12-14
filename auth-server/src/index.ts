@@ -1,9 +1,12 @@
 import 'dotenv/config';
 import { env } from './config/env';
-import app from './app';
+import getApp from './app';
 
 async function startServer() {
   try {
+    // Get the Express app instance
+    const app = getApp();
+
     const server = app.listen(env.PORT, () => {
       console.log(`🚀 Auth server running on port ${env.PORT}`);
       console.log(`   Environment: ${env.NODE_ENV}`);

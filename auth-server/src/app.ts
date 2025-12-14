@@ -120,8 +120,10 @@ export const auth = {
   }
 };
 
-// Named export with lazy initialization
-export const app = createApp();
+// Export createApp function for manual initialization
+export { createApp };
 
-// Default export - call createApp() to get singleton instance
-export default createApp();
+// Default export returns the app instance (lazy - only initializes when called)
+export default function getApp() {
+  return createApp();
+}

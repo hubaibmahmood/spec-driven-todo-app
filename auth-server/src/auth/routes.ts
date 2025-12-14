@@ -3,8 +3,15 @@ import { prisma } from '../database/client';
 import { betterAuth } from 'better-auth';
 import { authConfig } from './auth.config';
 
-// Initialize auth instance for session validation
-const auth = betterAuth(authConfig);
+// Lazy initialize auth instance for session validation
+let _authInstance: ReturnType<typeof betterAuth> | null = null;
+
+function getAuthInstance() {
+  if (!_authInstance) {
+    _authInstance = betterAuth(authConfig);
+  }
+  return _authInstance;
+}
 
 /**
  * GET /api/auth/me
@@ -13,6 +20,7 @@ const auth = betterAuth(authConfig);
 export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
   try {
     // Get session from better-auth using the auth instance
+    const auth = getAuthInstance();
     const sessionResult = await auth.api.getSession({
       headers: new Headers(req.headers as Record<string, string>),
     });
@@ -71,6 +79,7 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
 export const getUserSessions = async (req: Request, res: Response): Promise<void> => {
   try {
     // Get session from better-auth using the auth instance
+    const auth = getAuthInstance();
     const sessionResult = await auth.api.getSession({
       headers: new Headers(req.headers as Record<string, string>),
     });
@@ -128,6 +137,7 @@ export const getUserSessions = async (req: Request, res: Response): Promise<void
 export const revokeSession = async (req: Request, res: Response): Promise<void> => {
   try {
     // Get session from better-auth using the auth instance
+    const auth = getAuthInstance();
     const currentSessionResult = await auth.api.getSession({
       headers: new Headers(req.headers as Record<string, string>),
     });

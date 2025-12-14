@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { env } from '../config/env';
+import { env } from '../config/env.js';
 
 // Lazy initialize Resend client
 let _resend: Resend | null = null;

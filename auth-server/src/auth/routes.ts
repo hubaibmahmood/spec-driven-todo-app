@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { prisma } from '../database/client';
+import { prisma } from '../database/client.js';
 import { betterAuth } from 'better-auth';
-import { getAuthConfig } from './auth.config';
+import { getAuthConfig } from './auth.config.js';
 
 // Lazy initialize auth instance for session validation
 let _authInstance: ReturnType<typeof betterAuth> | null = null;
@@ -108,7 +108,7 @@ export const getUserSessions = async (req: Request, res: Response): Promise<void
     // Get current session ID to identify the current session
     const currentSessionId = session.id;
 
-    const sessionList = sessions.map((dbSession) => ({
+    const sessionList = sessions.map((dbSession: any) => ({
       id: dbSession.id,
       tokenExcerpt: dbSession.token?.substring(0, 8) || '',
       expiresAt: dbSession.expiresAt,

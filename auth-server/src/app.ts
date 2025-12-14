@@ -3,12 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { betterAuth } from 'better-auth';
 import { toNodeHandler } from 'better-auth/node';
-import { getAuthConfig } from './auth/auth.config';
-import { env } from './config/env';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { getAuthConfig } from './auth/auth.config.js';
+import { env } from './config/env.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 // Import custom routes
-import { getCurrentUser, getUserSessions, revokeSession } from './auth/routes';
+import { getCurrentUser, getUserSessions, revokeSession } from './auth/routes.js';
 
 // Lazy initialization for serverless environments
 let _app: express.Express | null = null;
@@ -30,7 +30,7 @@ function createApp() {
 
   // CRITICAL: CORS must be configured BEFORE helmet to allow cross-origin requests
   app.use(cors({
-    origin: env.CORS_ORIGINS.split(',').map(origin => origin.trim()),
+    origin: env.CORS_ORIGINS.split(',').map((origin: string) => origin.trim()),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -79,7 +79,7 @@ function createApp() {
     try {
       // Test database connection by importing and using the Prisma client directly
       // This ensures the database connection is working
-      const { prisma } = await import('./database/client');
+      const { prisma } = await import('./database/client.js');
 
       // Perform a simple query to test the connection
       await prisma.$queryRaw`SELECT 1`;

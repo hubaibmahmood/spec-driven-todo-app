@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { env } from './config/env';
-import getApp from './app';
+import { env } from './config/env.js';
+import getApp from './app.js';
 
 async function startServer() {
   try {

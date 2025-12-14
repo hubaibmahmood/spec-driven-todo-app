@@ -1,7 +1,7 @@
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "../database/client";
-import { resend } from "../utils/resend";
-import { env } from "../config/env";
+import { prisma } from "../database/client.js";
+import { resend } from "../utils/resend.js";
+import { env } from "../config/env.js";
 import { boolean, string, date } from "zod";
 
 // Lazy authConfig to prevent eager evaluation at module load
@@ -19,7 +19,7 @@ export function getAuthConfig() {
       : `http://localhost:${env.PORT}`,
 
     // Trusted origins for CORS (where requests can come from)
-    trustedOrigins: env.CORS_ORIGINS.split(',').map(origin => origin.trim()),
+    trustedOrigins: env.CORS_ORIGINS.split(',').map((origin: string) => origin.trim()),
 
     // Session settings with custom schema to match FastAPI expectations
     session: {

@@ -1,11 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
+import * as helmetModule from 'helmet';
 import { betterAuth } from 'better-auth';
 import { toNodeHandler } from 'better-auth/node';
 import { getAuthConfig } from './auth/auth.config.js';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+
+// Workaround for helmet ES module compatibility
+const helmet = (helmetModule as any).default || helmetModule;
 
 // Import custom routes
 import { getCurrentUser, getUserSessions, revokeSession } from './auth/routes.js';

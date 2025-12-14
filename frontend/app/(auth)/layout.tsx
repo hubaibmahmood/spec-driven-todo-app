@@ -12,13 +12,13 @@ export default function AuthLayout({
           <div className="flex justify-center mb-8">
             <div className="flex items-center gap-2 text-indigo-600 font-bold text-2xl">
               <CheckSquare className="w-8 h-8" />
-              <span>TaskFlow</span>
+              <span>Momentum</span>
             </div>
           </div>
         </div>
         {children}
         <div className="bg-slate-50 p-4 border-t border-slate-100 text-center text-xs text-slate-400">
-          © 2024 TaskFlow AI. Secure & Encrypted.
+          © 2024 Momentum. Secure & Encrypted.
         </div>
       </div>
     </div>

@@ -42,7 +42,7 @@ async def create_task(
     Create a new task for the authenticated user.
 
     Args:
-        task_data: Task creation data (title and optional description)
+        task_data: Task creation data (title, description, priority, due_date)
         repository: Task repository dependency
         current_user: Current authenticated user
 
@@ -52,7 +52,9 @@ async def create_task(
     task = await repository.create(
         user_id=current_user,
         title=task_data.title,
-        description=task_data.description
+        description=task_data.description,
+        priority=task_data.priority,
+        due_date=task_data.due_date
     )
     return TaskResponse.model_validate(task)
 
@@ -172,9 +174,19 @@ async def update_task_details(
         update_kwargs["description"] = _UNSET
 
     if task_update.completed is not None:
-        update_kwargs["completed"] = task_update.completed # Corrected line
+        update_kwargs["completed"] = task_update.completed
     else:
         update_kwargs["completed"] = _UNSET
+
+    if task_update.priority is not None:
+        update_kwargs["priority"] = task_update.priority
+    else:
+        update_kwargs["priority"] = _UNSET
+
+    if task_update.due_date is not None or "due_date" in task_update.model_fields_set:
+        update_kwargs["due_date"] = task_update.due_date
+    else:
+        update_kwargs["due_date"] = _UNSET
 
     task = await repository.update(**update_kwargs)
 

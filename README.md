@@ -1,6 +1,6 @@
-# Todo App - Spec-Driven Development Example
+# Momentum - Spec-Driven Development Example
 
-A feature-rich, interactive command-line todo application built using **Spec-Driven Development (SDD)** methodology. This project demonstrates how to build software systematically from specification to implementation with full traceability.
+A feature-rich task management application built using **Spec-Driven Development (SDD)** methodology. This project demonstrates how to build software systematically from specification to implementation with full traceability.
 
 ## Features
 
@@ -27,8 +27,8 @@ A feature-rich, interactive command-line todo application built using **Spec-Dri
 
 ```bash
 # Clone the repository
-git clone https://github.com/hubaibmahmood/spec-driven-todo-app.git
-cd spec-driven-todo-app
+git clone https://github.com/hubaibmahmood/momentum.git
+cd momentum
 
 # Install dependencies with uv (automatically creates virtual environment)
 uv sync
@@ -46,7 +46,7 @@ Once running, you'll see an interactive menu:
 
 ```
 ==================================================
-TODO APP - Main Menu
+MOMENTUM - Main Menu
 ==================================================
 1. Add Task
 2. View Tasks
@@ -69,7 +69,7 @@ TODO APP - Main Menu
 ## Project Structure
 
 ```
-spec-driven-todo-app/
+momentum/
 ├── src/                          # Source code
 │   ├── cli/                      # Command-line interface
 │   │   ├── main.py              # Interactive menu entry point

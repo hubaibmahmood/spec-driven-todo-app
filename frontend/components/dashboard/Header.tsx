@@ -1,5 +1,5 @@
 "use client";
-import { Menu, Bell } from "lucide-react";
+import { Menu } from "lucide-react";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -13,10 +13,6 @@ export function Header({ onMenuClick }: HeaderProps) {
       </button>
       
       <div className="flex items-center justify-end w-full gap-4">
-        <button className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-50">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-        </button>
       </div>
     </header>
   );

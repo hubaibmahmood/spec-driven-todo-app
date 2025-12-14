@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "momentum-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -17,6 +17,7 @@
     "recharts": "^3.5.1"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

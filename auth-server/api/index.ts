@@ -1,31 +1,31 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { Express } from 'express';
 
-console.log('[API] Catch-all route module loading started');
+console.log('[API Root] Catch-all route module loading started');
 
 // Cache the app instance across warm starts
 let cachedApp: Express | null = null;
 
 // Lazy load and initialize the Express app
 async function getApp(): Promise<Express> {
-  console.log('[API] getApp called, cached:', !!cachedApp);
+  console.log('[API Root] getApp called, cached:', !!cachedApp);
 
   if (cachedApp) {
     return cachedApp;
   }
 
   try {
-    console.log('[API] Attempting dynamic import of ../dist/app.js');
+    console.log('[API Root] Attempting dynamic import of ../dist/app.js');
     // Dynamically import the compiled Express app getter
     const { default: getApp } = await import('../dist/app.js');
-    console.log('[API] Import successful, calling getApp()');
+    console.log('[API Root] Import successful, calling getApp()');
 
     // Call the function to get the app instance
     cachedApp = getApp();
-    console.log('[API] App instance created successfully');
+    console.log('[API Root] App instance created successfully');
     return cachedApp;
   } catch (error) {
-    console.error('[API] Error during app initialization:', error);
+    console.error('[API Root] Error during app initialization:', error);
 
     // Re-throw with more context
     if (error instanceof Error && error.message.includes('Missing required environment variables')) {
@@ -46,7 +46,7 @@ async function getApp(): Promise<Express> {
   }
 }
 
-console.log('[API] Module loading completed');
+console.log('[API Root] Module loading completed');
 
 // Serverless function handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {

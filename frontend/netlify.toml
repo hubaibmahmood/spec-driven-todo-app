@@ -7,9 +7,3 @@
 
 [build.environment]
   NODE_VERSION = "20"
-
-# Redirects for client-side routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

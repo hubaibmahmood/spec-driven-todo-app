@@ -1,7 +1,9 @@
 import { createAuthClient } from "better-auth/react"
 
 export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:8080"
+    // Use the frontend's own API proxy route
+    // The proxy at /api/[...all]/route.ts will forward to the auth server
+    baseURL: "/api/auth"
 })
 
 export const { signIn, signUp, useSession, signOut } = authClient;

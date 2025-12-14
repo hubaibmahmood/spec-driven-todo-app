@@ -10,6 +10,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Momentum",
   description: "Task management dashboard",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

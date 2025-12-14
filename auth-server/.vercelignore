@@ -1,0 +1,36 @@
+# Development files
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules
+
+# Source files (we deploy compiled JS)
+src
+
+# Tests
+tests
+**/*.test.ts
+**/*.spec.ts
+
+# Development artifacts
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+docs

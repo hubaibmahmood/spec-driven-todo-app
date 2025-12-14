@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import { prisma } from '../database/client';
 import { betterAuth } from 'better-auth';
-import { authConfig } from './auth.config';
+import { getAuthConfig } from './auth.config';
 
 // Lazy initialize auth instance for session validation
 let _authInstance: ReturnType<typeof betterAuth> | null = null;
 
 function getAuthInstance() {
   if (!_authInstance) {
-    _authInstance = betterAuth(authConfig);
+    _authInstance = betterAuth(getAuthConfig());
   }
   return _authInstance;
 }

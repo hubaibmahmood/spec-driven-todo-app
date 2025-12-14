@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { betterAuth } from 'better-auth';
 import { toNodeHandler } from 'better-auth/node';
-import { authConfig } from './auth/auth.config';
+import { getAuthConfig } from './auth/auth.config';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
@@ -25,7 +25,7 @@ function createApp() {
   app.set('trust proxy', true);
 
   // Initialize better-auth
-  const auth = betterAuth(authConfig);
+  const auth = betterAuth(getAuthConfig());
   _auth = auth;
 
   // CRITICAL: CORS must be configured BEFORE helmet to allow cross-origin requests

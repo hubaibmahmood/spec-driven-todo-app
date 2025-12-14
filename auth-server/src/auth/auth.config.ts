@@ -37,30 +37,54 @@ export function getAuthConfig() {
       requireEmailVerification: true,
       minPasswordLength: 8,
       sendResetPassword: async ({ user, url, token }: { user: any; url: string; token: string }) => {
-        // Manually save the reset token to the database with type 'reset-password'
-        const expiresAt = new Date(Date.now() + resetPasswordTokenExpiresIn * 1000);
-        await prisma.verification.create({
-          data: {
-            identifier: user.email,
-            value: token,
-            userId: user.id,
-            expiresAt: expiresAt,
-            type: "reset-password",
-          },
-        });
+        console.log('[Email] Sending password reset email to:', user.email);
 
-        await resend.emails.send({
-          from: env.EMAIL_FROM,
-          to: user.email,
-          subject: "Reset your password",
-          html: `
-            <h2>Password Reset</h2>
-            <p>You requested to reset your password. Click the link below to continue:</p>
-            <a href="${url}">Reset Password</a>
-            <p>This link will expire in 1 hour.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-          `,
-        });
+        try {
+          // Manually save the reset token to the database with type 'reset-password'
+          const expiresAt = new Date(Date.now() + resetPasswordTokenExpiresIn * 1000);
+          await prisma.verification.create({
+            data: {
+              identifier: user.email,
+              value: token,
+              userId: user.id,
+              expiresAt: expiresAt,
+              type: "reset-password",
+            },
+          });
+
+          console.log('[Email] Password reset token saved to database');
+          console.log('[Email] Reset URL:', url);
+
+          // In development, log the reset link to console
+          if (process.env.NODE_ENV === 'development') {
+            console.log('\n=================================');
+            console.log('🔐 PASSWORD RESET LINK');
+            console.log('=================================');
+            console.log('To:', user.email);
+            console.log('Link:', url);
+            console.log('=================================\n');
+          }
+
+          const result = await resend.emails.send({
+            from: env.EMAIL_FROM,
+            to: user.email,
+            subject: "Reset your password",
+            html: `
+              <h2>Password Reset</h2>
+              <p>You requested to reset your password. Click the link below to continue:</p>
+              <a href="${url}">Reset Password</a>
+              <p>This link will expire in 1 hour.</p>
+              <p>If you didn't request this, please ignore this email.</p>
+            `,
+          });
+
+          console.log('[Email] Password reset email sent successfully:', result);
+        } catch (error) {
+          console.error('[Email] Failed to send password reset email:', error);
+          if (error instanceof Error) {
+            console.error('[Email] Error details:', error.message);
+          }
+        }
       },
       resetPasswordTokenExpiresIn,
     },
@@ -71,30 +95,55 @@ export function getAuthConfig() {
     // Email service configuration (top-level config for email sending)
     emailVerification: {
       sendVerificationEmail: async ({ user, url, token }: { user: any; url: string; token: string }) => {
-        // Manually save the verification token to the database
-        const expiresAt = new Date(Date.now() + emailVerificationTokenExpiresIn * 1000);
-        await prisma.verification.create({
-          data: {
-            identifier: user.email,
-            value: token,
-            userId: user.id,
-            expiresAt: expiresAt,
-            type: "email-verification",
-          },
-        });
+        console.log('[Email] Sending verification email to:', user.email);
 
-        await resend.emails.send({
-          from: env.EMAIL_FROM,
-          to: user.email,
-          subject: "Verify your email address",
-          html: `
-            <h2>Email Verification</h2>
-            <p>Please click the link below to verify your email address:</p>
-            <a href="${url}">Verify Email</a>
-            <p>This link will expire in 15 minutes.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-          `,
-        });
+        try {
+          // Manually save the verification token to the database
+          const expiresAt = new Date(Date.now() + emailVerificationTokenExpiresIn * 1000);
+          await prisma.verification.create({
+            data: {
+              identifier: user.email,
+              value: token,
+              userId: user.id,
+              expiresAt: expiresAt,
+              type: "email-verification",
+            },
+          });
+
+          console.log('[Email] Verification token saved to database');
+          console.log('[Email] Verification URL:', url);
+
+          // In development, log the verification link to console
+          if (process.env.NODE_ENV === 'development') {
+            console.log('\n=================================');
+            console.log('📧 EMAIL VERIFICATION LINK');
+            console.log('=================================');
+            console.log('To:', user.email);
+            console.log('Link:', url);
+            console.log('=================================\n');
+          }
+
+          const result = await resend.emails.send({
+            from: env.EMAIL_FROM,
+            to: user.email,
+            subject: "Verify your email address",
+            html: `
+              <h2>Email Verification</h2>
+              <p>Please click the link below to verify your email address:</p>
+              <a href="${url}">Verify Email</a>
+              <p>This link will expire in 15 minutes.</p>
+              <p>If you didn't request this, please ignore this email.</p>
+            `,
+          });
+
+          console.log('[Email] Verification email sent successfully:', result);
+        } catch (error) {
+          console.error('[Email] Failed to send verification email:', error);
+          // Don't throw - better-auth will handle it, but log for debugging
+          if (error instanceof Error) {
+            console.error('[Email] Error details:', error.message);
+          }
+        }
       },
       sendOnSignUp: true,
       emailVerificationTokenExpiresIn,

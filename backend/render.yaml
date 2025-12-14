@@ -1,0 +1,63 @@
+services:
+  # FastAPI Backend Service
+  - type: web
+    name: momentum-todo-api
+    runtime: python
+    region: oregon  # Change to your preferred region: oregon, frankfurt, singapore, ohio
+    plan: free  # Options: free, starter, standard, pro
+    branch: main  # Git branch to deploy
+    rootDir: backend  # Root directory for this service
+    buildCommand: "./build.sh"
+    startCommand: "uvicorn src.api.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+
+    envVars:
+      # Database Configuration
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard
+
+      # Authentication Configuration
+      - key: SESSION_HASH_SECRET
+        generateValue: true  # Auto-generate secure value
+
+      # Application Configuration
+      - key: ENVIRONMENT
+        value: production
+
+      # CORS Configuration
+      - key: CORS_ORIGINS
+        sync: false  # Set manually (e.g., https://your-frontend.netlify.app)
+
+      # SQLAlchemy Pool Configuration
+      - key: SQLALCHEMY_POOL_SIZE
+        value: 5  # Reduced for free tier (max 95 connections)
+
+      - key: SQLALCHEMY_POOL_OVERFLOW
+        value: 10
+
+      - key: SQLALCHEMY_POOL_TIMEOUT
+        value: 30
+
+      - key: SQLALCHEMY_POOL_RECYCLE
+        value: 3600
+
+      - key: SQLALCHEMY_ECHO
+        value: false
+
+      # Redis Configuration (Optional - for rate limiting)
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: momentum-redis
+          property: connectionString
+
+    # Auto-deploy on git push
+    autoDeploy: true
+
+# Optional: Redis instance for rate limiting (Render paid plan required)
+# - type: redis
+#   name: momentum-redis
+#   region: oregon
+#   plan: free  # Redis free tier available
+#   maxmemoryPolicy: allkeys-lru
+#   ipAllowList: []  # Empty allows all Render services

@@ -23,7 +23,7 @@ async function proxyRequest(request: NextRequest) {
 
   if (servicePrefix === "auth") {
     targetHost = AUTH_SERVICE_URL;
-    newPathname = `/${urlParts.slice(1).join("/")}`;
+    newPathname = `/${urlParts.join("/")}`;
   } else if (servicePrefix === "backend") {
     targetHost = BACKEND_SERVICE_URL;
     newPathname = `/${urlParts.slice(2).join("/")}`;

@@ -11,7 +11,7 @@ async function startServer() {
       console.log(`🚀 Auth server running on port ${env.PORT}`);
       console.log(`   Environment: ${env.NODE_ENV}`);
       console.log(`   Health check: http://localhost:${env.PORT}/health`);
-      console.log(`   Auth endpoints: http://localhost:${env.PORT}/auth`);
+      console.log(`   Auth endpoints: http://localhost:${env.PORT}/api/auth`);
       console.log(`   Access via frontend: ${env.FRONTEND_URL}/api/auth`);
     });
 

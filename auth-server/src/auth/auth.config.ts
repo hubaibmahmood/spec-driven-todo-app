@@ -14,9 +14,11 @@ export function getAuthConfig() {
       provider: "postgresql",
     }),
     secret: env.BETTER_AUTH_SECRET,
+    // BaseURL should include the full path where better-auth is publicly accessible
+    // The frontend proxies /api/auth/* to the auth server
     baseURL: process.env.NODE_ENV === 'production'
-      ? process.env.FRONTEND_URL
-      : env.FRONTEND_URL,
+      ? `${process.env.FRONTEND_URL}/api/auth`
+      : `${env.FRONTEND_URL}/api/auth`,
 
     // Trusted origins for CORS (where requests can come from)
     trustedOrigins: env.CORS_ORIGINS.split(',').map((origin: string) => origin.trim()),

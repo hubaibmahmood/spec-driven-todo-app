@@ -70,13 +70,12 @@ function createApp() {
   // app.use(express.urlencoded({ extended: true }));
 
   // Add custom routes BEFORE better-auth's middleware
-  app.get('/auth/me', getCurrentUser);
-  app.get('/auth/sessions', getUserSessions);
-  app.delete('/auth/sessions/:sessionId', revokeSession);
+  app.get('/api/auth/me', getCurrentUser);
+  app.get('/api/auth/sessions', getUserSessions);
+  app.delete('/api/auth/sessions/:sessionId', revokeSession);
 
-  // Add better-auth middleware - this must come after custom routes if they handle /auth paths
-  // Note: Frontend proxy forwards /api/auth/* to auth-server as /auth/*
-  app.all('/auth/*', toNodeHandler(auth));
+  // Add better-auth middleware - this must come after custom routes if they handle /api/auth paths
+  app.all('/api/auth/*', toNodeHandler(auth));
 
   // Health check endpoint (T023)
   app.get('/health', async (req, res) => {

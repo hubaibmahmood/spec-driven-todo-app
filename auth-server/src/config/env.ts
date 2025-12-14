@@ -34,6 +34,8 @@ export function validateEnv(): Env {
   if (missingEnvVars.length > 0) {
     const errorMessage = `❌ Missing required environment variables: ${missingEnvVars.join(', ')}`;
     console.error(errorMessage);
+    console.error('Please configure these environment variables in your Vercel project settings.');
+    console.error('Visit: https://vercel.com/docs/projects/environment-variables');
     throw new Error(errorMessage);
   }
 
@@ -49,4 +51,13 @@ export function validateEnv(): Env {
   };
 }
 
-export const env = validateEnv();
+// Lazy initialization: only validate when accessed
+let _env: Env | null = null;
+export const env = new Proxy({} as Env, {
+  get(target, prop) {
+    if (!_env) {
+      _env = validateEnv();
+    }
+    return _env[prop as keyof Env];
+  }
+});

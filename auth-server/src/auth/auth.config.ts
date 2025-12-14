@@ -16,7 +16,7 @@ export function getAuthConfig() {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: process.env.NODE_ENV === 'production'
       ? process.env.FRONTEND_URL
-      : `http://localhost:${env.PORT}`,
+      : env.FRONTEND_URL,
 
     // Trusted origins for CORS (where requests can come from)
     trustedOrigins: env.CORS_ORIGINS.split(',').map((origin: string) => origin.trim()),

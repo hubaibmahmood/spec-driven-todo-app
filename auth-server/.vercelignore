@@ -6,9 +6,6 @@
 # Dependencies
 node_modules
 
-# Source files (we deploy compiled JS)
-src
-
 # Tests
 tests
 **/*.test.ts

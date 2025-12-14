@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { Express } from 'express';
 
-console.log('[API] Module loading started');
+console.log('[API] Catch-all route module loading started');
 
 // Cache the app instance across warm starts
 let cachedApp: Express | null = null;

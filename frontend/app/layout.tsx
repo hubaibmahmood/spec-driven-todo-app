@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TaskFlow AI",
+  title: "Momentum",
   description: "Task management dashboard",
 };
 

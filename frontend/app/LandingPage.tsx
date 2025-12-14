@@ -40,7 +40,7 @@ const LandingPage: React.FC = () => {
             <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white p-2 rounded-xl shadow-lg shadow-indigo-500/20">
               <CheckSquare className="w-5 h-5" />
             </div>
-            <span className="tracking-tight">TaskFlow</span>
+            <span className="tracking-tight">Momentum</span>
           </div>
           <div className="flex items-center gap-4 sm:gap-8">
             <Link
@@ -75,7 +75,7 @@ const LandingPage: React.FC = () => {
           </h1>
 
           <p className="text-xl text-slate-500 mb-10 leading-relaxed max-w-2xl mx-auto font-medium">
-            TaskFlow helps you manage projects, track tasks, and reach new
+            Momentum helps you manage projects, track tasks, and reach new
             productivity peaks. Simple enough for personal use, powerful enough
             for teams.
           </p>
@@ -111,7 +111,7 @@ const LandingPage: React.FC = () => {
                 <div className="w-3 h-3 rounded-full bg-green-400 border border-green-500/20"></div>
               </div>
               <div className="flex-1 text-center text-xs font-medium text-slate-400 ml-[-50px]">
-                TaskFlow Dashboard
+                Momentum Dashboard
               </div>
             </div>
 
@@ -122,7 +122,7 @@ const LandingPage: React.FC = () => {
                 <div className="p-6 h-20 flex items-center">
                   <div className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
                     <CheckSquare className="w-7 h-7" />
-                    <span>TaskFlow</span>
+                    <span>Momentum</span>
                   </div>
                 </div>
 
@@ -429,7 +429,7 @@ const LandingPage: React.FC = () => {
               Designed for modern workflows
             </h2>
             <p className="text-slate-500 text-lg">
-              Stop juggling multiple tools. TaskFlow combines organization,
+              Stop juggling multiple tools. Momentum combines organization,
               analytics, and speed in one beautiful interface.
             </p>
           </div>
@@ -486,7 +486,7 @@ const LandingPage: React.FC = () => {
             </h2>
             <p className="text-slate-400 text-xl mb-10 max-w-xl mx-auto">
               Join thousands of users who have transformed their productivity
-              with TaskFlow.
+              with Momentum.
             </p>
             <Link
               href="/register"
@@ -510,7 +510,7 @@ const LandingPage: React.FC = () => {
               <div className="bg-indigo-600 text-white p-1.5 rounded-lg">
                 <CheckSquare className="w-4 h-4" />
               </div>
-              TaskFlow
+              Momentum
             </div>
             <div className="flex gap-8 text-sm text-slate-500 font-medium">
               <a href="#" className="hover:text-indigo-600 transition-colors">
@@ -528,7 +528,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="text-center md:text-left text-sm text-slate-400 border-t border-slate-100 pt-8">
-            © 2024 TaskFlow Inc. All rights reserved.
+            © 2024 Momentum Inc. All rights reserved.
           </div>
         </div>
       </footer>

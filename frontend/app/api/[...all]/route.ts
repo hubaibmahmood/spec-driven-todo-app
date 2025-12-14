@@ -31,7 +31,12 @@ async function proxyRequest(request: NextRequest) {
 
   if (servicePrefix === "auth") {
     targetHost = AUTH_SERVICE_URL;
-    newPathname = `/${urlParts.join("/")}`;
+    if (targetHost.endsWith("/api/auth")) {
+      console.log('[Proxy] Stripping /api/auth from path because it is in targetHost');
+      newPathname = `/${urlParts.slice(2).join("/")}`;
+    } else {
+      newPathname = `/${urlParts.join("/")}`;
+    }
   } else if (servicePrefix === "backend") {
     targetHost = BACKEND_SERVICE_URL;
     newPathname = `/${urlParts.slice(2).join("/")}`;

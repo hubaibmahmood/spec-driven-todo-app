@@ -207,8 +207,42 @@ Ensure import paths match file names exactly (case-sensitive).
 - `POST /api/auth/sign-up/email` returns 404
 - Verification links don't work
 - Auth server deployed successfully but routes not found
+- Function logs show `[Better Auth Handler]` message but still returns 404
 
 **Common Causes:**
+
+#### 0. Trailing Slash in FRONTEND_URL (MOST COMMON!)
+
+**Diagnosis:**
+Check if `FRONTEND_URL` environment variable has a trailing slash:
+
+```bash
+# ❌ WRONG - Has trailing slash
+FRONTEND_URL=https://yourapp.vercel.app/
+
+# ✅ CORRECT - No trailing slash
+FRONTEND_URL=https://yourapp.vercel.app
+```
+
+**Why This Breaks:**
+When better-auth constructs URLs, it concatenates:
+```typescript
+baseURL: `${env.FRONTEND_URL}/api/auth`
+
+// With trailing slash: https://yourapp.vercel.app//api/auth (double slash!)
+// Without trailing slash: https://yourapp.vercel.app/api/auth (correct!)
+```
+
+The double slash `//api/auth` breaks better-auth's internal routing logic, causing all auth endpoints to return 404 even though the handler is being called.
+
+**Solution:**
+1. Go to Vercel dashboard → Project → Settings → Environment Variables
+2. Find `FRONTEND_URL` variable
+3. Remove the trailing slash if present
+4. Click Save
+5. Redeploy the application
+
+**This is the #1 cause of mysterious 404 errors where everything else looks correct!**
 
 #### 1. Route Configuration Mismatch
 
@@ -268,6 +302,83 @@ if (servicePrefix === "auth") {
 
 **Solution:**
 Update proxy logic to handle both cases.
+
+#### 4. Incorrect vercel.json Configuration
+
+**Diagnosis:**
+Check if `vercel.json` uses deprecated `routes` configuration:
+
+```json
+// ❌ DEPRECATED - May not work correctly
+{
+  "version": 2,
+  "buildCommand": "npm run vercel-build",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.ts"
+    }
+  ]
+}
+```
+
+**Solution:**
+Use `rewrites` instead and remove `buildCommand` (use `vercel-build` script in package.json instead):
+
+```json
+// ✅ CORRECT - Modern approach
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}
+```
+
+**Why This Works:**
+- `rewrites` is the modern, supported approach for Vercel routing
+- Removing `buildCommand` from vercel.json allows Vercel to use the `vercel-build` script from package.json
+- The destination should be `/api/index` (no file extension or `/api`)
+
+**package.json should have:**
+```json
+{
+  "scripts": {
+    "vercel-build": "prisma migrate deploy && prisma generate && tsc"
+  }
+}
+```
+
+#### 5. Incorrect toNodeHandler Usage
+
+**Diagnosis:**
+Check if toNodeHandler is called with incorrect parameters:
+
+```typescript
+// ❌ WRONG - toNodeHandler doesn't accept 'next' parameter
+app.all('/api/auth/*', (req, res, next) => {
+  return toNodeHandler(auth)(req, res, next);
+});
+```
+
+**Solution:**
+toNodeHandler only accepts `req` and `res`:
+
+```typescript
+// ✅ CORRECT - Only req and res
+app.all('/api/auth/*', (req, res) => {
+  console.log(`[Better Auth Handler] ${req.method} ${req.url}`);
+  return toNodeHandler(auth)(req, res);
+});
+```
+
+Or even simpler:
+```typescript
+// ✅ BEST - Direct usage
+app.all('/api/auth/*', toNodeHandler(auth));
+```
 
 ### Error: CORS Issues
 
@@ -607,21 +718,33 @@ emailVerification: {
 
 Before deploying to Vercel:
 
+### Critical (Check First!)
+- [ ] ⚠️ **FRONTEND_URL has NO trailing slash** (e.g., `https://app.com` not `https://app.com/`)
+- [ ] ⚠️ **CORS_ORIGINS have NO trailing slashes**
+- [ ] ⚠️ **vercel.json uses `rewrites` not `routes`**
+- [ ] ⚠️ **vercel.json has no `buildCommand` or `version` fields**
+- [ ] ⚠️ **toNodeHandler called correctly** (no `next` parameter)
+
+### Code Quality
 - [ ] All module-level initialization converted to lazy patterns
 - [ ] All relative imports have `.js` extensions
 - [ ] `tsconfig.json` uses `"module": "NodeNext"`
 - [ ] Serverless handler imports from `/dist` not `/src`
-- [ ] All environment variables documented
-- [ ] Environment validation provides helpful error messages
 - [ ] App instance cached for warm starts
 - [ ] Error handling catches and reports all failures
 - [ ] Logging added for debugging (can be removed later)
+
+### Environment & Configuration
+- [ ] All environment variables documented
+- [ ] Environment validation provides helpful error messages
+- [ ] CORS configuration includes all origins
+- [ ] Better-auth baseURL matches public URL (no double slashes!)
+
+### Testing
 - [ ] Local build succeeds: `npm run build`
 - [ ] Local server starts: `npm start`
 - [ ] Health endpoint responds: `curl localhost:PORT/health`
 - [ ] Auth endpoints work locally
-- [ ] CORS configuration includes all origins
-- [ ] Better-auth baseURL matches public URL
 
 ## Monitoring and Alerts
 
@@ -684,12 +807,15 @@ If you're still stuck after trying these solutions:
 
 ## Summary
 
-**Most Common Issues:**
-1. Module-level initialization → Use lazy patterns
-2. Missing env variables → Check Vercel dashboard
-3. Import errors → Add `.js` extensions
-4. Route mismatches → Align all configurations
-5. CORS errors → Update `CORS_ORIGINS`
+**Most Common Issues (in order of frequency):**
+1. **Trailing slash in FRONTEND_URL** → Remove trailing slashes from ALL environment variables (MOST COMMON!)
+2. **Deprecated vercel.json** → Use `rewrites` instead of `routes`
+3. Module-level initialization → Use lazy patterns
+4. Missing env variables → Check Vercel dashboard
+5. Import errors → Add `.js` extensions
+6. Route mismatches → Align all configurations
+7. CORS errors → Update `CORS_ORIGINS`
+8. Incorrect toNodeHandler usage → Don't pass `next` parameter
 
 **Best Debugging Practice:**
 1. Check function logs first

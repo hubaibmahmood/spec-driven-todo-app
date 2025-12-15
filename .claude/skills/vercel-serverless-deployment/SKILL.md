@@ -850,7 +850,292 @@ PORT="8080"
 - **Debugging Time**: < 15 minutes to diagnose and fix deployment issues
 - **Build Time**: < 2 minutes for full build and deployment
 
-## Troubleshooting Guide
+## Cross-Domain Authentication (Critical Issue!)
+
+### The Problem: Cross-Domain Cookie Restrictions
+
+**Scenario**: Frontend deployed on one domain (e.g., Netlify), auth server on another (e.g., Vercel).
+
+**What Happens**:
+1. Frontend (`momentum.intevia.cc`) makes request to auth server (`auth-server.vercel.app/api/auth/sign-in/email`)
+2. Auth server creates session and sets cookie for `auth-server.vercel.app` domain
+3. Browser stores cookie under `auth-server.vercel.app` domain
+4. User navigates to frontend `/dashboard`
+5. Frontend middleware tries to read session cookie
+6. **Cookie is NOT available** - browser security prevents reading cookies from different domain
+7. Middleware redirects to login → **infinite redirect loop**
+
+**Why It Fails**:
+- Browsers block cross-domain cookie access (third-party cookies)
+- Even with `sameSite='none'` and `secure=true`, the frontend cannot read cookies set by a different domain
+- This is fundamental browser security, not a configuration issue
+
+### The Solution: Proxy Authentication Through Frontend Domain
+
+**Strategy**: Make all auth requests go through the frontend domain, then proxy to the auth server. This makes cookies first-party (same-origin).
+
+#### Step 1: Configure Frontend Proxy (Netlify Example)
+
+**netlify.toml**:
+```toml
+# Netlify Configuration for Next.js
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+# Proxy authentication requests through frontend domain
+# Ensures cookies are set for momentum.intevia.cc (same-origin)
+[[redirects]]
+  from = "/api/auth/*"
+  to = "https://auth-server.vercel.app/api/auth/:splat"
+  status = 200
+  force = true
+
+# Enable Next.js plugin for proper deployment
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+```
+
+**Netlify Dashboard Settings** (for monorepo/subdirectory):
+- **Base directory**: `frontend` (if your Next.js app is in a subdirectory)
+- **Publish directory**: `frontend/.next` (Netlify auto-fills this)
+- **Build command**: (leave empty, handled by netlify.toml)
+
+**Critical**: If your codebase has the frontend in a subdirectory:
+1. Set base directory to the subdirectory name (e.g., `frontend`)
+2. Publish directory will auto-expand to `frontend/.next`
+3. Add build command to netlify.toml, NOT dashboard
+4. The `@netlify/plugin-nextjs` plugin must be enabled
+
+#### Step 2: Update Frontend Auth Client
+
+**frontend/lib/auth-client.ts**:
+```typescript
+import { createAuthClient } from "better-auth/react"
+
+// Auth requests go to frontend domain, proxied to auth server
+// Netlify redirects /api/auth/* → auth-server.vercel.app/api/auth/*
+// Cookies are set for frontend domain (same-origin)
+
+function getAuthBaseURL() {
+    // Development: connect directly to local auth server
+    if (process.env.NODE_ENV === 'development') {
+        return "http://localhost:8080/api/auth";
+    }
+
+    // Production: use frontend URL (proxied by Netlify to auth server)
+    // better-auth requires absolute URL, not relative
+    return process.env.NEXT_PUBLIC_AUTH_URL
+        ? `${process.env.NEXT_PUBLIC_AUTH_URL}/api/auth`
+        : "https://momentum.intevia.cc/api/auth";
+}
+
+export const authClient = createAuthClient({
+    baseURL: getAuthBaseURL()
+})
+
+export const { signIn, signUp, useSession, signOut } = authClient;
+```
+
+**⚠️ CRITICAL**: better-auth client requires **absolute URLs**, not relative paths like `/api/auth`. Using relative URLs causes `Invalid base URL` errors.
+
+#### Step 3: Update Auth Server Configuration
+
+**auth-server/src/auth/auth.config.ts**:
+```typescript
+export function getAuthConfig() {
+  return {
+    database: prismaAdapter(prisma, { provider: "postgresql" }),
+    secret: env.BETTER_AUTH_SECRET,
+
+    // BaseURL should point to FRONTEND URL because requests are proxied
+    // Frontend proxies /api/auth/* to this auth server
+    // Cookies are set for frontend domain, enabling same-origin auth
+    baseURL: `${env.FRONTEND_URL}/api/auth`,
+
+    trustedOrigins: env.CORS_ORIGINS.split(',').map(origin => origin.trim()),
+
+    // Cookie configuration for same-origin requests (via proxy)
+    cookies: {
+      sessionToken: {
+        name: "better-auth.session_token",
+        options: {
+          httpOnly: true,
+          sameSite: 'lax', // Safe for same-origin cookies (via proxy)
+          secure: process.env.NODE_ENV === 'production',
+          path: "/",
+        },
+      },
+    },
+
+    // ... rest of configuration
+  };
+}
+```
+
+**Key Changes**:
+- `baseURL` uses `FRONTEND_URL`, not auth server URL
+- `sameSite: 'lax'` instead of `'none'` (cookies are now same-origin via proxy)
+- Cookie domain is implicitly the frontend domain
+
+#### Step 4: Fix Middleware Cookie Name Mismatch
+
+**Problem**: In production (HTTPS), browsers add `__Secure-` prefix to cookies with `secure: true`.
+
+**frontend/middleware.ts**:
+```typescript
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export async function middleware(request: NextRequest) {
+  // In production (HTTPS), browsers add __Secure- prefix to secure cookies
+  // In development (HTTP), the cookie name has no prefix
+  const sessionToken =
+    request.cookies.get("__Secure-better-auth.session_token") ||
+    request.cookies.get("better-auth.session_token");
+
+  const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
+                      request.nextUrl.pathname.startsWith("/register");
+
+  const isPublicRoute = isAuthRoute || request.nextUrl.pathname === '/';
+
+  if (!sessionToken && !isPublicRoute) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (sessionToken && isAuthRoute) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return NextResponse.next();
+}
+```
+
+#### Step 5: Environment Variables
+
+**Netlify (Frontend)**:
+```bash
+NEXT_PUBLIC_AUTH_URL=https://momentum.intevia.cc  # Frontend URL, NOT auth server!
+NEXT_PUBLIC_API_URL=https://your-api.com
+```
+
+**Vercel (Auth Server)**:
+```bash
+FRONTEND_URL=https://momentum.intevia.cc  # NO trailing slash!
+CORS_ORIGINS=https://momentum.intevia.cc,http://localhost:3000
+NODE_ENV=production
+```
+
+### How It Works (Request Flow)
+
+1. **User clicks "Sign In"** on `momentum.intevia.cc`
+2. **Frontend auth client** sends request to `https://momentum.intevia.cc/api/auth/sign-in/email`
+3. **Netlify proxy** routes request to `https://auth-server.vercel.app/api/auth/sign-in/email`
+4. **Auth server** creates session, sets cookie for `momentum.intevia.cc` domain (via baseURL config)
+5. **Netlify proxy** forwards response back to browser
+6. **Browser** stores cookie under `momentum.intevia.cc` domain ✓
+7. **User** navigates to `/dashboard`
+8. **Middleware** reads cookie from `momentum.intevia.cc` domain ✓
+9. **Middleware** finds session → allows access to dashboard ✓
+
+### Common Mistakes When Implementing Proxy
+
+**❌ Mistake 1**: Using relative URLs in auth client
+```typescript
+// ❌ WRONG - better-auth requires absolute URL
+baseURL: "/api/auth"  // Causes "Invalid base URL" error
+
+// ✅ CORRECT
+baseURL: "https://momentum.intevia.cc/api/auth"
+```
+
+**❌ Mistake 2**: Setting baseURL to auth server URL
+```typescript
+// ❌ WRONG - Cookies set for auth server domain
+baseURL: "https://auth-server.vercel.app/api/auth"
+
+// ✅ CORRECT - Cookies set for frontend domain
+baseURL: `${FRONTEND_URL}/api/auth`
+```
+
+**❌ Mistake 3**: Using sameSite='none' for proxied requests
+```typescript
+// ❌ WRONG - Treats as cross-origin (unnecessary)
+sameSite: 'none'
+
+// ✅ CORRECT - Requests are same-origin via proxy
+sameSite: 'lax'
+```
+
+**❌ Mistake 4**: Not checking for __Secure- prefix in middleware
+```typescript
+// ❌ WRONG - Only checks unprefixed name
+const sessionToken = request.cookies.get("better-auth.session_token");
+
+// ✅ CORRECT - Checks both variants
+const sessionToken =
+  request.cookies.get("__Secure-better-auth.session_token") ||
+  request.cookies.get("better-auth.session_token");
+```
+
+**❌ Mistake 5**: Incorrect Netlify configuration for subdirectory
+```bash
+# ❌ WRONG - Base and publish are the same
+Base directory: /
+Publish directory: frontend
+
+# ✅ CORRECT - Proper subdirectory setup
+Base directory: frontend
+Publish directory: frontend/.next (auto-filled by Netlify)
+```
+
+### Why Localhost Works Without Proxy
+
+**Localhost behavior is different**:
+- Both frontend (`localhost:3000`) and auth server (`localhost:8080`) share the same root domain (`localhost`)
+- Browsers are more permissive with `localhost` cookies
+- `sameSite: 'lax'` allows cookies across different ports on `localhost`
+- This is why dev works but production fails - different browser cookie rules
+
+**Don't rely on localhost behavior** - always test on actual domains before deploying.
+
+### Debugging Cross-Domain Cookie Issues
+
+**Symptoms**:
+- Signin succeeds on localhost but fails/redirects on production
+- Browser DevTools shows cookies set for auth server domain, not frontend
+- Middleware can't find session cookie
+- Infinite redirect loops between login and dashboard
+
+**Diagnostic Steps**:
+
+1. **Check Browser DevTools → Application → Cookies**:
+   - Look under frontend domain (e.g., `momentum.intevia.cc`)
+   - Should see `__Secure-better-auth.session_token` or `better-auth.session_token`
+   - If cookies are under auth server domain → proxy not working
+
+2. **Check Network Tab during signin**:
+   - Request should go to frontend domain `/api/auth/sign-in/email`
+   - Response `Set-Cookie` header should NOT have `Domain=` (defaults to current domain)
+   - If request goes to auth server domain → proxy not configured
+
+3. **Verify Environment Variables**:
+   ```bash
+   # Frontend
+   echo $NEXT_PUBLIC_AUTH_URL  # Should be frontend URL
+
+   # Auth server
+   echo $FRONTEND_URL  # Should match frontend URL, no trailing slash!
+   ```
+
+4. **Test Proxy**:
+   ```bash
+   # Should return auth server response
+   curl https://momentum.intevia.cc/api/auth/session
+   ```
+
+### Troubleshooting Guide
 
 ### Issue: Deployment succeeds but function crashes
 

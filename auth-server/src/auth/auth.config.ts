@@ -14,10 +14,11 @@ export function getAuthConfig() {
       provider: "postgresql",
     }),
     secret: env.BETTER_AUTH_SECRET,
-    // BaseURL should include the full path where better-auth is publicly accessible
-    // The frontend proxies /api/auth/* to the auth server
+    // BaseURL must point to where the auth server is actually deployed for cookies to work
+    // Production: Auth server's own URL (use VERCEL_URL auto-provided by Vercel)
+    // Development: Frontend URL works because localhost CORS is permissive
     baseURL: process.env.NODE_ENV === 'production'
-      ? `${process.env.FRONTEND_URL}/api/auth`
+      ? `https://${process.env.VERCEL_URL}/api/auth`
       : `${env.FRONTEND_URL}/api/auth`,
 
     // Trusted origins for CORS (where requests can come from)

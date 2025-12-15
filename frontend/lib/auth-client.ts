@@ -1,13 +1,13 @@
 import { createAuthClient } from "better-auth/react"
 
-// For better-auth client, we need the full auth server URL with /api/auth path
-// The auth server mounts better-auth at /api/auth/* (see auth-server/src/app.ts:84)
-// Local: http://localhost:8080/api/auth
-// Production: NEXT_PUBLIC_AUTH_URL should be set to: https://your-auth-server.vercel.app/api/auth
+// Auth requests are proxied through the frontend domain via Netlify redirects
+// This ensures cookies are set for the same domain (first-party cookies)
+// Production: /api/auth/* → proxied to auth server via netlify.toml
+// Development: Direct connection to localhost:8080/api/auth
 export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_AUTH_URL
-        ? `${process.env.NEXT_PUBLIC_AUTH_URL}/api/auth`
-        : "http://localhost:8080/api/auth"
+    baseURL: process.env.NODE_ENV === 'production'
+        ? "/api/auth"  // Relative URL - proxied by Netlify
+        : "http://localhost:8080/api/auth"  // Direct connection for localhost
 })
 
 export const { signIn, signUp, useSession, signOut } = authClient;

@@ -1,0 +1,12 @@
+# Netlify Configuration
+
+[build]
+  publish = ".next"
+
+# Proxy authentication requests through the frontend domain
+# This ensures cookies are set for momentum.intevia.cc (same-origin)
+[[redirects]]
+  from = "/api/auth/*"
+  to = "https://spec-driven-todo-app.vercel.app/api/auth/:splat"
+  status = 200
+  force = true

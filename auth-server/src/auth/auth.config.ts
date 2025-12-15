@@ -14,14 +14,10 @@ export function getAuthConfig() {
       provider: "postgresql",
     }),
     secret: env.BETTER_AUTH_SECRET,
-    // BaseURL must point to where the auth server is actually deployed for cookies to work
-    // Production: Use AUTH_SERVER_URL if set, otherwise use VERCEL_URL (auto-provided by Vercel)
-    // Development: Frontend URL works because localhost CORS is permissive
-    baseURL: process.env.NODE_ENV === 'production'
-      ? process.env.AUTH_SERVER_URL
-        ? `${process.env.AUTH_SERVER_URL}/api/auth`
-        : `https://${process.env.VERCEL_URL}/api/auth`
-      : `${env.FRONTEND_URL}/api/auth`,
+    // BaseURL should point to the frontend URL because auth requests are proxied
+    // Frontend proxies /api/auth/* to this auth server (via Netlify redirects)
+    // Cookies are set for the frontend domain, enabling same-origin authentication
+    baseURL: `${env.FRONTEND_URL}/api/auth`,
 
     // Trusted origins for CORS (where requests can come from)
     trustedOrigins: env.CORS_ORIGINS.split(',').map((origin: string) => origin.trim()),
@@ -36,16 +32,14 @@ export function getAuthConfig() {
       },
     },
 
-    // Cookie configuration for cross-origin requests in production
-    // When frontend and auth-server are on different domains, we need:
-    // - sameSite: 'none' to allow cross-site cookies
-    // - secure: true (required when sameSite is 'none')
+    // Cookie configuration for same-origin requests (via proxy)
+    // Since auth requests are proxied through frontend domain, cookies are first-party
     cookies: {
       sessionToken: {
         name: "better-auth.session_token",
         options: {
           httpOnly: true,
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          sameSite: 'lax', // Safe for same-origin cookies
           secure: process.env.NODE_ENV === 'production', // true in production (HTTPS required)
           path: "/",
         },

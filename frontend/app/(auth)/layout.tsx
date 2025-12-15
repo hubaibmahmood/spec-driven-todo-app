@@ -1,3 +1,6 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { CheckSquare } from "lucide-react";
 
 export default function AuthLayout({
@@ -5,6 +8,18 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  // Full-width pages that should not be wrapped in a card
+  const fullWidthPages = ["/verify-email", "/email-verified"];
+  const isFullWidth = fullWidthPages.includes(pathname);
+
+  // For full-width pages, just render children without the card wrapper
+  if (isFullWidth) {
+    return <>{children}</>;
+  }
+
+  // For other auth pages (login, register), use the card layout
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">

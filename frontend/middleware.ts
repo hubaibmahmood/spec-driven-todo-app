@@ -9,10 +9,12 @@ export async function middleware(request: NextRequest) {
     request.cookies.get("better-auth.session_token");
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/register");
+  const isVerificationRoute = request.nextUrl.pathname.startsWith("/verify-email") || request.nextUrl.pathname.startsWith("/email-verified");
 
   // Define protected routes explicitly or protect everything except auth/public
   // Here we assume everything except auth and static assets is protected
-  const isPublicRoute = isAuthRoute || request.nextUrl.pathname === '/';
+  // Verification routes are public since users don't have a session yet
+  const isPublicRoute = isAuthRoute || isVerificationRoute || request.nextUrl.pathname === '/';
 
   if (!sessionToken && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));

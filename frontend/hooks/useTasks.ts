@@ -141,8 +141,7 @@ export function useTasks(): UseTasksReturn {
 
   // Add subtask (not implemented in backend yet)
   const handleAddSubtask = useCallback((todoId: string, title: string) => {
-    // Not implemented in backend yet
-    console.log("Add subtask not implemented", todoId, title);
+    // TODO: Implement subtask functionality when backend support is added
   }, []);
 
   // Manual refresh

@@ -26,7 +26,8 @@ export default function RegisterPage() {
       name,
       fetchOptions: {
         onSuccess: () => {
-             router.push("/dashboard");
+             // Redirect to verification pending page (no email in URL for security)
+             router.push('/verify-email');
         },
         onError: (ctx) => {
              setError(ctx.error.message);

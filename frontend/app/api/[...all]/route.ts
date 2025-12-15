@@ -9,21 +9,11 @@ const BACKEND_SERVICE_URL = (
 
 async function proxyRequest(request: NextRequest) {
   const urlParts = request.nextUrl.pathname.split("/").filter(Boolean);
-  
-  console.log('[Proxy] Incoming Request:', {
-    url: request.url,
-    pathname: request.nextUrl.pathname,
-    method: request.method,
-    urlParts,
-    AUTH_SERVICE_URL,
-    BACKEND_SERVICE_URL
-  });
 
   let targetHost: string;
   let newPathname: string;
 
   if (urlParts.length < 2) {
-    console.log('[Proxy] Error: Invalid API route');
     return NextResponse.json({ error: "Invalid API route" }, { status: 400 });
   }
 
@@ -32,7 +22,6 @@ async function proxyRequest(request: NextRequest) {
   if (servicePrefix === "auth") {
     targetHost = AUTH_SERVICE_URL;
     if (targetHost.endsWith("/api/auth")) {
-      console.log('[Proxy] Stripping /api/auth from path because it is in targetHost');
       newPathname = `/${urlParts.slice(2).join("/")}`;
     } else {
       newPathname = `/${urlParts.join("/")}`;
@@ -41,7 +30,6 @@ async function proxyRequest(request: NextRequest) {
     targetHost = BACKEND_SERVICE_URL;
     newPathname = `/${urlParts.slice(2).join("/")}`;
   } else {
-    console.log('[Proxy] Error: Unknown service prefix:', servicePrefix);
     return NextResponse.json(
       { error: `Unknown service prefix: ${servicePrefix}` },
       { status: 404 },
@@ -49,7 +37,6 @@ async function proxyRequest(request: NextRequest) {
   }
 
   const targetUrl = `${targetHost}${newPathname}${request.nextUrl.search}`;
-  console.log('[Proxy] Forwarding to:', targetUrl);
 
   try {
     const headers = new Headers(request.headers);

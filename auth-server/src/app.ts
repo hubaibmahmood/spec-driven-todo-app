@@ -27,12 +27,6 @@ function createApp() {
   // Middleware
   app.set('trust proxy', true);
 
-  // Debug logging middleware
-  app.use((req, res, next) => {
-    console.log(`[Auth Server] ${req.method} ${req.url}`);
-    next();
-  });
-
   // Initialize better-auth
   const auth = betterAuth(getAuthConfig());
   _auth = auth;
@@ -82,7 +76,6 @@ function createApp() {
 
   // Add better-auth middleware - this must come after custom routes if they handle /api/auth paths
   app.all('/api/auth/*', (req, res) => {
-    console.log(`[Better Auth Handler] ${req.method} ${req.url}`);
     return toNodeHandler(auth)(req, res);
   });
 

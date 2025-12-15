@@ -13,6 +13,8 @@ async function startServer() {
       console.log(`   Health check: http://localhost:${env.PORT}/health`);
       console.log(`   Auth endpoints: http://localhost:${env.PORT}/api/auth`);
       console.log(`   Access via frontend: ${env.FRONTEND_URL}/api/auth`);
+      console.log(`   📧 Email from: ${env.EMAIL_FROM}`);
+      console.log(`   📧 Resend API key: ${env.RESEND_API_KEY ? '✓ Set' : '✗ Missing'}`);
     });
 
     // Graceful shutdown

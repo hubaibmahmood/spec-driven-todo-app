@@ -93,7 +93,17 @@ function TasksContent() {
 
   // Empty state - no tasks at all
   if (todos.length === 0) {
-    return <EmptyTasksState onCreateTask={handleOpenModal} />;
+    return (
+      <>
+        <EmptyTasksState onCreateTask={handleOpenModal} />
+        <AddTodoModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSave={onSaveTodo}
+          initialData={editingTodo}
+        />
+      </>
+    );
   }
 
   // No results state - filters applied but no matches

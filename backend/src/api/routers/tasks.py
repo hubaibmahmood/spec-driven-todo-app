@@ -20,7 +20,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 @router.get("/", response_model=list[TaskResponse], status_code=status.HTTP_200_OK)
 async def get_all_tasks(
     repository: TaskRepository = Depends(get_task_repository),
-    # current_user: UUID = Depends(get_current_user) # Commented out for testing get_all_tasks only
+    current_user: str = Depends(get_current_user)
 ) -> list[TaskResponse]:
     """
     Get all tasks for the authenticated user.
@@ -28,7 +28,7 @@ async def get_all_tasks(
     Returns:
         List of tasks owned by the user
     """
-    tasks = await repository.get_all_unprotected() # Using unprotected method for testing
+    tasks = await repository.get_all_by_user(current_user)
     return [TaskResponse.model_validate(task) for task in tasks]
 
 

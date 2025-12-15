@@ -1,5 +1,9 @@
 # Netlify Configuration for Next.js
 
+[build]
+  command = "npm run build"
+  publish = ".next"
+
 # Proxy authentication requests through the frontend domain
 # This ensures cookies are set for momentum.intevia.cc (same-origin)
 [[redirects]]
@@ -8,6 +12,6 @@
   status = 200
   force = true
 
-# Enable Next.js plugin for proper Next.js support on Netlify
+# Enable Next.js plugin - handles deployment after build
 [[plugins]]
   package = "@netlify/plugin-nextjs"

@@ -15,10 +15,12 @@ export function getAuthConfig() {
     }),
     secret: env.BETTER_AUTH_SECRET,
     // BaseURL must point to where the auth server is actually deployed for cookies to work
-    // Production: Auth server's own URL (use VERCEL_URL auto-provided by Vercel)
+    // Production: Use AUTH_SERVER_URL if set, otherwise use VERCEL_URL (auto-provided by Vercel)
     // Development: Frontend URL works because localhost CORS is permissive
     baseURL: process.env.NODE_ENV === 'production'
-      ? `https://${process.env.VERCEL_URL}/api/auth`
+      ? process.env.AUTH_SERVER_URL
+        ? `${process.env.AUTH_SERVER_URL}/api/auth`
+        : `https://${process.env.VERCEL_URL}/api/auth`
       : `${env.FRONTEND_URL}/api/auth`,
 
     // Trusted origins for CORS (where requests can come from)
@@ -31,6 +33,22 @@ export function getAuthConfig() {
       cookieCache: {
         enabled: true,
         maxAge: 5 * 60, // 5 minutes
+      },
+    },
+
+    // Cookie configuration for cross-origin requests in production
+    // When frontend and auth-server are on different domains, we need:
+    // - sameSite: 'none' to allow cross-site cookies
+    // - secure: true (required when sameSite is 'none')
+    cookies: {
+      sessionToken: {
+        name: "better-auth.session_token",
+        options: {
+          httpOnly: true,
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          secure: process.env.NODE_ENV === 'production', // true in production (HTTPS required)
+          path: "/",
+        },
       },
     },
 

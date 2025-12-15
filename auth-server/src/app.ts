@@ -81,9 +81,9 @@ function createApp() {
   app.delete('/api/auth/sessions/:sessionId', revokeSession);
 
   // Add better-auth middleware - this must come after custom routes if they handle /api/auth paths
-  app.all('/api/auth/*', (req, res, next) => {
+  app.all('/api/auth/*', (req, res) => {
     console.log(`[Better Auth Handler] ${req.method} ${req.url}`);
-    return toNodeHandler(auth)(req, res, next);
+    return toNodeHandler(auth)(req, res);
   });
 
   // Health check endpoint (T023)

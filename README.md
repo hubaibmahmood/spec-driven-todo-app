@@ -1,100 +1,196 @@
-# Momentum - Spec-Driven Development Example
+# Momentum - Full-Stack Task Management Platform
 
-A feature-rich task management application built using **Spec-Driven Development (SDD)** methodology. This project demonstrates how to build software systematically from specification to implementation with full traceability.
+A production-ready, full-stack task management application built using **Spec-Driven Development (SDD)** methodology. This project demonstrates modern web application architecture with FastAPI backend, Next.js frontend, and microservices authentication.
+
+## Architecture Overview
+
+Momentum is built as a modern microservices architecture with three core components:
+
+- **Backend API** (Python/FastAPI) - RESTful API with PostgreSQL database, async operations
+- **Auth Server** (Node.js/TypeScript) - Dedicated authentication microservice using better-auth
+- **Frontend** (Next.js 16) - Modern dashboard with App Router, Server Components, and Tailwind CSS
+
+All services share a single PostgreSQL database (Neon serverless) for data consistency and simplified deployment.
 
 ## Features
 
 ### Current Capabilities
 
-- **Interactive Menu System** - Numbered menu (1-6) for easy navigation
-- **Create Tasks** - Add tasks with title and optional description
-- **View All Tasks** - Display tasks with ID, status (✓/□), title, and truncated description
-- **Mark Complete** - Toggle task completion status (idempotent)
-- **Delete Tasks** - Remove single or multiple tasks (comma-separated IDs)
-- **Update Tasks** - Modify task descriptions with current value preview
-- **Session-Based** - In-memory storage maintains data during app session
-- **Input Validation** - Field length limits, whitespace handling, and error messages
-- **Error Handling** - Graceful failures without crashes
+#### Backend API (FastAPI)
+- **RESTful Endpoints** - Complete CRUD operations for tasks
+- **User Authentication** - Session-based auth with JWT tokens
+- **Database Integration** - PostgreSQL with SQLAlchemy 2.0 async ORM
+- **Rate Limiting** - User-based rate limiting (100 req/min read, 30 req/min write)
+- **CORS Support** - Configured for cross-origin requests
+- **Input Validation** - Pydantic models with comprehensive validation
+- **Error Handling** - Structured error responses with proper HTTP status codes
+- **Database Migrations** - Alembic for schema versioning
+- **Task Filtering** - User-specific task isolation
+
+#### Authentication Server (better-auth)
+- **Email/Password Auth** - Secure registration and login with bcrypt hashing
+- **Email Verification** - Mandatory verification using Resend email service
+- **OAuth Integration** - Google sign-in support
+- **Session Management** - Multiple concurrent sessions with device tracking
+- **Password Recovery** - Secure password reset flow
+- **JWT Tokens** - 15-minute access tokens, 7-day refresh tokens
+- **Database-Driven** - Session validation against PostgreSQL
+
+#### Frontend Dashboard (Next.js)
+- **Modern UI** - Responsive design with Tailwind CSS 4
+- **Authentication** - Sign-in/Sign-up forms integrated with auth server
+- **Task Management** - Complete CRUD operations via API
+- **Real-time Stats** - Dashboard with task statistics and completion rates
+- **Search & Filter** - Filter by status (All/Active/Completed) with URL state
+- **Priority & Due Dates** - Task priority levels and deadline tracking
+- **Mobile Responsive** - Sidebar navigation with mobile toggle
+- **Email Verification** - Full-width modern verification pages
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.12 or higher
-- [uv](https://github.com/astral-sh/uv) package manager
+- **Python 3.12+** - For backend API
+- **Node.js 20+** - For auth server and frontend
+- **PostgreSQL** - Neon serverless PostgreSQL (or local instance)
+- **uv** - Python package manager ([install](https://github.com/astral-sh/uv))
 
-### Installation
+### Full Stack Setup
+
+#### 1. Clone Repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/hubaibmahmood/momentum.git
 cd momentum
-
-# Install dependencies with uv (automatically creates virtual environment)
-uv sync
 ```
 
-### Run the App
+#### 2. Database Setup
+
+Create a Neon PostgreSQL database or use a local PostgreSQL instance:
 
 ```bash
-uv run python -m src.cli.main
+# Set up your DATABASE_URL in .env files (see .env.example in each directory)
+# Example: postgresql+asyncpg://user:password@host/database
 ```
 
-### Usage
+#### 3. Backend API Setup
 
-Once running, you'll see an interactive menu:
+```bash
+cd backend
 
+# Create .env file (copy from .env.example and configure)
+cp .env.example .env
+
+# Install dependencies
+uv sync
+
+# Run database migrations
+alembic upgrade head
+
+# Start the FastAPI server
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
-==================================================
-MOMENTUM - Main Menu
-==================================================
-1. Add Task
-2. View Tasks
-3. Mark Task Complete
-4. Delete Task(s)
-5. Update Task Description
-6. Quit
-==================================================
+
+Backend API will be available at `http://localhost:8000`
+
+#### 4. Auth Server Setup
+
+```bash
+cd auth-server
+
+# Create .env file (copy from .env.example and configure)
+cp .env.example .env
+
+# Install dependencies
+npm install
+
+# Generate Prisma client
+npx prisma generate
+
+# Push database schema
+npx prisma db push
+
+# Start the auth server
+npm run dev
 ```
 
-**Example workflow:**
-1. Select `1` to add a task
-2. Enter title: `Buy groceries`
-3. Enter description: `Milk, eggs, bread` (or press Enter to skip)
-4. Select `2` to view all tasks
-5. Select `3` to mark task complete
-6. Enter task ID to mark complete
-7. Select `6` to quit
+Auth server will be available at `http://localhost:3001`
+
+#### 5. Frontend Setup
+
+```bash
+cd frontend
+
+# Create .env file (copy from .env.example and configure)
+cp .env.example .env
+
+# Install dependencies
+npm install
+
+# Start the Next.js development server
+npm run dev
+```
+
+Frontend will be available at `http://localhost:3000`
+
+### Environment Variables
+
+Each component requires specific environment variables. See `.env.example` files in:
+- `backend/.env.example` - Database URL, CORS origins, session secret
+- `auth-server/.env.example` - Database URL, better-auth config, Resend API key, OAuth credentials
+- `frontend/.env.example` - Backend API URL, Auth server URL
 
 ## Project Structure
 
 ```
 momentum/
-├── src/                          # Source code
-│   ├── cli/                      # Command-line interface
-│   │   ├── main.py              # Interactive menu entry point
-│   │   ├── commands.py          # Command handlers (add, view, delete, etc.)
-│   │   ├── validators.py        # Input validation functions
-│   │   └── exceptions.py        # Custom exceptions
-│   ├── models/                   # Data models
-│   │   └── task.py              # Task dataclass
-│   ├── services/                 # Business logic
-│   │   └── task_service.py      # Task operations
-│   └── storage/                  # Data persistence
-│       ├── memory_store.py      # In-memory CRUD operations
-│       └── exceptions.py        # Storage exceptions
-├── tests/                        # Test suite
-│   ├── contract/                # Data model validation tests
-│   ├── integration/             # End-to-end workflow tests
-│   └── unit/                    # Component unit tests
-├── specs/                        # Feature specifications
-│   ├── 001-add-task/            # Add task feature documentation
-│   └── 002-crud-operations/     # CRUD operations documentation
-├── history/prompts/             # Prompt History Records (PHRs)
-│   ├── constitution/            # Project principles
-│   ├── 001-add-task/            # Feature 001 development history
-│   └── 002-crud-operations/     # Feature 002 development history
-└── .specify/                     # SpecKit Plus framework files
+├── backend/                      # FastAPI REST API
+│   ├── src/
+│   │   ├── api/                 # API layer
+│   │   │   ├── main.py         # FastAPI application
+│   │   │   ├── routers/        # API route handlers
+│   │   │   └── schemas/        # Pydantic models
+│   │   ├── database/           # Database layer
+│   │   │   ├── connection.py  # SQLAlchemy engine
+│   │   │   └── models/        # ORM models
+│   │   ├── services/           # Business logic
+│   │   └── config.py           # Configuration settings
+│   ├── alembic/                # Database migrations
+│   ├── tests/                  # API tests
+│   └── pyproject.toml          # Python dependencies
+│
+├── auth-server/                 # Authentication microservice
+│   ├── src/
+│   │   ├── auth/               # better-auth configuration
+│   │   ├── config/             # Server configuration
+│   │   └── index.ts            # Express server
+│   ├── api/                    # Vercel serverless functions
+│   ├── prisma/                 # Prisma schema for auth tables
+│   └── package.json            # Node.js dependencies
+│
+├── frontend/                    # Next.js dashboard
+│   ├── app/                    # Next.js App Router
+│   │   ├── (auth)/            # Auth routes (sign-in, sign-up)
+│   │   ├── dashboard/         # Protected dashboard routes
+│   │   └── layout.tsx         # Root layout
+│   ├── components/             # React components
+│   ├── lib/                    # Utilities and API clients
+│   ├── hooks/                  # Custom React hooks
+│   └── package.json            # Node.js dependencies
+│
+├── specs/                       # Feature specifications (SDD)
+│   ├── 003-fastapi-rest-api/   # Backend API specification
+│   ├── 004-auth-server/        # Authentication service spec
+│   └── 005-nextjs-dashboard-migration/  # Frontend dashboard spec
+│
+├── history/prompts/             # Development history (PHRs)
+│   ├── constitution/           # Project principles
+│   ├── 001-add-task/          # Feature development records
+│   └── .../                   # Other feature histories
+│
+└── .specify/                    # SpecKit Plus framework
+    ├── memory/                 # Constitution and guidelines
+    └── templates/              # Spec templates
 ```
 
 ## Development Workflow
@@ -151,100 +247,160 @@ All development sessions are recorded as **Prompt History Records (PHRs)** in `h
 
 ## Testing
 
-### Run All Tests
+### Backend API Tests
 
 ```bash
-uv run pytest
+cd backend
+
+# Run all tests with coverage
+pytest --cov=src --cov-report=html
+
+# Run specific test suites
+pytest tests/unit/ -v           # Unit tests
+pytest tests/integration/ -v    # Integration tests
+pytest tests/contract/ -v       # Contract tests
+
+# Linting and type checking
+ruff check src/ tests/          # Run ruff linter
+mypy src/                       # Run mypy type checker
 ```
 
-### Run Specific Test Suites
+### Auth Server Tests
 
 ```bash
-# Unit tests only
-uv run pytest tests/unit/ -v
+cd auth-server
 
-# Integration tests only
-uv run pytest tests/integration/ -v
+# Run tests
+npm test
 
-# Contract tests only
-uv run pytest tests/contract/ -v
+# Type checking
+npx tsc --noEmit
+
+# Linting
+npm run lint
 ```
 
-### Test Coverage
+### Frontend Tests
 
 ```bash
-uv run pytest --cov=src --cov-report=html
-```
+cd frontend
 
-### Linting and Type Checking
+# Run tests (when implemented)
+npm test
 
-```bash
-# Run ruff linter
-uv run ruff check src/ tests/
+# Type checking
+npx tsc --noEmit
 
-# Run mypy type checker
-uv run mypy src/
+# Linting
+npm run lint
 ```
 
 ## Tech Stack
 
+### Backend API
+- **Framework**: FastAPI 0.104+
 - **Language**: Python 3.12+
-- **Package Manager**: [uv](https://github.com/astral-sh/uv)
-- **Testing**: pytest, pytest-cov
-- **Linting**: ruff
+- **Database**: PostgreSQL (Neon serverless)
+- **ORM**: SQLAlchemy 2.0+ (async)
+- **Migrations**: Alembic 1.13+
+- **Validation**: Pydantic 2.0+
+- **Server**: Uvicorn (ASGI)
+- **Rate Limiting**: SlowAPI with Redis
+- **Testing**: pytest, pytest-asyncio, httpx
 - **Type Checking**: mypy
-- **Storage**: In-memory (dict-based, no persistence)
-- **Data Models**: Python dataclasses
-- **Development Framework**: [SpecKit Plus](https://github.com/panaversity/spec-kit-plus)
+- **Linting**: ruff
+
+### Authentication Server
+- **Framework**: Express.js
+- **Language**: TypeScript 5.x
+- **Runtime**: Node.js 20+
+- **Auth Library**: better-auth 1.4+
+- **Database ORM**: Prisma
+- **Email Service**: Resend
+- **Password Hashing**: bcrypt
+- **Deployment**: Vercel serverless functions
+
+### Frontend
+- **Framework**: Next.js 16.0+ (App Router)
+- **Language**: TypeScript 5.x
+- **Runtime**: Node.js 20+
+- **UI Library**: React 19.2+
+- **Styling**: Tailwind CSS 4
+- **Charts**: Recharts 3.5+
+- **Icons**: Lucide React
+- **State Management**: URL Search Params
+- **Deployment**: Netlify
+
+### Development Framework
+- **Methodology**: [SpecKit Plus](https://github.com/panaversity/spec-kit-plus) - Spec-Driven Development
+- **Version Control**: Git with feature branch workflow
+- **Documentation**: Markdown specs with traceability
+- **AI Assistant**: [Claude Code](https://claude.com/claude-code) for development
 
 ## Architecture Decisions
 
 Key architectural choices documented in feature specs:
 
-- **In-memory storage** - Simple dict-based storage for MVP (no persistence)
-- **Interactive menu** - Numbered options instead of CLI arguments for better UX
-- **Idempotent operations** - Safe to retry (e.g., marking completed tasks)
-- **Batch operations** - Delete supports comma-separated IDs
-- **TDD approach** - Tests written before implementation
-- **Minimal dependencies** - Standard library only, no external frameworks
+### Full-Stack Architecture
+- **Microservices Pattern** - Separate services for API, auth, and frontend
+- **Shared Database** - PostgreSQL shared between FastAPI and auth server
+- **Session-Based Auth** - JWT tokens stored in database, validated on each request
+- **Cross-Origin** - CORS configured for frontend-backend communication
+- **Rate Limiting** - User-based rate limiting with IP fallback
+- **API-First Design** - RESTful API contracts drive frontend development
 
-## Current Limitations
+### Backend Decisions
+- **Async SQLAlchemy** - Non-blocking database operations for high concurrency
+- **Pydantic Validation** - Request/response validation with automatic OpenAPI docs
+- **Alembic Migrations** - Version-controlled database schema changes
+- **Repository Pattern** - Clean separation between API and data access layers
+- **Error Handling** - Structured error responses with proper HTTP status codes
 
-- **No persistence** - Data lost when app quits (session-based)
-- **Single user** - No multi-user support or authentication
-- **No task filtering** - Cannot filter by status, date, etc.
-- **No priority levels** - All tasks treated equally
-- **No due dates** - No deadline tracking
-- **No search** - Cannot search tasks by keyword
-- **No export** - Cannot export to CSV, JSON, etc.
+### Authentication Decisions
+- **better-auth Library** - Production-ready auth with built-in security features
+- **Email Verification** - Mandatory verification using Resend email service
+- **Multiple Sessions** - Users can maintain sessions across multiple devices
+- **OAuth Integration** - Google sign-in for streamlined user onboarding
+- **Database-Driven Tokens** - Session validation against PostgreSQL (not cryptographic)
 
-## Future Enhancements
+### Frontend Decisions
+- **Next.js App Router** - Server Components for improved performance and SEO
+- **URL State Management** - Search params for filter/search persistence and shareability
+- **TypeScript Strict Mode** - Type safety across the entire application
+- **Tailwind CSS 4** - Utility-first styling with modern CSS features
+- **Client-Side API Calls** - Fetch API with proper error handling and loading states
+- **Responsive Design** - Mobile-first approach with adaptive layouts
 
-Potential features for future development:
+## API Documentation
 
-1. **Persistence Layer**
-   - File-based storage (JSON, SQLite)
-   - Cloud sync (Firebase, PostgreSQL)
+Once the backend is running, you can access:
 
-2. **Enhanced Task Management**
-   - Priority levels (High/Medium/Low)
-   - Due dates and reminders
-   - Categories/tags
-   - Subtasks
+- **OpenAPI Docs**: `http://localhost:8000/docs` - Interactive API documentation
+- **ReDoc**: `http://localhost:8000/redoc` - Alternative API documentation
+- **Health Check**: `http://localhost:8000/health` - Service health status
 
-3. **Filtering and Search**
-   - Filter by status, priority, date
-   - Full-text search
-   - Sort by different criteria
+### Key API Endpoints
 
-4. **Export/Import**
-   - Export to CSV, JSON, Markdown
-   - Import from other todo apps
+```
+POST   /api/tasks              - Create a new task
+GET    /api/tasks              - Get all user tasks
+GET    /api/tasks/{id}         - Get specific task
+PATCH  /api/tasks/{id}         - Update task
+DELETE /api/tasks/{id}         - Delete task
+PATCH  /api/tasks/{id}/complete - Toggle task completion
+```
 
-5. **User Experience**
-   - Color-coded output
-   - Progress tracking (% complete)
-   - Statistics and analytics
+All endpoints require authentication via `Authorization: Bearer <token>` header.
+
+## Deployment
+
+The application is designed for cloud deployment:
+
+- **Backend**: Render.com (see `backend/DEPLOYMENT_RENDER.md`)
+- **Auth Server**: Vercel serverless (see `auth-server/DEPLOYMENT.md`)
+- **Frontend**: Netlify (see `frontend/DEPLOYMENT.md`)
+
+Each component includes deployment configuration files and detailed deployment guides.
 
 ## Contributing
 
@@ -268,20 +424,26 @@ This project is a demonstration of Spec-Driven Development methodology.
 
 ## Project Status
 
-**Current Version**: 0.2.0 (CRUD Operations Complete)
+**Current Version**: 1.0.0 (Full-Stack Production Release)
 
 ### Completed Features
 
-- ✅ Full CRUD with interactive menu
+- ✅ **Backend API (FastAPI)** - RESTful API with PostgreSQL, authentication, rate limiting
+- ✅ **Authentication Server** - better-auth microservice with email verification and OAuth
+- ✅ **Frontend Dashboard** - Next.js 16 with modern UI, task management, and statistics
+- ✅ **Database Integration** - SQLAlchemy async ORM with Alembic migrations
+- ✅ **User Authentication** - JWT tokens, session management, password recovery
+- ✅ **Task Management** - CRUD operations with priority levels and due dates
+- ✅ **Cloud Deployment** - Production-ready deployment on Render, Vercel, and Netlify
 
-### In Progress
+### Development Methodology
 
-- None
+This project demonstrates **Spec-Driven Development (SDD)** using SpecKit Plus:
 
-### Planned
-
-- File-based persistence
-- Task priorities and due dates
-- Filtering and search capabilities
+- Every feature starts with a detailed specification
+- Implementation follows TDD principles
+- Full traceability from spec to code via PHRs (Prompt History Records)
+- Architecture decisions documented in ADRs
+- Clean separation between business requirements and technical implementation
 
 ---

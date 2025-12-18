@@ -1,0 +1,69 @@
+"""MCP Server configuration
+
+Generated: {{GENERATION_DATE}}
+"""
+
+import os
+from pydantic_settings import BaseSettings
+from typing import Literal
+
+
+class Settings(BaseSettings):
+    """MCP Server settings loaded from environment variables."""
+
+    # MCP Server Configuration
+    MCP_SERVER_NAME: str = "{{PROJECT_NAME}} MCP Server"
+    MCP_TRANSPORT: Literal["stdio", "streamable-http", "sse"] = "stdio"
+    MCP_PORT: int = 8001
+
+    # FastAPI Backend Configuration
+    FASTAPI_BASE_URL: str = "{{FASTAPI_BASE_URL}}"
+    FASTAPI_API_PREFIX: str = "{{FASTAPI_API_PREFIX}}"
+    FASTAPI_TIMEOUT: float = 30.0
+
+    # Authentication Configuration
+    AUTH_METHOD: Literal["user_id", "jwt", "session", "none"] = "{{AUTH_METHOD}}"
+    JWT_SECRET: str | None = None
+    JWT_TOKEN: str | None = None
+    SESSION_COOKIE_NAME: str = "session_id"
+    SESSION_TOKEN: str | None = None
+
+    # HTTP Client Configuration
+    HTTP_MAX_CONNECTIONS: int = 100
+    HTTP_MAX_KEEPALIVE: int = 20
+    HTTP_KEEPALIVE_EXPIRY: float = 30.0
+
+    # Logging Configuration
+    LOG_LEVEL: str = "INFO"
+    LOG_FILE: str | None = "mcp-server.log"
+
+    class Config:
+        env_file = ".env"
+        env_prefix = "MCP_"
+        case_sensitive = False
+
+
+# Global settings instance
+settings = Settings()
+
+
+# Validate configuration on import
+def validate_config():
+    """Validate configuration settings."""
+    errors = []
+
+    if settings.AUTH_METHOD == "jwt" and not settings.JWT_SECRET:
+        errors.append("JWT_SECRET is required when AUTH_METHOD=jwt")
+
+    if settings.AUTH_METHOD == "session" and not settings.SESSION_TOKEN:
+        errors.append("SESSION_TOKEN is required when AUTH_METHOD=session")
+
+    if settings.MCP_TRANSPORT in ["streamable-http", "sse"] and not (1024 <= settings.MCP_PORT <= 65535):
+        errors.append(f"Invalid MCP_PORT: {settings.MCP_PORT}. Must be between 1024-65535")
+
+    if errors:
+        raise ValueError(f"Configuration errors:\n  - " + "\n  - ".join(errors))
+
+
+# Run validation
+validate_config()

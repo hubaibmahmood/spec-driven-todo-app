@@ -216,7 +216,10 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - Neon serverless PostgreSQL (shared with better-auth Node.js server) (003-fastapi-rest-api)
 - Node.js 20+ with TypeScript 5.x (004-auth-server)
 - Neon Serverless PostgreSQL (shared with FastAPI) (004-auth-server)
+- Python 3.12+ (matches existing backend) + FastMCP (official MCP Python SDK), httpx (async HTTP client), pydantic (data validation) (006-mcp-server-integration)
+- N/A (MCP server is stateless; backend handles persistence via Neon PostgreSQL) (006-mcp-server-integration)
 
 ## Recent Changes
+- 006-mcp-server-integration: Replaced bulk_delete_tasks tool with mark_task_completed (dedicated tool for marking tasks complete); update_task now handles only title/description/priority/due_date
 - 002-crud-operations: Confirmed interactive CLI pattern (no argparse - uses input() for interactive menu)
 - 001-add-task: Added Python 3.12+ + dataclasses (models), pytest (testing), ruff (linting), mypy (type checking)

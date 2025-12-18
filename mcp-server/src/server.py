@@ -6,6 +6,9 @@ from fastmcp import FastMCP
 from .config import settings
 from .tools.list_tasks import list_tasks
 from .tools.create_task import create_task
+from .tools.mark_completed import mark_task_completed
+from .tools.update_task import update_task
+from .tools.delete_task import delete_task
 
 # Configure logging
 logging.basicConfig(
@@ -29,7 +32,19 @@ logger.info("Registered tool: list_tasks")
 mcp.tool()(create_task)
 logger.info("Registered tool: create_task")
 
-logger.info("MCP server initialized with 2 tools")
+# Tool 3: Mark Task Completed
+mcp.tool()(mark_task_completed)
+logger.info("Registered tool: mark_task_completed")
+
+# Tool 4: Update Task
+mcp.tool()(update_task)
+logger.info("Registered tool: update_task")
+
+# Tool 5: Delete Task
+mcp.tool()(delete_task)
+logger.info("Registered tool: delete_task")
+
+logger.info("MCP server initialized with 5 tools")
 
 
 def main():

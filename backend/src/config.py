@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # Authentication Configuration
     SESSION_HASH_SECRET: str = "dev-secret-key-change-in-production"
+    SERVICE_AUTH_TOKEN: str = ""  # Service-to-service authentication token
 
     # Application Configuration
     ENVIRONMENT: str = "development"

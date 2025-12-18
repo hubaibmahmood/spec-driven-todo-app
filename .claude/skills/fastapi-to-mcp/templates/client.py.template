@@ -1,0 +1,312 @@
+"""HTTP client for FastAPI backend communication
+
+Generated: {{GENERATION_DATE}}
+"""
+
+import httpx
+from typing import Any, Optional, Dict
+import logging
+from config import settings
+
+
+logger = logging.getLogger(__name__)
+
+
+class FastAPIClient:
+    """Async HTTP client for FastAPI backend."""
+
+    def __init__(self, base_url: str | None = None):
+        """Initialize FastAPI client.
+
+        Args:
+            base_url: FastAPI base URL (defaults to settings.FASTAPI_BASE_URL)
+        """
+        self.base_url = base_url or settings.FASTAPI_BASE_URL
+
+        # Configure HTTP client with connection pooling
+        self.client = httpx.AsyncClient(
+            base_url=self.base_url,
+            timeout=httpx.Timeout(settings.FASTAPI_TIMEOUT),
+            limits=httpx.Limits(
+                max_keepalive_connections=settings.HTTP_MAX_KEEPALIVE,
+                max_connections=settings.HTTP_MAX_CONNECTIONS,
+                keepalive_expiry=settings.HTTP_KEEPALIVE_EXPIRY
+            ),
+            follow_redirects=True,
+            http2=True  # Enable HTTP/2 for better performance
+        )
+
+        logger.info(f"FastAPI client initialized: {self.base_url}")
+
+    def _get_auth_headers(self, user_id: str | None = None) -> Dict[str, str]:
+        """Get authentication headers based on configured method.
+
+        Args:
+            user_id: User ID for JWT generation
+
+        Returns:
+            Dictionary of authentication headers
+        """
+        headers = {}
+
+        if settings.AUTH_METHOD == "jwt" and settings.JWT_TOKEN:
+            headers["Authorization"] = f"Bearer {settings.JWT_TOKEN}"
+        elif settings.AUTH_METHOD == "jwt" and user_id:
+            # TODO: Implement JWT generation if needed
+            logger.warning("JWT generation not implemented, using token from config")
+            if settings.JWT_TOKEN:
+                headers["Authorization"] = f"Bearer {settings.JWT_TOKEN}"
+
+        return headers
+
+    def _get_auth_cookies(self) -> Dict[str, str] | None:
+        """Get authentication cookies based on configured method.
+
+        Returns:
+            Dictionary of cookies or None
+        """
+        if settings.AUTH_METHOD == "session" and settings.SESSION_TOKEN:
+            return {settings.SESSION_COOKIE_NAME: settings.SESSION_TOKEN}
+        return None
+
+    async def get(
+        self,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        user_id: Optional[str] = None
+    ) -> Any:
+        """GET request to FastAPI endpoint.
+
+        Args:
+            path: API endpoint path
+            params: Query parameters
+            headers: Additional headers
+            user_id: User ID for authentication
+
+        Returns:
+            JSON response data
+
+        Raises:
+            httpx.HTTPStatusError: On HTTP errors
+            httpx.RequestError: On connection errors
+        """
+        all_headers = {**self._get_auth_headers(user_id), **(headers or {})}
+        cookies = self._get_auth_cookies()
+
+        logger.debug(f"GET {path} params={params}")
+
+        try:
+            response = await self.client.get(
+                path,
+                params=params,
+                headers=all_headers,
+                cookies=cookies
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error on GET {path}: {e.response.status_code}")
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error on GET {path}: {e}")
+            raise
+
+    async def post(
+        self,
+        path: str,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        user_id: Optional[str] = None
+    ) -> Any:
+        """POST request to FastAPI endpoint.
+
+        Args:
+            path: API endpoint path
+            json: JSON request body
+            params: Query parameters
+            headers: Additional headers
+            user_id: User ID for authentication
+
+        Returns:
+            JSON response data
+
+        Raises:
+            httpx.HTTPStatusError: On HTTP errors
+            httpx.RequestError: On connection errors
+        """
+        all_headers = {**self._get_auth_headers(user_id), **(headers or {})}
+        cookies = self._get_auth_cookies()
+
+        logger.debug(f"POST {path} params={params} json={json}")
+
+        try:
+            response = await self.client.post(
+                path,
+                json=json,
+                params=params,
+                headers=all_headers,
+                cookies=cookies
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error on POST {path}: {e.response.status_code} - {e.response.text}")
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error on POST {path}: {e}")
+            raise
+
+    async def put(
+        self,
+        path: str,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        user_id: Optional[str] = None
+    ) -> Any:
+        """PUT request to FastAPI endpoint.
+
+        Args:
+            path: API endpoint path
+            json: JSON request body
+            params: Query parameters
+            headers: Additional headers
+            user_id: User ID for authentication
+
+        Returns:
+            JSON response data
+
+        Raises:
+            httpx.HTTPStatusError: On HTTP errors
+            httpx.RequestError: On connection errors
+        """
+        all_headers = {**self._get_auth_headers(user_id), **(headers or {})}
+        cookies = self._get_auth_cookies()
+
+        logger.debug(f"PUT {path} params={params} json={json}")
+
+        try:
+            response = await self.client.put(
+                path,
+                json=json,
+                params=params,
+                headers=all_headers,
+                cookies=cookies
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error on PUT {path}: {e.response.status_code}")
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error on PUT {path}: {e}")
+            raise
+
+    async def delete(
+        self,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        user_id: Optional[str] = None
+    ) -> Any:
+        """DELETE request to FastAPI endpoint.
+
+        Args:
+            path: API endpoint path
+            params: Query parameters
+            headers: Additional headers
+            user_id: User ID for authentication
+
+        Returns:
+            JSON response data
+
+        Raises:
+            httpx.HTTPStatusError: On HTTP errors
+            httpx.RequestError: On connection errors
+        """
+        all_headers = {**self._get_auth_headers(user_id), **(headers or {})}
+        cookies = self._get_auth_cookies()
+
+        logger.debug(f"DELETE {path} params={params}")
+
+        try:
+            response = await self.client.delete(
+                path,
+                params=params,
+                headers=all_headers,
+                cookies=cookies
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error on DELETE {path}: {e.response.status_code}")
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error on DELETE {path}: {e}")
+            raise
+
+    async def patch(
+        self,
+        path: str,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        user_id: Optional[str] = None
+    ) -> Any:
+        """PATCH request to FastAPI endpoint.
+
+        Args:
+            path: API endpoint path
+            json: JSON request body
+            params: Query parameters
+            headers: Additional headers
+            user_id: User ID for authentication
+
+        Returns:
+            JSON response data
+
+        Raises:
+            httpx.HTTPStatusError: On HTTP errors
+            httpx.RequestError: On connection errors
+        """
+        all_headers = {**self._get_auth_headers(user_id), **(headers or {})}
+        cookies = self._get_auth_cookies()
+
+        logger.debug(f"PATCH {path} params={params} json={json}")
+
+        try:
+            response = await self.client.patch(
+                path,
+                json=json,
+                params=params,
+                headers=all_headers,
+                cookies=cookies
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error on PATCH {path}: {e.response.status_code}")
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Request error on PATCH {path}: {e}")
+            raise
+
+    async def close(self):
+        """Close HTTP client and cleanup connections."""
+        await self.client.aclose()
+        logger.info("FastAPI client closed")
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.close()

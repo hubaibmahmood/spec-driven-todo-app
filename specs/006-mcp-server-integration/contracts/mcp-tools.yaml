@@ -1,0 +1,551 @@
+# MCP Tools Contract Specification
+# Feature: 006-mcp-server-integration
+# Purpose: Define MCP tool interfaces exposed to AI assistants
+
+version: "1.0.0"
+protocol: "Model Context Protocol (MCP)"
+transport: "HTTP"
+
+tools:
+  # ============================================================================
+  # Tool 1: list_tasks
+  # ============================================================================
+  list_tasks:
+    name: "list_tasks"
+    description: >
+      Retrieve all tasks for the authenticated user. Returns a list of tasks
+      with full details including ID, title, description, completion status,
+      priority, and due date. Use this tool when the user asks "what's on my
+      todo list?" or "show me my tasks".
+
+    parameters:
+      type: "object"
+      properties: {}  # No parameters required (user context from MCP session)
+      required: []
+
+    returns:
+      type: "array"
+      items:
+        $ref: "#/schemas/TaskResponse"
+      description: "List of tasks owned by the authenticated user (empty array if no tasks)"
+
+    errors:
+      - type: "authentication_error"
+        status: 401
+        message: "Service authentication failed"
+        causes: ["Missing or invalid SERVICE_AUTH_TOKEN", "Missing user context"]
+
+      - type: "backend_error"
+        status: 500
+        message: "Backend service unavailable"
+        causes: ["Backend server down", "Database connection failed"]
+
+      - type: "timeout_error"
+        status: 504
+        message: "Request timed out after 30 seconds"
+        causes: ["Backend slow response", "Network latency"]
+
+      - type: "connection_error"
+        status: 503
+        message: "Unable to connect to backend service"
+        causes: ["Backend unreachable", "Network failure"]
+
+    examples:
+      - description: "User with 2 tasks"
+        request:
+          tool: "list_tasks"
+          parameters: {}
+        response:
+          - id: 1
+            title: "Buy milk"
+            description: "Pick up 2% milk from grocery store"
+            completed: false
+            priority: "Medium"
+            due_date: "2025-12-20T10:00:00Z"
+            created_at: "2025-12-18T08:00:00Z"
+            updated_at: "2025-12-18T08:00:00Z"
+            user_id: "user_123"
+          - id: 2
+            title: "Finish project report"
+            description: null
+            completed: false
+            priority: "High"
+            due_date: "2025-12-19T17:00:00Z"
+            created_at: "2025-12-18T09:00:00Z"
+            updated_at: "2025-12-18T09:00:00Z"
+            user_id: "user_123"
+
+      - description: "User with no tasks"
+        request:
+          tool: "list_tasks"
+          parameters: {}
+        response: []
+
+  # ============================================================================
+  # Tool 2: create_task
+  # ============================================================================
+  create_task:
+    name: "create_task"
+    description: >
+      Create a new task for the authenticated user. Requires a title and
+      optionally accepts description, priority, and due_date. Returns the
+      created task with generated ID and timestamps. Use this tool when the
+      user says "add [task] to my todo list" or "remind me to [task]".
+
+    parameters:
+      type: "object"
+      properties:
+        title:
+          type: "string"
+          minLength: 1
+          maxLength: 200
+          description: "Task title (required)"
+          examples: ["Buy milk", "Finish project report"]
+
+        description:
+          type: "string"
+          nullable: true
+          description: "Detailed task description (optional)"
+          examples: ["Pick up 2% milk from grocery store", null]
+
+        priority:
+          type: "string"
+          enum: ["Low", "Medium", "High", "Urgent"]
+          default: "Medium"
+          description: "Task priority level (default: Medium)"
+
+        due_date:
+          type: "string"
+          format: "date-time"
+          nullable: true
+          description: "Task due date in ISO 8601 format (optional)"
+          examples: ["2025-12-20T10:00:00Z", null]
+
+      required: ["title"]
+
+    returns:
+      $ref: "#/schemas/TaskResponse"
+      description: "Created task with ID and timestamps"
+
+    errors:
+      - type: "validation_error"
+        status: 422
+        message: "Input validation failed"
+        causes: ["Empty title", "Title exceeds 200 characters", "Invalid due_date format", "Invalid priority value"]
+
+      - type: "authentication_error"
+        status: 401
+        message: "Service authentication failed"
+        causes: ["Missing or invalid SERVICE_AUTH_TOKEN", "Missing user context"]
+
+      - type: "backend_error"
+        status: 500
+        message: "Backend service error"
+        causes: ["Database insert failed", "Backend server error"]
+
+    examples:
+      - description: "Create task with title only"
+        request:
+          tool: "create_task"
+          parameters:
+            title: "Buy milk"
+        response:
+          id: 3
+          title: "Buy milk"
+          description: null
+          completed: false
+          priority: "Medium"
+          due_date: null
+          created_at: "2025-12-18T10:00:00Z"
+          updated_at: "2025-12-18T10:00:00Z"
+          user_id: "user_123"
+
+      - description: "Create task with all fields"
+        request:
+          tool: "create_task"
+          parameters:
+            title: "Finish project report"
+            description: "Complete Q4 financial analysis"
+            priority: "High"
+            due_date: "2025-12-19T17:00:00Z"
+        response:
+          id: 4
+          title: "Finish project report"
+          description: "Complete Q4 financial analysis"
+          completed: false
+          priority: "High"
+          due_date: "2025-12-19T17:00:00Z"
+          created_at: "2025-12-18T10:05:00Z"
+          updated_at: "2025-12-18T10:05:00Z"
+          user_id: "user_123"
+
+  # ============================================================================
+  # Tool 3: update_task
+  # ============================================================================
+  update_task:
+    name: "update_task"
+    description: >
+      Update task fields (title, description, priority, due_date) for the
+      authenticated user. Only the owner can update their tasks. Returns the
+      updated task with new values and updated timestamp. Use this tool when the
+      user says "change task [X] description to [Y]" or "change priority to high".
+      Note: For marking tasks complete, use mark_task_completed tool instead.
+
+    parameters:
+      type: "object"
+      properties:
+        task_id:
+          type: "integer"
+          minimum: 1
+          description: "ID of task to update (required)"
+          examples: [1, 2, 3]
+
+        title:
+          type: "string"
+          minLength: 1
+          maxLength: 200
+          nullable: true
+          description: "New task title (optional)"
+
+        description:
+          type: "string"
+          nullable: true
+          description: "New task description (optional, null to clear)"
+
+        priority:
+          type: "string"
+          enum: ["Low", "Medium", "High", "Urgent"]
+          nullable: true
+          description: "New priority level (optional)"
+
+        due_date:
+          type: "string"
+          format: "date-time"
+          nullable: true
+          description: "New due date in ISO 8601 format (optional, null to clear)"
+
+      required: ["task_id"]
+
+    returns:
+      $ref: "#/schemas/TaskResponse"
+      description: "Updated task with new values"
+
+    errors:
+      - type: "not_found_error"
+        status: 404
+        message: "Task not found"
+        causes: ["Task ID doesn't exist", "Task belongs to another user"]
+
+      - type: "validation_error"
+        status: 422
+        message: "Input validation failed"
+        causes: ["Invalid task_id (must be > 0)", "Empty title", "Invalid due_date format"]
+
+      - type: "authorization_error"
+        status: 403
+        message: "Not authorized to update this task"
+        causes: ["Task belongs to another user"]
+
+    examples:
+      - description: "Update task title and priority"
+        request:
+          tool: "update_task"
+          parameters:
+            task_id: 1
+            title: "Buy organic milk"
+            priority: "High"
+        response:
+          id: 1
+          title: "Buy organic milk"  # Changed
+          description: "Pick up 2% milk from grocery store"
+          completed: false
+          priority: "High"  # Changed
+          due_date: "2025-12-20T10:00:00Z"
+          created_at: "2025-12-18T08:00:00Z"
+          updated_at: "2025-12-18T11:00:00Z"  # Updated
+          user_id: "user_123"
+
+      - description: "Update multiple fields"
+        request:
+          tool: "update_task"
+          parameters:
+            task_id: 2
+            title: "Complete annual report"
+            priority: "Urgent"
+            due_date: "2025-12-18T23:59:59Z"
+        response:
+          id: 2
+          title: "Complete annual report"  # Changed
+          description: null
+          completed: false
+          priority: "Urgent"  # Changed
+          due_date: "2025-12-18T23:59:59Z"  # Changed
+          created_at: "2025-12-18T09:00:00Z"
+          updated_at: "2025-12-18T11:05:00Z"  # Updated
+          user_id: "user_123"
+
+  # ============================================================================
+  # Tool 4: delete_task
+  # ============================================================================
+  delete_task:
+    name: "delete_task"
+    description: >
+      Delete a single task by ID for the authenticated user. Only the owner can
+      delete their tasks. Returns success confirmation. Use this tool when the
+      user says "delete task [X]" or "remove task [X]".
+
+    parameters:
+      type: "object"
+      properties:
+        task_id:
+          type: "integer"
+          minimum: 1
+          description: "ID of task to delete (required)"
+          examples: [1, 2, 3]
+      required: ["task_id"]
+
+    returns:
+      type: "object"
+      properties:
+        success:
+          type: "boolean"
+          const: true
+        message:
+          type: "string"
+          examples: ["Task 1 deleted successfully"]
+      description: "Deletion confirmation"
+
+    errors:
+      - type: "not_found_error"
+        status: 404
+        message: "Task not found"
+        causes: ["Task ID doesn't exist", "Task belongs to another user"]
+
+      - type: "validation_error"
+        status: 422
+        message: "Input validation failed"
+        causes: ["Invalid task_id (must be > 0)"]
+
+    examples:
+      - description: "Delete existing task"
+        request:
+          tool: "delete_task"
+          parameters:
+            task_id: 1
+        response:
+          success: true
+          message: "Task 1 deleted successfully"
+
+  # ============================================================================
+  # Tool 5: mark_task_completed
+  # ============================================================================
+  mark_task_completed:
+    name: "mark_task_completed"
+    description: >
+      Mark a task as completed for the authenticated user. This is a focused,
+      simple tool for the common operation of marking tasks complete. Returns the
+      updated task with completed status set to true. Use this tool when the user
+      says "mark task [X] as done", "complete the milk task", or "finish task [X]".
+      For other task updates (title, description, priority, due_date), use
+      update_task instead.
+
+    parameters:
+      type: "object"
+      properties:
+        task_id:
+          type: "integer"
+          minimum: 1
+          description: "ID of task to mark as completed (required)"
+          examples: [1, 2, 3]
+      required: ["task_id"]
+
+    returns:
+      $ref: "#/schemas/TaskResponse"
+      description: "Updated task with completed status set to true"
+
+    errors:
+      - type: "not_found_error"
+        status: 404
+        message: "Task not found"
+        causes: ["Task ID doesn't exist", "Task belongs to another user"]
+
+      - type: "validation_error"
+        status: 422
+        message: "Input validation failed"
+        causes: ["Invalid task_id (must be > 0)"]
+
+      - type: "authorization_error"
+        status: 403
+        message: "Not authorized to update this task"
+        causes: ["Task belongs to another user"]
+
+    examples:
+      - description: "Mark incomplete task as completed"
+        request:
+          tool: "mark_task_completed"
+          parameters:
+            task_id: 1
+        response:
+          id: 1
+          title: "Buy milk"
+          description: "Pick up 2% milk from grocery store"
+          completed: true  # Changed from false to true
+          priority: "Medium"
+          due_date: "2025-12-20T10:00:00Z"
+          created_at: "2025-12-18T08:00:00Z"
+          updated_at: "2025-12-18T11:00:00Z"  # Updated
+          user_id: "user_123"
+
+      - description: "Mark already completed task (idempotent)"
+        request:
+          tool: "mark_task_completed"
+          parameters:
+            task_id: 2
+        response:
+          id: 2
+          title: "Finish report"
+          description: null
+          completed: true  # Already true, remains true
+          priority: "High"
+          due_date: null
+          created_at: "2025-12-18T09:00:00Z"
+          updated_at: "2025-12-18T09:30:00Z"
+          user_id: "user_123"
+
+# ============================================================================
+# Shared Schemas
+# ============================================================================
+schemas:
+  TaskResponse:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        description: "Unique task identifier"
+        examples: [1, 2, 3]
+
+      title:
+        type: "string"
+        maxLength: 200
+        description: "Task title"
+        examples: ["Buy milk", "Finish project report"]
+
+      description:
+        type: "string"
+        nullable: true
+        description: "Detailed task description"
+        examples: ["Pick up 2% milk from grocery store", null]
+
+      completed:
+        type: "boolean"
+        description: "Whether task is completed"
+        examples: [false, true]
+
+      priority:
+        type: "string"
+        enum: ["Low", "Medium", "High", "Urgent"]
+        description: "Task priority level"
+        examples: ["Medium", "High"]
+
+      due_date:
+        type: "string"
+        format: "date-time"
+        nullable: true
+        description: "Task due date (ISO 8601 format)"
+        examples: ["2025-12-20T10:00:00Z", null]
+
+      created_at:
+        type: "string"
+        format: "date-time"
+        description: "Timestamp when task was created"
+        examples: ["2025-12-18T08:00:00Z"]
+
+      updated_at:
+        type: "string"
+        format: "date-time"
+        description: "Timestamp when task was last updated"
+        examples: ["2025-12-18T11:00:00Z"]
+
+      user_id:
+        type: "string"
+        description: "User who owns this task"
+        examples: ["user_123", "user_456"]
+
+    required: ["id", "title", "completed", "priority", "created_at", "updated_at", "user_id"]
+
+# ============================================================================
+# Authentication
+# ============================================================================
+authentication:
+  service_to_service:
+    type: "bearer_token"
+    header: "Authorization"
+    format: "Bearer {SERVICE_AUTH_TOKEN}"
+    description: "Service authentication token for MCP server to backend communication"
+
+  user_context:
+    type: "custom_header"
+    header: "X-User-ID"
+    description: "User identifier from MCP session, propagated to backend"
+    required: true
+
+# ============================================================================
+# Backend API Endpoints
+# ============================================================================
+backend_endpoints:
+  list_tasks:
+    method: "GET"
+    path: "/tasks"
+    headers:
+      Authorization: "Bearer {SERVICE_AUTH_TOKEN}"
+      X-User-ID: "{user_id}"
+    response: "200 OK with TaskResponse[]"
+
+  create_task:
+    method: "POST"
+    path: "/tasks"
+    headers:
+      Authorization: "Bearer {SERVICE_AUTH_TOKEN}"
+      X-User-ID: "{user_id}"
+      Content-Type: "application/json"
+    body:
+      title: "string (required)"
+      description: "string (optional)"
+      priority: "string (optional, default: Medium)"
+      due_date: "string (optional, ISO 8601)"
+    response: "201 Created with TaskResponse"
+
+  update_task:
+    method: "PUT"
+    path: "/tasks/{task_id}"
+    headers:
+      Authorization: "Bearer {SERVICE_AUTH_TOKEN}"
+      X-User-ID: "{user_id}"
+      Content-Type: "application/json"
+    body:
+      title: "string (optional)"
+      description: "string (optional)"
+      priority: "string (optional)"
+      due_date: "string (optional, ISO 8601)"
+    response: "200 OK with TaskResponse"
+    note: "Completion status is handled by mark_task_completed tool"
+
+  mark_task_completed:
+    method: "PATCH"
+    path: "/tasks/{task_id}"
+    headers:
+      Authorization: "Bearer {SERVICE_AUTH_TOKEN}"
+      X-User-ID: "{user_id}"
+      Content-Type: "application/json"
+    body:
+      completed: "boolean (always true)"
+    response: "200 OK with TaskResponse"
+    note: "Uses existing PATCH endpoint for completion updates"
+
+  delete_task:
+    method: "DELETE"
+    path: "/tasks/{task_id}"
+    headers:
+      Authorization: "Bearer {SERVICE_AUTH_TOKEN}"
+      X-User-ID: "{user_id}"
+    response: "204 No Content"

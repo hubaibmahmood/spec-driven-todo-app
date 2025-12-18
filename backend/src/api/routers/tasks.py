@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, status
 
-from src.api.dependencies import get_task_repository, get_current_user
+from src.api.dependencies import get_task_repository, get_current_user_or_service
 from src.api.schemas.task import (
     TaskCreate,
     TaskResponse,
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 @router.get("/", response_model=list[TaskResponse], status_code=status.HTTP_200_OK)
 async def get_all_tasks(
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_or_service)
 ) -> list[TaskResponse]:
     """
     Get all tasks for the authenticated user.
@@ -36,7 +36,7 @@ async def get_all_tasks(
 async def create_task(
     task_data: TaskCreate,
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_or_service)
 ) -> TaskResponse:
     """
     Create a new task for the authenticated user.
@@ -63,7 +63,7 @@ async def create_task(
 async def get_task(
     task_id: int,
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_or_service)
 ) -> TaskResponse:
     """
     Get a specific task by ID.
@@ -98,7 +98,7 @@ async def update_task_completion(
     task_id: int,
     completion_data: CompletionUpdate,
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_or_service)
 ) -> TaskResponse:
     """
     Update task completion status.
@@ -139,7 +139,7 @@ async def update_task_details(
     task_id: int,
     task_update: TaskUpdate,
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_or_service)
 ) -> TaskResponse:
     """
     Update task title and/or description.
@@ -203,7 +203,7 @@ async def update_task_details(
 async def delete_task(
     task_id: int,
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_or_service)
 ) -> None:
     """
     Delete a task.
@@ -233,7 +233,7 @@ async def delete_task(
 async def bulk_delete_tasks(
     request: BulkDeleteRequest,
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user)
+    current_user: str = Depends(get_current_user_or_service)
 ) -> BulkDeleteResponse:
     """
     Delete multiple tasks in one request.

@@ -43,7 +43,7 @@ python_files = "test_*.py"
 python_functions = "test_*"
 
 [tool.uv.workspace]
-members = ["backend"]
+members = ["backend", "mcp-server"]
 
 [dependency-groups]
 dev = [

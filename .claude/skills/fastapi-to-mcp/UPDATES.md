@@ -1,5 +1,336 @@
 # FastAPI-to-MCP Skill Updates
 
+## Version 2.1 - Production Templates & Documentation (2025-01-18)
+
+This update adds production-ready templates and comprehensive documentation based on successful Spec 006 implementation (MCP Server Integration for Todo App).
+
+### 🆕 New Templates
+
+#### 1. **server.py.template** (Production Server Entry Point)
+
+Modern server structure with direct tool registration:
+
+**Key Features**:
+- Direct tool import and registration (no register_tools() wrapper)
+- Structured logging configuration
+- Clear separation of concerns
+- FastMCP best practices
+
+**Replaces**: Old main.py template for Pattern 4
+
+#### 2. **tool_file.template** (Individual Tool Files)
+
+Comprehensive template for standalone tool files:
+
+**Features**:
+- Context-based user extraction (`ctx: Context`)
+- Complete error handling (7 error types)
+- Structured logging with audit fields
+- AI-friendly error messages with suggestions
+- Comprehensive docstrings with examples
+- Finally block for resource cleanup
+
+**Benefits over monolithic tools.py**:
+- Each tool is independently testable
+- Easier to maintain and review
+- Clear boundaries between tools
+- Better for teams (reduced merge conflicts)
+
+#### 3. **schemas.template** (Pydantic Schemas Module)
+
+Centralized schema definitions:
+
+**Includes**:
+- Enum definitions
+- Response models
+- Parameter models
+- ErrorResponse with suggestions
+- ValidationErrorDetail for field-level errors
+- ERROR_TYPES taxonomy
+- Comprehensive examples
+
+**Benefits**:
+- Type safety across tools
+- Reusable validation logic
+- Clear API contracts
+- Better IDE support
+
+#### 4. **SECURITY_REVIEW.template.md** (Security Audit Template)
+
+Production security checklist:
+
+**Sections**:
+- Constant-time comparison verification
+- Token logging prevention check
+- Token storage validation
+- Audit logging compliance
+- Positive findings
+- Recommendations
+- Compliance summary
+
+**Usage**: Generated after skill execution for security sign-off
+
+### 📚 New Documentation
+
+#### SKILL_IMPROVEMENTS_FROM_006.md
+
+Comprehensive analysis of production learnings:
+
+**Contents**:
+- 10 key learnings from Spec 006 implementation
+- Comparison: current skill vs production patterns
+- Detailed recommendations for each improvement
+- Implementation priority guide
+- Success metrics for updated skill
+
+**Covers**:
+1. Modular tool structure
+2. Dedicated schemas module
+3. AI-friendly error taxonomy
+4. Context-based user extraction
+5. Direct tool registration
+6. Documentation suite (5 guides)
+7. Integration test structure
+8. Logging best practices
+9. Security checklist
+10. E2E testing guide
+
+### 🔧 Template Updates
+
+#### Updated Structure for Pattern 4
+
+**Before (v2.0)**:
+```
+mcp-server/
+├── main.py              # Monolithic
+├── tools.py             # All tools in one file
+├── client.py
+└── config.py
+```
+
+**After (v2.1)**:
+```
+mcp-server/
+├── src/
+│   ├── server.py          # NEW: Entry point
+│   ├── client.py          # Enhanced with retry
+│   ├── config.py          # Pydantic settings
+│   ├── tools/             # NEW: Modular
+│   │   ├── list_{entity}.py
+│   │   ├── create_{entity}.py
+│   │   ├── update_{entity}.py
+│   │   ├── mark_completed.py
+│   │   └── delete_{entity}.py
+│   └── schemas/           # NEW: Centralized
+│       └── {entity}.py
+└── tests/
+    ├── contract/          # Schema validation
+    ├── unit/              # Component tests
+    └── integration/       # E2E workflows
+```
+
+### 🎯 Error Handling Improvements
+
+#### V2.0 Error Response
+```python
+return {"error": "Not found", "status_code": 404}
+```
+
+#### V2.1 Error Response
+```python
+return ErrorResponse(
+    error_type="not_found_error",
+    message="Task not found with ID: 123",
+    details={"task_id": 123, "user_id": "user_123"},
+    suggestions=[
+        "Verify the task ID is correct",
+        "Use list_tasks to see available tasks",
+        "Check that the task belongs to your account"
+    ]
+).model_dump()
+```
+
+**Benefits**:
+- AI can explain error clearly to user
+- Actionable suggestions for resolution
+- Structured for programmatic handling
+- Consistent format across all tools
+
+### 📊 Documentation Suite
+
+New templates for production deployment:
+
+1. **SECURITY_REVIEW.md** - Security audit checklist
+2. **CLAUDE_DESKTOP_SETUP.md** - E2E integration guide
+3. **E2E_SMOKE_TEST.md** - Manual testing guide (14 tests)
+4. **SUCCESS_CRITERIA_VERIFICATION.md** - Validation checklist
+5. **IMPLEMENTATION_SUMMARY.md** - Overview document
+
+### 🧪 Testing Enhancements
+
+#### Test Organization
+
+**V2.0**: Simple `tests/` directory
+**V2.1**: Structured by test type
+
+```
+tests/
+├── conftest.py           # Shared fixtures
+├── contract/             # Schema validation
+│   └── test_{entity}_schemas.py
+├── unit/                 # Component tests
+│   ├── test_client.py
+│   └── test_config.py
+└── integration/          # E2E workflows
+    ├── test_user_context.py
+    ├── test_workflows.py
+    ├── test_list_{entity}.py
+    └── test_create_{entity}.py
+```
+
+### 🔐 Security Template Features
+
+**SECURITY_REVIEW.template.md** validates:
+
+1. ✅ Constant-time token comparison (`hmac.compare_digest`)
+2. ✅ No token logging (grep verification)
+3. ✅ Environment-only storage (no hardcoding)
+4. ✅ Comprehensive audit logging
+5. ✅ Input validation (Pydantic)
+6. ✅ Error sanitization
+
+**Auto-generated** after skill execution with:
+- Line number references
+- Code snippets
+- Verification commands
+- Compliance summary
+
+### 📈 Production Validation
+
+**Tested on Spec 006 (Todo App MCP Server)**:
+
+**Architecture**:
+- Pattern 4 (service-to-service auth)
+- 5 MCP tools
+- Modular structure
+- Complete test suite
+- E2E validated with Claude Desktop
+
+**Results**:
+- ✅ All 11 success criteria met
+- ✅ Security review passed
+- ✅ E2E tests successful
+- ✅ <2s operation latency
+- ✅ 100% data isolation
+- ✅ Production-ready
+
+### 🚀 Migration from V2.0 to V2.1
+
+**If you generated MCP server with V2.0**:
+
+1. **Restructure tools** (optional, recommended for 5+ tools):
+   ```bash
+   mkdir -p src/tools src/schemas
+   # Move each tool to separate file
+   ```
+
+2. **Add schemas module**:
+   ```bash
+   # Copy schemas.template and populate
+   ```
+
+3. **Update error handling**:
+   ```bash
+   # Add ErrorResponse model
+   # Update all error returns
+   ```
+
+4. **Add documentation**:
+   ```bash
+   # Generate security review
+   # Add E2E test guide
+   ```
+
+**Or**: Regenerate with updated skill (recommended)
+
+### 💡 Key Improvements Summary
+
+| Aspect | V2.0 | V2.1 |
+|--------|------|------|
+| **Structure** | Monolithic tools.py | Modular src/tools/ |
+| **Schemas** | Inline | Dedicated module |
+| **Errors** | Simple dict | Structured taxonomy |
+| **Context** | user_id param | FastMCP Context |
+| **Registration** | register_tools() | Direct in server.py |
+| **Docs** | README only | 5-doc suite |
+| **Tests** | Basic | Contract/unit/integration |
+| **Security** | Implicit | Explicit review checklist |
+
+### 🎓 Learning Sources
+
+Based on production implementation:
+- **Spec 006**: MCP Server Integration
+- **Duration**: 8 phases, 59 tasks
+- **Testing**: TDD approach, comprehensive suite
+- **Documentation**: Security review, E2E guide, setup docs
+- **Validation**: Claude Desktop integration, manual E2E testing
+
+### 📦 No New Dependencies
+
+V2.1 is a **template and documentation update**. No new runtime dependencies required beyond V2.0.
+
+### ⚡ Quick Start with V2.1
+
+```python
+# Skill automatically detects Pattern 4 and asks:
+# "Use production structure with modular tools?" -> YES
+
+# Generates:
+# - src/server.py (direct registration)
+# - src/tools/*.py (one per tool)
+# - src/schemas/{entity}.py (centralized)
+# - tests/ (contract/unit/integration)
+# - SECURITY_REVIEW.md
+# - CLAUDE_DESKTOP_SETUP.md
+# - E2E_SMOKE_TEST.md
+
+cd mcp-server
+uv sync
+pytest tests/contract/  # Schema validation
+pytest tests/unit/      # Component tests
+pytest tests/integration/  # E2E workflows
+```
+
+### 🔮 Future Enhancements (V2.2)
+
+Planned additions:
+- [ ] CLI generator for adding new tools to existing server
+- [ ] OpenAPI schema diffing (detect backend changes)
+- [ ] Performance benchmark templates
+- [ ] Load testing templates
+- [ ] Monitoring/metrics templates (Prometheus)
+
+### 📝 Backward Compatibility
+
+**100% backward compatible**:
+- V2.0 templates still available
+- Use V2.1 for Pattern 4 or 5+ tools
+- Use V2.0 for simple cases (< 5 tools)
+
+**Selection Logic**:
+```python
+if pattern == "service-to-service" or tool_count >= 5:
+    use_v2_1_structure()  # Modular
+else:
+    use_v2_0_structure()  # Monolithic
+```
+
+---
+
+**Questions?** See SKILL_IMPROVEMENTS_FROM_006.md for detailed analysis.
+
+**Contributing?** New templates and patterns welcome!
+
 ## Version 2.0 - Microservices Support (2025-12-18)
 
 This update adds comprehensive microservices patterns based on real-world implementation of an MCP server for a production FastAPI todo application.

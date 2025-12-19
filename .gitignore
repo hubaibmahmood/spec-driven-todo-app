@@ -72,6 +72,10 @@ Thumbs.db
 # Logs
 *.log
 
+# AI Agent
+ai-agent/.env
+ai-agent/alembic/versions/*.pyc
+
 # Frontend (Next.js/Node)
 frontend/node_modules/
 frontend/.next/

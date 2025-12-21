@@ -43,9 +43,16 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   // Initialize ChatKit with authentication
   const { control } = useChatKit({
     api: {
-      url: `${process.env.NEXT_PUBLIC_API_URL || ''}/api/chat`,
-      domainKey: process.env.NEXT_PUBLIC_DOMAIN_KEY || 'local-dev',
-      fetch: authenticatedFetch,
+      getClientSecret: async () => {
+        const response = await fetch('/api/chatkit-secret', {
+          method: 'POST',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch client_secret');
+        }
+        const data = await response.json();
+        return data.client_secret;
+      },
     },
     header: {
       enabled: true,
@@ -66,17 +73,17 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         {
           label: 'Add a task',
           prompt: 'Add a new task',
-          icon: 'plus' as any,
+          icon: 'plus',
         },
         {
           label: 'List my tasks',
           prompt: 'Show me all my tasks',
-          icon: 'list' as any,
+          icon: 'document',
         },
         {
           label: 'Update a task',
           prompt: 'Update an existing task',
-          icon: 'edit' as any,
+          icon: 'write',
         },
       ],
     },
@@ -109,7 +116,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   if (!isAuthenticated) {
     return (
       <div
-        className="fixed right-0 top-0 z-40 flex h-screen w-full flex-col bg-white shadow-xl transition-transform duration-300 md:w-96"
+        className="fixed bottom-6 right-6 z-40 flex h-[650px] w-[400px] flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"
         role="dialog"
         aria-label="Chat panel"
       >
@@ -165,7 +172,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   // Render ChatKit component
   return (
     <div
-      className="fixed right-0 top-0 z-40 h-screen w-full bg-white shadow-xl transition-transform duration-300 md:w-96"
+      className="fixed bottom-6 right-6 z-40 h-[650px] w-[400px] overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"
       role="dialog"
       aria-label="Chat panel"
     >

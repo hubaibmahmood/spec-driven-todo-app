@@ -1,0 +1,457 @@
+openapi: 3.1.0
+info:
+  title: Frontend Chat Integration API
+  description: |
+    API contract for frontend chat interface integration with OpenAI Agents SDK backend.
+    This contract documents the endpoints used by the Next.js frontend to interact with
+    the AI agent for natural language task management.
+  version: 1.0.0
+  contact:
+    name: Spec 009 - Frontend Chat Integration
+
+servers:
+  - url: http://localhost:8000
+    description: Local development (FastAPI backend)
+  - url: https://api.todo-app.com
+    description: Production (if applicable)
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/chat:
+    post:
+      summary: Send chat message to AI agent
+      description: |
+        Sends a user's natural language message to the AI agent for processing.
+        The agent parses the intent, performs task operations (create, update, delete, list),
+        and returns a conversational response with operation results.
+
+        **Authentication**: Requires valid session token from better-auth (spec 004)
+        **Timezone**: Must include X-Timezone header for accurate date/time parsing
+      operationId: sendChatMessage
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              createTask:
+                summary: Create a new task
+                value:
+                  message: "add task buy groceries tomorrow at 5pm"
+                  timezone: "America/New_York"
+              updateTask:
+                summary: Update existing task
+                value:
+                  conversationId: "550e8400-e29b-41d4-a716-446655440000"
+                  message: "change the priority of 'buy groceries' to high"
+                  timezone: "Europe/London"
+              listTasks:
+                summary: List tasks
+                value:
+                  conversationId: "550e8400-e29b-41d4-a716-446655440000"
+                  message: "show me all my high priority tasks"
+                  timezone: "Asia/Tokyo"
+      responses:
+        '200':
+          description: Chat message processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                taskCreated:
+                  summary: Task created successfully
+                  value:
+                    conversationId: "550e8400-e29b-41d4-a716-446655440000"
+                    message:
+                      id: "660e8400-e29b-41d4-a716-446655440001"
+                      conversationId: "550e8400-e29b-41d4-a716-446655440000"
+                      content: "I've created a task 'Buy groceries' with due date tomorrow at 5pm."
+                      role: "assistant"
+                      timestamp: "2025-12-21T14:30:00Z"
+                      metadata:
+                        operation: "create_task"
+                        taskId: "770e8400-e29b-41d4-a716-446655440002"
+                        status: "success"
+                    operations:
+                      - type: "create"
+                        taskId: "770e8400-e29b-41d4-a716-446655440002"
+                        task:
+                          id: "770e8400-e29b-41d4-a716-446655440002"
+                          title: "Buy groceries"
+                          description: null
+                          priority: "medium"
+                          completed: false
+                          dueDate: "2025-12-22T17:00:00-05:00"
+                        status: "success"
+        '401':
+          description: Unauthorized - Invalid or missing session token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Unauthorized"
+                message: "Session token is invalid or expired. Please log in again."
+        '422':
+          description: Validation error - Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Validation Error"
+                message: "Message field is required and cannot be empty."
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Internal Server Error"
+                message: "Failed to process chat message. Please try again later."
+
+  /api/conversations/{conversationId}/messages:
+    get:
+      summary: Fetch conversation history
+      description: |
+        Retrieves paginated conversation history for a specific conversation.
+        Used to load past messages when user opens the chat panel.
+
+        **Pagination**: Returns messages in batches (default: 50 per page)
+        **Ordering**: Messages are ordered chronologically (oldest to newest)
+      operationId: getConversationHistory
+      tags:
+        - Conversations
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          description: UUID of the conversation
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          description: Number of messages to return (default: 50, max: 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Number of messages to skip (for pagination, default: 0)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Conversation history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationHistoryResponse'
+              example:
+                messages:
+                  - id: "660e8400-e29b-41d4-a716-446655440001"
+                    conversationId: "550e8400-e29b-41d4-a716-446655440000"
+                    content: "add task buy groceries tomorrow at 5pm"
+                    role: "user"
+                    timestamp: "2025-12-21T14:29:30Z"
+                    metadata: null
+                  - id: "660e8400-e29b-41d4-a716-446655440002"
+                    conversationId: "550e8400-e29b-41d4-a716-446655440000"
+                    content: "I've created a task 'Buy groceries' with due date tomorrow at 5pm."
+                    role: "assistant"
+                    timestamp: "2025-12-21T14:30:00Z"
+                    metadata:
+                      operation: "create_task"
+                      taskId: "770e8400-e29b-41d4-a716-446655440002"
+                      status: "success"
+                total: 120
+                limit: 50
+                offset: 0
+                hasMore: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Not Found"
+                message: "Conversation with ID 550e8400-e29b-41d4-a716-446655440000 not found."
+
+  /api/conversations/latest:
+    get:
+      summary: Get or create user's latest conversation
+      description: |
+        Retrieves the user's most recent conversation. If no conversation exists,
+        creates a new one. Used when user first opens the chat panel.
+
+        **Authentication**: User ID extracted from session token
+      operationId: getOrCreateLatestConversation
+      tags:
+        - Conversations
+      responses:
+        '200':
+          description: Latest conversation retrieved or created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                userId: "880e8400-e29b-41d4-a716-446655440003"
+                createdAt: "2025-12-21T10:00:00Z"
+                updatedAt: "2025-12-21T14:30:00Z"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Session token from better-auth (spec 004)
+
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+        - timezone
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+          description: Optional conversation ID to resume existing conversation
+          nullable: true
+        message:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          description: User's natural language message
+          example: "add task buy groceries tomorrow at 5pm"
+        timezone:
+          type: string
+          description: IANA timezone identifier from user's browser
+          example: "America/New_York"
+
+    ChatResponse:
+      type: object
+      required:
+        - conversationId
+        - message
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+          description: Conversation UUID (created or resumed)
+        message:
+          $ref: '#/components/schemas/Message'
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskOperation'
+          description: List of task operations performed (if any)
+
+    Message:
+      type: object
+      required:
+        - id
+        - conversationId
+        - content
+        - role
+        - timestamp
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Message UUID
+        conversationId:
+          type: string
+          format: uuid
+          description: Parent conversation UUID
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Message text content
+        role:
+          type: string
+          enum: [user, assistant]
+          description: Message sender (user or AI assistant)
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 datetime when message was created
+        metadata:
+          type: object
+          nullable: true
+          properties:
+            operation:
+              type: string
+              enum: [create_task, update_task, delete_task, list_tasks, mark_complete]
+              description: Task operation performed (if applicable)
+            taskId:
+              type: string
+              format: uuid
+              nullable: true
+              description: Affected task UUID (if applicable)
+            status:
+              type: string
+              enum: [pending, success, error]
+              description: Operation status
+            errorMessage:
+              type: string
+              nullable: true
+              description: Error message if operation failed
+
+    TaskOperation:
+      type: object
+      required:
+        - type
+        - status
+      properties:
+        type:
+          type: string
+          enum: [create, update, delete, mark_complete, list]
+          description: Type of task operation performed
+        taskId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Affected task UUID (not present for 'list' operations)
+        task:
+          $ref: '#/components/schemas/Task'
+          nullable: true
+          description: Full task object (for create/update/list operations)
+        status:
+          type: string
+          enum: [success, error]
+          description: Operation status
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error message if status is 'error'
+
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - priority
+        - completed
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        priority:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+        completed:
+          type: boolean
+          default: false
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO 8601 datetime in user's timezone
+
+    Conversation:
+      type: object
+      required:
+        - id
+        - userId
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+          description: Owner user UUID
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConversationHistoryResponse:
+      type: object
+      required:
+        - messages
+        - total
+        - limit
+        - offset
+        - hasMore
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          description: Array of messages (ordered oldest to newest)
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of messages in conversation
+        limit:
+          type: integer
+          description: Applied limit (max messages per page)
+        offset:
+          type: integer
+          description: Applied offset (number of messages skipped)
+        hasMore:
+          type: boolean
+          description: True if more messages available for pagination
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type (e.g., "Unauthorized", "Validation Error")
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          nullable: true
+          description: Optional additional error details

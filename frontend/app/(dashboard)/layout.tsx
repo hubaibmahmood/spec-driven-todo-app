@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
+import ChatPanel from "@/components/chat/ChatPanel";
+import ChatToggleButton from "@/components/chat/ChatToggleButton";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { usePanelState } from "@/lib/chat/panel-state";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +18,9 @@ export default function DashboardLayout({
   const { data: session } = useSession();
   const [user, setUser] = useState<{ name: string; email: string; image?: string | null } | null>(null);
   const router = useRouter();
+
+  // Chat panel state with localStorage persistence
+  const [panelState, setPanelState] = usePanelState();
 
   useEffect(() => {
     if (session?.user) {
@@ -29,6 +35,21 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     await signOut();
     router.push("/login");
+  };
+
+  // Toggle chat panel with lastOpenedAt tracking
+  const toggleChatPanel = () => {
+    setPanelState({
+      isOpen: !panelState.isOpen,
+      lastOpenedAt: !panelState.isOpen ? new Date() : panelState.lastOpenedAt,
+    });
+  };
+
+  const closeChatPanel = () => {
+    setPanelState({
+      ...panelState,
+      isOpen: false,
+    });
   };
 
   return (
@@ -47,6 +68,10 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+
+      {/* Chat UI Components */}
+      <ChatToggleButton onClick={toggleChatPanel} isOpen={panelState.isOpen} />
+      <ChatPanel isOpen={panelState.isOpen} onClose={closeChatPanel} />
     </div>
   );
 }

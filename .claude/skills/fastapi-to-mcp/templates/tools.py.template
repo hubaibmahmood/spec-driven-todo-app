@@ -7,6 +7,12 @@ Each tool corresponds to a FastAPI endpoint and maintains
 the same request/response structure.
 
 Total endpoints converted: {{TOOL_COUNT}}
+
+Architecture Note:
+- This file contains ALL tools in one file (monolithic approach)
+- For microservices/Pattern 4: Consider splitting into separate files
+  (e.g., src/tools/list_tasks.py, src/tools/create_task.py, etc.)
+- Modular structure improves maintainability for 5+ tools
 """
 
 from typing import Optional, List, Dict, Any

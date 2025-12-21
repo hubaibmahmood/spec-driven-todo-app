@@ -57,8 +57,8 @@ def main():
         },
     )
 
-    # Run server with HTTP transport
-    mcp.run(transport="stdio")
+    # Run server with streamable HTTP transport for AI agent integration on port 8001
+    mcp.run(transport="streamable-http", port=8001)
 
 
 if __name__ == "__main__":

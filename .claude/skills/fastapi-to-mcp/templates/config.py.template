@@ -22,11 +22,17 @@ class Settings(BaseSettings):
     FASTAPI_TIMEOUT: float = 30.0
 
     # Authentication Configuration
-    AUTH_METHOD: Literal["user_id", "jwt", "session", "none"] = "{{AUTH_METHOD}}"
+    AUTH_METHOD: Literal["user_id", "jwt", "session", "service", "none"] = "{{AUTH_METHOD}}"
     JWT_SECRET: str | None = None
     JWT_TOKEN: str | None = None
     SESSION_COOKIE_NAME: str = "session_id"
     SESSION_TOKEN: str | None = None
+
+    # Pattern 4: Service-to-Service Authentication (Microservices)
+    # Uncomment if using microservices architecture
+    # SERVICE_AUTH_TOKEN: str | None = None  # Required for Pattern 4
+    # BACKEND_TIMEOUT: float = 30.0          # Request timeout
+    # BACKEND_MAX_RETRIES: int = 3           # Retry attempts
 
     # HTTP Client Configuration
     HTTP_MAX_CONNECTIONS: int = 100
@@ -57,6 +63,13 @@ def validate_config():
 
     if settings.AUTH_METHOD == "session" and not settings.SESSION_TOKEN:
         errors.append("SESSION_TOKEN is required when AUTH_METHOD=session")
+
+    # Pattern 4 validation (uncomment if using service auth)
+    # if settings.AUTH_METHOD == "service":
+    #     if not hasattr(settings, 'SERVICE_AUTH_TOKEN') or not settings.SERVICE_AUTH_TOKEN:
+    #         errors.append("SERVICE_AUTH_TOKEN is required when AUTH_METHOD=service")
+    #     elif len(settings.SERVICE_AUTH_TOKEN) < 32:
+    #         errors.append("SERVICE_AUTH_TOKEN must be at least 32 characters for security")
 
     if settings.MCP_TRANSPORT in ["streamable-http", "sse"] and not (1024 <= settings.MCP_PORT <= 65535):
         errors.append(f"Invalid MCP_PORT: {settings.MCP_PORT}. Must be between 1024-65535")

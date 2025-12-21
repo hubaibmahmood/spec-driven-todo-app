@@ -1,0 +1,387 @@
+# OpenAPI 3.0 Schema for Chat API with Agent Integration
+# Feature: 008-openai-agents-sdk-integration
+# Date: 2025-12-20
+
+openapi: 3.0.3
+info:
+  title: Todo Chat API with AI Agent
+  description: |
+    FastAPI chat endpoint enhanced with OpenAI Agents SDK and Gemini API backend.
+    Extends spec 007 (Chat Persistence Service) with intelligent natural language
+    task management via MCP tools integration.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://api.example.com
+    description: Production
+
+paths:
+  /api/chat:
+    post:
+      summary: Send message to AI agent
+      description: |
+        Enhanced chat endpoint with OpenAI Agent integration. The agent:
+        - Understands natural language queries about tasks
+        - Calls MCP tools (list_tasks, create_task, etc.) to perform operations
+        - Maintains multi-turn conversation context
+        - Returns user-friendly responses
+
+        **Modifications from Spec 007:**
+        - Agent processes user messages instead of echo response
+        - Response includes AI-generated natural language
+        - Tool calls stored in message metadata
+      operationId: sendChatMessage
+      tags:
+        - Chat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              newConversation:
+                summary: Start new conversation
+                value:
+                  message: "What are my tasks?"
+                  conversation_id: null
+              continuedConversation:
+                summary: Continue existing conversation
+                value:
+                  message: "Mark the first one as complete"
+                  conversation_id: 42
+              createTask:
+                summary: Create task with natural language
+                value:
+                  message: "Add a task to buy groceries tomorrow with high priority"
+                  conversation_id: 42
+
+      responses:
+        '200':
+          description: Agent successfully processed message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                listTasks:
+                  summary: Agent listed tasks
+                  value:
+                    response: "You have 3 tasks:\n1. Buy groceries (High priority, due tomorrow)\n2. Call dentist (Medium priority)\n3. Finish report (Urgent)"
+                    conversation_id: 42
+                    metadata:
+                      tokens_used: 245
+                      model: "gemini-2.5-flash"
+                      execution_time_ms: 1250
+                      tool_calls: ["list_tasks"]
+
+                createTask:
+                  summary: Agent created task
+                  value:
+                    response: "I've created a high priority task 'Buy groceries' with a due date of tomorrow (2025-12-21)."
+                    conversation_id: 42
+                    metadata:
+                      tokens_used: 180
+                      model: "gemini-2.5-flash"
+                      execution_time_ms: 1800
+                      tool_calls: ["create_task"]
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "validation_error"
+                message: "Message content is required"
+                details:
+                  field: "message"
+                  constraint: "non_empty"
+
+        '401':
+          description: Unauthorized - missing or invalid authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "unauthorized"
+                message: "Authentication required"
+
+        '403':
+          description: Forbidden - user doesn't own conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "forbidden"
+                message: "You don't have access to this conversation"
+
+        '503':
+          description: Service unavailable - AI agent or MCP server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                geminiError:
+                  summary: Gemini API unavailable
+                  value:
+                    error: "service_unavailable"
+                    message: "AI service temporarily unavailable. Please try again in a moment."
+                    retry_after: 30
+                mcpError:
+                  summary: MCP server unavailable
+                  value:
+                    error: "service_unavailable"
+                    message: "Task service temporarily unavailable. Please try again later."
+                    retry_after: 10
+
+  /api/conversations:
+    get:
+      summary: List user's conversations
+      description: |
+        Get all conversations for authenticated user (from spec 007).
+        **Unchanged by this feature.**
+      operationId: listConversations
+      tags:
+        - Conversations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+
+  /api/conversations/{conversation_id}:
+    get:
+      summary: Get conversation messages
+      description: |
+        Get all messages for a conversation (from spec 007).
+        **Unchanged by this feature.** Agent tool calls visible in message metadata.
+      operationId: getConversation
+      tags:
+        - Conversations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 42
+      responses:
+        '200':
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDetail'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Better-auth session token
+
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: User's message to the AI agent
+          example: "Show me all my high priority tasks"
+        conversation_id:
+          type: integer
+          nullable: true
+          description: |
+            Optional conversation ID for multi-turn context.
+            Null or omitted for new conversation.
+          example: 42
+
+    ChatResponse:
+      type: object
+      required:
+        - response
+        - conversation_id
+      properties:
+        response:
+          type: string
+          description: Agent's natural language response
+          example: "You have 2 high priority tasks: 'Buy groceries' due tomorrow and 'Finish report' due today."
+        conversation_id:
+          type: integer
+          description: Conversation ID for subsequent messages
+          example: 42
+        metadata:
+          type: object
+          description: Optional execution metadata
+          properties:
+            tokens_used:
+              type: integer
+              example: 245
+            model:
+              type: string
+              example: "gemini-2.5-flash"
+            execution_time_ms:
+              type: integer
+              example: 1250
+            tool_calls:
+              type: array
+              items:
+                type: string
+              example: ["list_tasks"]
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          enum:
+            - validation_error
+            - unauthorized
+            - forbidden
+            - not_found
+            - service_unavailable
+            - internal_error
+          example: "service_unavailable"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "AI service temporarily unavailable"
+        details:
+          type: object
+          description: Optional additional error details
+          additionalProperties: true
+        retry_after:
+          type: integer
+          description: Suggested retry delay in seconds (for 503 errors)
+          example: 30
+
+    Conversation:
+      type: object
+      required:
+        - id
+        - user_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          example: 42
+        user_id:
+          type: string
+          description: Better-auth user ID
+          example: "user_abc123"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-20T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-12-20T14:45:00Z"
+
+    Message:
+      type: object
+      required:
+        - id
+        - conversation_id
+        - role
+        - content
+        - created_at
+      properties:
+        id:
+          type: integer
+          example: 123
+        conversation_id:
+          type: integer
+          example: 42
+        role:
+          type: string
+          enum: [user, assistant, tool]
+          example: "assistant"
+        content:
+          type: string
+          example: "I've created a high priority task 'Buy groceries' for you."
+        metadata:
+          type: object
+          description: |
+            Optional metadata including tool calls, token counts, timestamps.
+            New in spec 008: includes agent execution metadata.
+          properties:
+            tool_calls:
+              type: array
+              description: MCP tools invoked by agent
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "call_abc123"
+                  type:
+                    type: string
+                    example: "function"
+                  function:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "create_task"
+                      arguments:
+                        type: string
+                        example: '{"title": "Buy groceries", "priority": "High"}'
+            token_count:
+              type: integer
+              example: 245
+            model:
+              type: string
+              example: "gemini-2.5-flash"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-20T14:45:30Z"
+
+    ConversationDetail:
+      allOf:
+        - $ref: '#/components/schemas/Conversation'
+        - type: object
+          required:
+            - messages
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: '#/components/schemas/Message'
+              description: All messages in chronological order
+
+tags:
+  - name: Chat
+    description: AI agent chat operations
+  - name: Conversations
+    description: Conversation history management

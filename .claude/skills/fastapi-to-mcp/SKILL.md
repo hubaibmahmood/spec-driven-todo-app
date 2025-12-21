@@ -361,6 +361,134 @@ async def get_current_user_or_service(
 
 **See [MICROSERVICES_PATTERNS.md](MICROSERVICES_PATTERNS.md) for complete guide**
 
+### Production Patterns (Integrated from Real Implementation)
+
+Based on successful production deployment (Spec 006: Todo App MCP Server), the following patterns are now integrated into the skill templates:
+
+#### Error Taxonomy (7 Types)
+
+AI-friendly error classification for better error handling and user communication:
+
+| Error Type | HTTP Status | When to Use | AI Message Example |
+|------------|-------------|-------------|-------------------|
+| `authentication_error` | 401 | Service token invalid | "Unable to authenticate with backend. Check SERVICE_AUTH_TOKEN configuration." |
+| `authorization_error` | 403 | User lacks permission | "You don't have permission to access this task. It may belong to another user." |
+| `not_found_error` | 404 | Resource doesn't exist | "Task not found with ID: 123. It may have been deleted or doesn't belong to you." |
+| `validation_error` | 422 | Invalid input data | "Title must be between 1 and 200 characters. Received: empty string." |
+| `backend_error` | 500 | Server-side error | "Backend service encountered an error. Please try again in a moment." |
+| `timeout_error` | Timeout | Request timeout | "Request timed out after 30 seconds. Backend may be experiencing high load." |
+| `connection_error` | Network | Connection failed | "Unable to connect to backend service. Check FASTAPI_BASE_URL and network." |
+
+**Implementation** (available in schemas.template):
+```python
+ERROR_TYPES = {
+    "authentication_error": "authentication_error",
+    "authorization_error": "authorization_error",
+    "not_found_error": "not_found_error",
+    "validation_error": "validation_error",
+    "backend_error": "backend_error",
+    "timeout_error": "timeout_error",
+    "connection_error": "connection_error",
+}
+
+class ErrorResponse(BaseModel):
+    """Standardized error response for AI agents."""
+    error_type: str  # From ERROR_TYPES
+    message: str     # Human-readable for AI
+    details: Optional[dict] = None  # Structured data
+    suggestions: List[str] = []     # Actionable steps
+```
+
+**Benefits**:
+- AI agents can explain errors clearly to users
+- Consistent error format across all tools
+- Actionable suggestions for error resolution
+- Structured for programmatic handling
+
+#### Test Organization (Contract/Unit/Integration)
+
+Production-ready test structure for comprehensive validation:
+
+```
+tests/
+├── conftest.py              # Shared pytest fixtures
+├── contract/                # Schema validation tests
+│   └── test_task_schemas.py    # Pydantic model validation
+├── unit/                    # Component tests
+│   ├── test_client.py           # HTTP client tests
+│   └── test_config.py           # Configuration tests
+└── integration/             # End-to-end workflow tests
+    ├── test_user_context.py     # Data isolation tests (SC-001)
+    └── test_workflows.py        # Cross-tool workflows (SC-002-004)
+```
+
+**Test Types**:
+1. **Contract Tests**: Validate that Pydantic schemas match backend API contracts
+2. **Unit Tests**: Test individual components in isolation with mocks
+3. **Integration Tests**: Test complete workflows with mocked backend
+
+**Pattern 4 Specific Tests**:
+- User context propagation and isolation
+- Service auth header validation
+- Retry logic verification
+- Structured logging validation
+
+#### Context-Based User Extraction
+
+Modern pattern using FastMCP Context instead of direct parameters:
+
+```python
+from fastmcp import Context
+
+async def list_tasks(ctx: Context) -> list[dict]:
+    """List tasks - user ID extracted from context."""
+    # Extract user_id from MCP session context
+    user_id = getattr(ctx.request_context, "user_id", None) or "test_user_123"
+
+    # Use user_id for backend request
+    client = BackendClient()
+    response = await client.get_tasks(user_id)
+    return response.json()
+```
+
+**Benefits**:
+- Cleaner tool signatures (no user_id parameter pollution)
+- Centralized user extraction logic
+- Easy to add test fallbacks
+- Supports future MCP session improvements
+
+#### Modular Tool Structure
+
+For Pattern 4 or projects with 5+ tools, use modular structure:
+
+```
+src/tools/
+├── __init__.py
+├── list_tasks.py        # One file per tool
+├── create_task.py
+├── update_task.py
+├── mark_completed.py
+└── delete_task.py
+```
+
+**Each tool file contains**:
+- Complete error handling (all 7 error types)
+- Structured logging with audit fields
+- Context-based user extraction
+- Resource cleanup (finally block)
+- Comprehensive docstrings with examples
+
+**When to use**:
+- ✅ Microservices architecture (Pattern 4)
+- ✅ 5+ tools
+- ✅ Team collaboration (reduces merge conflicts)
+- ✅ Independent tool testing
+
+**When NOT to use**:
+- ❌ Simple prototypes
+- ❌ < 5 tools
+- ❌ Solo developer, quick iteration
+
 ## Generated Code Structure
 
 ### main.py (MCP Server Entry Point)

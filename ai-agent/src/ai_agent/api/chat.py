@@ -3,12 +3,16 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Header, status
 from pydantic import BaseModel
 from sqlmodel import select
 
 from ai_agent.api.deps import CurrentUser, DbSession
 from ai_agent.database.models import Conversation, Message
+from ai_agent.agent.agent_service import AgentService
+from ai_agent.agent.config import AgentConfig
+from ai_agent.agent.context_manager import ContextManager
+from ai_agent.agent.timezone_utils import extract_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -35,79 +39,120 @@ async def chat(
     request: ChatRequest,
     user_id: CurrentUser,
     db: DbSession,
+    x_timezone: str | None = Header(None, alias="X-Timezone"),
 ) -> ChatResponse:
     """
-    Send a message and receive a response.
+    Send a message and receive a response via OpenAI Agent with Gemini backend.
 
     Creates a new conversation if conversation_id is not provided,
     or adds to existing conversation if ID is provided.
 
-    For spec 007, returns an echo response. In spec 008, this will be replaced
-    with OpenAI Agents SDK integration.
+    Integrates with OpenAI Agents SDK (spec 008) for natural language task management.
     """
     logger.info(f"Chat request from user {user_id[:8]}... conversation_id={request.conversation_id}")
-    conversation: Conversation
 
-    # Get or create conversation
-    if request.conversation_id:
-        # Validate conversation ownership
-        statement = select(Conversation).where(
-            Conversation.id == request.conversation_id,
-            Conversation.user_id == user_id,
-        )
-        result = await db.execute(statement)
-        conv = result.scalar_one_or_none()
+    try:
+        # Extract and validate timezone
+        user_timezone = extract_timezone(x_timezone)
+        logger.debug(f"Using timezone: {user_timezone}")
 
-        if not conv:
-            logger.error(f"Conversation {request.conversation_id} not found for user {user_id[:8]}...")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Conversation not found or you don't have access",
+        # Initialize agent configuration
+        config = AgentConfig()
+        agent_service = AgentService(config)
+        context_manager = ContextManager()
+
+        conversation: Conversation
+
+        # Get or create conversation
+        if request.conversation_id:
+            # Validate conversation ownership
+            statement = select(Conversation).where(
+                Conversation.id == request.conversation_id,
+                Conversation.user_id == user_id,
             )
+            result = await db.execute(statement)
+            conv = result.scalar_one_or_none()
 
-        conversation = conv
-        # Update conversation timestamp
-        conversation.updated_at = datetime.utcnow()
+            if not conv:
+                logger.error(f"Conversation {request.conversation_id} not found for user {user_id[:8]}...")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Conversation not found or you don't have access",
+                )
 
-    else:
-        # Create new conversation
-        timestamp = datetime.utcnow()
-        title = f"Chat - {timestamp.strftime('%Y-%m-%d %H:%M')}"
-        conversation = Conversation(
-            user_id=user_id,
-            title=title,
-            created_at=timestamp,
-            updated_at=timestamp,
+            conversation = conv
+            # Update conversation timestamp
+            conversation.updated_at = datetime.utcnow()
+
+        else:
+            # Create new conversation
+            timestamp = datetime.utcnow()
+            title = f"Chat - {timestamp.strftime('%Y-%m-%d %H:%M')}"
+            conversation = Conversation(
+                user_id=user_id,
+                title=title,
+                created_at=timestamp,
+                updated_at=timestamp,
+            )
+            db.add(conversation)
+            await db.commit()
+            await db.refresh(conversation)
+
+        # Load conversation history
+        history = await context_manager.load_conversation_history(
+            session=db,
+            conversation_id=conversation.id,  # type: ignore
+            user_id=user_id
         )
-        db.add(conversation)
+
+        # Truncate history to fit token budget
+        truncated_history = context_manager.truncate_by_tokens(
+            messages=history,
+            max_tokens=config.token_budget
+        )
+
+        logger.info(f"Loaded {len(history)} messages, truncated to {len(truncated_history)}")
+
+        # Execute agent with context
+        agent_result = await agent_service.run_agent_with_context(
+            user_id=user_id,
+            user_message=request.message,
+            conversation_history=truncated_history,
+            user_timezone=user_timezone
+        )
+
+        # Save user message
+        user_message = Message(
+            conversation_id=conversation.id,  # type: ignore
+            role="user",
+            content=request.message,
+            created_at=datetime.utcnow(),
+        )
+        db.add(user_message)
+
+        # Save assistant message
+        assistant_message = Message(
+            conversation_id=conversation.id,  # type: ignore
+            role="assistant",
+            content=agent_result.response_text,
+            created_at=datetime.utcnow(),
+        )
+        db.add(assistant_message)
+
         await db.commit()
-        await db.refresh(conversation)
 
-    # Save user message
-    user_message = Message(
-        conversation_id=conversation.id,  # type: ignore
-        role="user",
-        content=request.message,
-        created_at=datetime.utcnow(),
-    )
-    db.add(user_message)
+        logger.info(f"Agent response: {agent_result.execution_time_ms}ms, {agent_result.tokens_used} tokens")
 
-    # Generate assistant response (echo for now)
-    assistant_response = f"Echo: {request.message}"
+        return ChatResponse(
+            conversation_id=conversation.id,  # type: ignore
+            user_message=request.message,
+            assistant_message=agent_result.response_text,
+        )
 
-    # Save assistant message
-    assistant_message = Message(
-        conversation_id=conversation.id,  # type: ignore
-        role="assistant",
-        content=assistant_response,
-        created_at=datetime.utcnow(),
-    )
-    db.add(assistant_message)
-
-    await db.commit()
-
-    return ChatResponse(
-        conversation_id=conversation.id,  # type: ignore
-        user_message=request.message,
-        assistant_message=assistant_response,
-    )
+    except Exception as e:
+        logger.error(f"Chat endpoint error: {e}", exc_info=True)
+        # Graceful degradation
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service temporarily unavailable. Please try again.",
+        )

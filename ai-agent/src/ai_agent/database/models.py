@@ -1,6 +1,6 @@
 """Database models for AI Agent service."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Optional
 
 from sqlalchemy import JSON
@@ -37,8 +37,8 @@ class Conversation(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: str = Field(index=True)
     title: str = Field(max_length=200)
-    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), index=True)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class Message(SQLModel, table=True):
@@ -56,4 +56,4 @@ class Message(SQLModel, table=True):
     role: str = Field(max_length=20)  # 'user', 'assistant', or 'tool'
     content: str
     message_metadata: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

@@ -2,14 +2,15 @@
 
 import React, { useState } from 'react';
 import { Todo, Priority, Status } from '@/types';
-import { 
-  CheckCircle2, 
-  Circle, 
-  MoreVertical, 
-  Trash2, 
-  Edit3, 
+import {
+  CheckCircle2,
+  Circle,
+  MoreVertical,
+  Trash2,
+  Edit3,
   Calendar
 } from 'lucide-react';
+import { getUserTimezone } from '@/lib/utils/timezone';
 
 interface TodoItemProps {
   todo: Todo;
@@ -28,6 +29,38 @@ export function TodoItem({ todo, onToggleStatus, onDelete, onEdit }: TodoItemPro
     [Priority.MEDIUM]: 'bg-blue-50 text-blue-600',
     [Priority.HIGH]: 'bg-orange-50 text-orange-600',
     [Priority.URGENT]: 'bg-red-50 text-red-600',
+  };
+
+  // Format due date with time if it has a time component (not midnight UTC)
+  const formatDueDate = (date: Date | null): string => {
+    if (!date) return '';
+
+    const dateObj = new Date(date);
+    const timezone = getUserTimezone();
+
+    // Check if the date has a meaningful time component (not midnight UTC)
+    const hasTime = dateObj.getUTCHours() !== 0 || dateObj.getUTCMinutes() !== 0;
+
+    if (hasTime) {
+      // Show date and time
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: timezone,
+        hour12: true
+      }).format(dateObj);
+    } else {
+      // Show only date
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: timezone
+      }).format(dateObj);
+    }
   };
 
 
@@ -86,21 +119,13 @@ export function TodoItem({ todo, onToggleStatus, onDelete, onEdit }: TodoItemPro
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor[todo.priority]}`}>
                 {todo.priority}
               </span>
-              
+
               {todo.dueDate && (
                 <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
                   <Calendar className="w-3 h-3" />
-                  {new Date(todo.dueDate).toLocaleDateString()}
+                  {formatDueDate(todo.dueDate)}
                 </span>
               )}
-
-              {todo.tags.map(tag => (
-                <span key={tag} className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                  #{tag}
-                </span>
-              ))}
-
-
             </div>
           </div>
         </div>

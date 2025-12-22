@@ -220,6 +220,7 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - N/A (MCP server is stateless; backend handles persistence via Neon PostgreSQL) (006-mcp-server-integration)
 - Python 3.12+ (matches existing FastAPI backend from spec 003) (008-openai-agents-sdk-integration)
 - Neon serverless PostgreSQL (shared with FastAPI backend, conversation/message tables from spec 007) (008-openai-agents-sdk-integration)
+- TypeScript 5.x + React 18+ (Next.js frontend) (009-frontend-chat-integration)
 
 ## Recent Changes
 - 006-mcp-server-integration: Replaced bulk_delete_tasks tool with mark_task_completed (dedicated tool for marking tasks complete); update_task now handles only title/description/priority/due_date

@@ -182,11 +182,51 @@
 - See `plan.md` § "Phase 3 Implementation Learnings" for architectural impact analysis
 - See `FIXED_BY_GEMINI.md` for complete fix history with before/after code examples
 
-**Next Steps**: Proceed to Phase 4 (User Story 2 - Multi-Turn Conversation Context) with validated foundation
+**Next Steps**: Proceed to Phase 4 (User Story 2 - Partial Title Search) or any other P2 user story with validated foundation
 
 ---
 
-## Phase 4: User Story 2 - Multi-Turn Conversation Context (Priority: P2)
+## Phase 4: User Story 2 - Partial Title Search with Disambiguation (Priority: P2)
+
+**Goal**: Enable users to reference tasks by partial title (e.g., "update my grocery task") without knowing exact IDs or listing all tasks first. When multiple matches exist, the agent presents numbered options for disambiguation.
+
+**Independent Test**: Create tasks "Buy groceries" and "Organize groceries in pantry". Send "update my grocery task to high priority". Verify agent presents 2 options with numbers. Respond "the first one". Verify "Buy groceries" task is updated to high priority.
+
+### MCP Server Tool Development
+
+- [ ] T061 [RED] [US2] Write failing test for search_tasks_by_title tool in mcp-server/tests/tools/test_search_tasks_by_title.py
+- [ ] T062 [GREEN] [US2] Create search_tasks_by_title.py in mcp-server/src/tools/ with FastMCP tool decorator
+- [ ] T063 [GREEN] [US2] Implement case-insensitive partial match query (SQL ILIKE %query%) in search function
+- [ ] T064 [GREEN] [US2] Return all matching tasks with id, title, description, priority, due_date, status
+- [ ] T065 [GREEN] [US2] Add user_id filtering to ensure users only search their own tasks
+- [ ] T066 [REFACTOR] [US2] Add error handling for empty queries and database errors
+- [ ] T067 [REFACTOR] [US2] Add validation for minimum query length (2 characters)
+
+### Agent Integration - Disambiguation Logic
+
+- [ ] T068 [RED] [US2] Write failing test for single match auto-proceed in ai-agent/tests/agent/integration/test_partial_title_search.py
+- [ ] T069 [RED] [US2] Write failing test for multiple matches disambiguation flow
+- [ ] T070 [RED] [US2] Write failing test for no matches with helpful error message
+- [ ] T071 [GREEN] [US2] Update system_prompt in agent_service.py with search_tasks_by_title usage instructions
+- [ ] T072 [GREEN] [US2] Add disambiguation logic to system_prompt: single match → proceed, multiple → present numbered options
+- [ ] T073 [GREEN] [US2] Integrate search results with existing task context storage (use store_task_list_context from T023b)
+- [ ] T074 [GREEN] [US2] Enable ordinal resolution for disambiguation responses (leverage resolve_ordinal_reference from T023d)
+- [ ] T075 [REFACTOR] [US2] Add system prompt examples: "I found 2 tasks:\n1. Buy groceries\n2. Organize groceries\nWhich one?"
+- [ ] T076 [REFACTOR] [US2] Add no-match guidance: "I couldn't find any tasks matching 'xyz'. Would you like to list all tasks?"
+
+### End-to-End Testing for User Story 2
+
+- [ ] T077 [GREEN] [US2] Run E2E test: "update grocery task" with 2 matches → disambiguation → "first one" → success
+- [ ] T078 [GREEN] [US2] Run E2E test: "delete my meeting task" with 1 match → auto proceed with confirmation
+- [ ] T079 [GREEN] [US2] Run E2E test: "mark xyz task complete" with 0 matches → helpful error message
+- [ ] T080 [GREEN] [US2] Run E2E test: multi-word partial match "update my buy groc task" → finds "Buy groceries"
+- [ ] T081 [REFACTOR] [US2] Add search accuracy metrics logging (match rate, disambiguation rate)
+
+**Checkpoint**: At this point, users can reference tasks by partial title with intelligent disambiguation
+
+---
+
+## Phase 5: User Story 3 - Multi-Turn Conversation Context (Priority: P2)
 
 **Goal**: Enable natural multi-turn conversations where context is maintained across messages
 
@@ -194,33 +234,33 @@
 
 ### Context Persistence Testing
 
-- [ ] T061 [RED] [US2] Write failing test for multi-turn context preservation in ai-agent/tests/agent/integration/test_multi_turn.py
-- [ ] T062 [RED] [US2] Write failing test for follow-up question understanding ("delete the second one")
-- [ ] T063 [RED] [US2] Write failing test for incremental task creation across turns
+- [ ] T082 [RED] [US3] Write failing test for multi-turn context preservation in ai-agent/tests/agent/integration/test_multi_turn.py
+- [ ] T083 [RED] [US3] Write failing test for follow-up question understanding ("delete the second one")
+- [ ] T084 [RED] [US3] Write failing test for incremental task creation across turns
 
 ### Conversation History Enhancement
 
-- [ ] T064 [GREEN] [US2] Verify load_conversation_history() correctly loads messages in chronological order
-- [ ] T065 [GREEN] [US2] Add test for conversation history ordering in test_context_loading.py
-- [ ] T066 [REFACTOR] [US2] Optimize database query with eager loading for large conversations
+- [ ] T085 [GREEN] [US3] Verify load_conversation_history() correctly loads messages in chronological order
+- [ ] T086 [GREEN] [US3] Add test for conversation history ordering in test_context_loading.py
+- [ ] T087 [REFACTOR] [US3] Optimize database query with eager loading for large conversations
 
 ### Multi-Turn Integration
 
-- [ ] T067 [GREEN] [US2] Test /api/chat with conversation_id to ensure history is passed to agent
-- [ ] T068 [GREEN] [US2] Verify agent responses reference prior context appropriately
-- [ ] T069 [REFACTOR] [US2] Add conversation state validation in chat endpoint
+- [ ] T088 [GREEN] [US3] Test /api/chat with conversation_id to ensure history is passed to agent
+- [ ] T089 [GREEN] [US3] Verify agent responses reference prior context appropriately
+- [ ] T090 [REFACTOR] [US3] Add conversation state validation in chat endpoint
 
 ### End-to-End Multi-Turn Testing
 
-- [ ] T070 [GREEN] [US2] Run E2E test for 3-turn conversation with context references
-- [ ] T071 [GREEN] [US2] Run E2E test for 10-turn conversation to verify SC-003 (context accuracy)
-- [ ] T072 [REFACTOR] [US2] Add metrics logging for conversation turn count and context accuracy
+- [ ] T091 [GREEN] [US3] Run E2E test for 3-turn conversation with context references
+- [ ] T092 [GREEN] [US3] Run E2E test for 10-turn conversation to verify SC-003 (context accuracy)
+- [ ] T093 [REFACTOR] [US3] Add metrics logging for conversation turn count and context accuracy
 
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
+**Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently
 
 ---
 
-## Phase 5: User Story 3 - Intelligent Task Parsing and Validation (Priority: P2)
+## Phase 6: User Story 4 - Intelligent Task Parsing and Validation (Priority: P2)
 
 **Goal**: Intelligently parse natural language to extract task attributes and validate inputs before operations
 
@@ -228,42 +268,42 @@
 
 ### Validation Testing
 
-- [ ] T073 [RED] [US3] Write failing test for relative date parsing ("next Wednesday") in ai-agent/tests/agent/integration/test_parsing_validation.py
-- [ ] T073a [RED] [US3] Write failing test for timezone-aware time parsing ("tomorrow at 9pm" with X-Timezone header)
-- [ ] T073b [RED] [US3] Write failing test for UTC fallback when X-Timezone header missing
-- [ ] T074 [RED] [US3] Write failing test for invalid date detection ("February 30th")
-- [ ] T075 [RED] [US3] Write failing test for missing required fields (title not provided)
-- [ ] T076 [RED] [US3] Write failing test for priority extraction from natural language ("urgent task")
-- [ ] T076a [RED] [US3] Write failing test for EOD time interpretation ("by EOD" → 23:59:59 user timezone)
-- [ ] T076b [RED] [US3] Write failing test for week boundary interpretation ("this week" with locale)
-- [ ] T076c [RED] [US3] Write failing test for task context ordinal references ("mark the first one complete")
+- [ ] T094 [RED] [US4] Write failing test for relative date parsing ("next Wednesday") in ai-agent/tests/agent/integration/test_parsing_validation.py
+- [ ] T094a [RED] [US4] Write failing test for timezone-aware time parsing ("tomorrow at 9pm" with X-Timezone header)
+- [ ] T094b [RED] [US4] Write failing test for UTC fallback when X-Timezone header missing
+- [ ] T095 [RED] [US4] Write failing test for invalid date detection ("February 30th")
+- [ ] T096 [RED] [US4] Write failing test for missing required fields (title not provided)
+- [ ] T097 [RED] [US4] Write failing test for priority extraction from natural language ("urgent task")
+- [ ] T097a [RED] [US4] Write failing test for EOD time interpretation ("by EOD" → 23:59:59 user timezone)
+- [ ] T097b [RED] [US4] Write failing test for week boundary interpretation ("this week" with locale)
+- [ ] T097c [RED] [US4] Write failing test for task context ordinal references ("mark the first one complete")
 
 ### Agent Prompt Enhancement
 
-- [ ] T077 [GREEN] [US3] Update system_prompt with: date parsing instructions, EOD/COB definitions, week boundary rules, priority mapping table
-- [ ] T078 [GREEN] [US3] Add validation guidelines: clarification triggers, enum validation, ambiguity detection
-- [ ] T079 [REFACTOR] [US3] Extract system prompt to template file for easier maintenance
+- [ ] T098 [GREEN] [US4] Update system_prompt with: date parsing instructions, EOD/COB definitions, week boundary rules, priority mapping table
+- [ ] T099 [GREEN] [US4] Add validation guidelines: clarification triggers, enum validation, ambiguity detection
+- [ ] T100 [REFACTOR] [US4] Extract system prompt to template file for easier maintenance
 
 ### Validation Integration Testing
 
-- [ ] T080 [GREEN] [US3] Run E2E test for relative date parsing with Gemini
-- [ ] T080a [GREEN] [US3] Run E2E test for timezone-aware parsing ("9pm" with America/New_York → correct UTC conversion)
-- [ ] T080b [GREEN] [US3] Run E2E test for cross-timezone scenarios (user in Asia/Tokyo creates "9am" task → correct UTC)
-- [ ] T080c [GREEN] [US3] Run E2E test for UTC fallback behavior (no X-Timezone header provided)
-- [ ] T081 [GREEN] [US3] Run E2E test for invalid date detection and clarification request
-- [ ] T082 [GREEN] [US3] Run E2E test for missing field detection and follow-up question
-- [ ] T083 [GREEN] [US3] Run E2E test for priority keyword extraction (urgent, high, low)
-- [ ] T083a [GREEN] [US3] Run E2E test for priority normalization ("critical" → "Urgent", "important" → "High")
-- [ ] T083b [GREEN] [US3] Run E2E test for EOD interpretation and UTC conversion
-- [ ] T083c [GREEN] [US3] Run E2E test for week boundary filtering with different locales
-- [ ] T083d [GREEN] [US3] Run E2E test for task context resolution after displaying list
-- [ ] T084 [REFACTOR] [US3] Add validation accuracy metrics logging
+- [ ] T101 [GREEN] [US4] Run E2E test for relative date parsing with Gemini
+- [ ] T101a [GREEN] [US4] Run E2E test for timezone-aware parsing ("9pm" with America/New_York → correct UTC conversion)
+- [ ] T101b [GREEN] [US4] Run E2E test for cross-timezone scenarios (user in Asia/Tokyo creates "9am" task → correct UTC)
+- [ ] T101c [GREEN] [US4] Run E2E test for UTC fallback behavior (no X-Timezone header provided)
+- [ ] T102 [GREEN] [US4] Run E2E test for invalid date detection and clarification request
+- [ ] T103 [GREEN] [US4] Run E2E test for missing field detection and follow-up question
+- [ ] T104 [GREEN] [US4] Run E2E test for priority keyword extraction (urgent, high, low)
+- [ ] T104a [GREEN] [US4] Run E2E test for priority normalization ("critical" → "Urgent", "important" → "High")
+- [ ] T104b [GREEN] [US4] Run E2E test for EOD interpretation and UTC conversion
+- [ ] T104c [GREEN] [US4] Run E2E test for week boundary filtering with different locales
+- [ ] T104d [GREEN] [US4] Run E2E test for task context resolution after displaying list
+- [ ] T105 [REFACTOR] [US4] Add validation accuracy metrics logging
 
 **Checkpoint**: All high-priority user stories (P1, P2) should now be independently functional
 
 ---
 
-## Phase 6: User Story 4 - Batch Operations via Natural Language (Priority: P3)
+## Phase 7: User Story 5 - Batch Operations via Natural Language (Priority: P3)
 
 **Goal**: Enable bulk operations like "mark all urgent tasks as complete"
 
@@ -271,55 +311,55 @@
 
 ### Batch Operations Testing
 
-- [ ] T085 [RED] [US4] Write failing test for bulk complete operation in ai-agent/tests/agent/integration/test_batch_operations.py
-- [ ] T086 [RED] [US4] Write failing test for bulk delete operation
-- [ ] T087 [RED] [US4] Write failing test for filtered list with batch action
+- [ ] T106 [RED] [US5] Write failing test for bulk complete operation in ai-agent/tests/agent/integration/test_batch_operations.py
+- [ ] T107 [RED] [US5] Write failing test for bulk delete operation
+- [ ] T108 [RED] [US5] Write failing test for filtered list with batch action
 
 ### Agent Prompt Enhancement for Batch
 
-- [ ] T088 [GREEN] [US4] Update system_prompt to handle batch operation requests
-- [ ] T089 [GREEN] [US4] Add confirmation flow to system_prompt for destructive batch operations
-- [ ] T090 [REFACTOR] [US4] Document batch operation patterns in system prompt
+- [ ] T109 [GREEN] [US5] Update system_prompt to handle batch operation requests
+- [ ] T110 [GREEN] [US5] Add confirmation flow to system_prompt for destructive batch operations
+- [ ] T111 [REFACTOR] [US5] Document batch operation patterns in system prompt
 
 ### Batch Integration Testing
 
-- [ ] T091 [GREEN] [US4] Run E2E test for "mark all high priority tasks as done"
-- [ ] T092 [GREEN] [US4] Run E2E test for "delete all completed tasks" with confirmation
-- [ ] T093 [GREEN] [US4] Run E2E test for filtered batch operations
-- [ ] T094 [REFACTOR] [US4] Add batch operation size limits and warnings
+- [ ] T112 [GREEN] [US5] Run E2E test for "mark all high priority tasks as done"
+- [ ] T113 [GREEN] [US5] Run E2E test for "delete all completed tasks" with confirmation
+- [ ] T114 [GREEN] [US5] Run E2E test for filtered batch operations
+- [ ] T115 [REFACTOR] [US5] Add batch operation size limits and warnings
 
 **Checkpoint**: All user stories should now be independently functional
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple user stories
 
 ### Error Handling & Observability
 
-- [ ] T095 [P] Add comprehensive error logging in agent_service.py for debugging
-- [ ] T096 [P] Add performance metrics logging (latency, token usage) in chat endpoint
-- [ ] T097 [P] Add rate limiting configuration for Gemini API calls
+- [ ] T116 [P] Add comprehensive error logging in agent_service.py for debugging
+- [ ] T117 [P] Add performance metrics logging (latency, token usage) in chat endpoint
+- [ ] T118 [P] Add rate limiting configuration for Gemini API calls
 
 ### Documentation
 
-- [ ] T098 [P] Document environment variables in README.md
-- [ ] T099 [P] Add agent configuration guide with examples
-- [ ] T100 [P] Add troubleshooting section for common errors (auth, timeouts)
+- [ ] T119 [P] Document environment variables in README.md
+- [ ] T120 [P] Add agent configuration guide with examples
+- [ ] T121 [P] Add troubleshooting section for common errors (auth, timeouts)
 
 ### Code Quality
 
-- [ ] T101 Run type checking with mypy on ai-agent/src/ai_agent/agent/
-- [ ] T102 Run linting with ruff on ai-agent/src/ai_agent/agent/
-- [ ] T103 [P] Run test coverage analysis and verify >80% coverage for agent module
-- [ ] T104 [P] Run quickstart.md verification checklist
+- [ ] T122 Run type checking with mypy on ai-agent/src/ai_agent/agent/
+- [ ] T123 Run linting with ruff on ai-agent/src/ai_agent/agent/
+- [ ] T124 [P] Run test coverage analysis and verify >80% coverage for agent module
+- [ ] T125 [P] Run quickstart.md verification checklist
 
 ### Security
 
-- [ ] T105 Verify GEMINI_API_KEY is not hardcoded anywhere
-- [ ] T106 Verify X-User-ID header is always passed to MCP server
-- [ ] T107 Add input sanitization for user messages before passing to Gemini
+- [ ] T126 Verify GEMINI_API_KEY is not hardcoded anywhere
+- [ ] T127 Verify X-User-ID header is always passed to MCP server
+- [ ] T128 Add input sanitization for user messages before passing to Gemini
 
 ---
 
@@ -329,17 +369,18 @@
 
 - **Setup (Phase 1)**: No dependencies - can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phase 3-6)**: All depend on Foundational phase completion
+- **User Stories (Phase 3-7)**: All depend on Foundational phase completion
   - User stories can then proceed in parallel (if staffed)
-  - Or sequentially in priority order (P1 → P2 → P2 → P3)
-- **Polish (Phase 7)**: Depends on all desired user stories being complete
+  - Or sequentially in priority order (P1 → P2 → P2 → P2 → P3)
+- **Polish (Phase 8)**: Depends on all desired user stories being complete
 
 ### User Story Dependencies
 
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
-- **User Story 2 (P2)**: Can start after Foundational (Phase 2) - Builds on US1 but independently testable
-- **User Story 3 (P2)**: Can start after Foundational (Phase 2) - Enhances US1 but independently testable
-- **User Story 4 (P3)**: Can start after Foundational (Phase 2) - Extends US1 capabilities
+- **User Story 1 (P1 - Phase 3)**: Can start after Foundational (Phase 2) - No dependencies on other stories
+- **User Story 2 (P2 - Phase 4)**: Can start after Foundational (Phase 2) - Leverages existing task context (T023a-T023e) for disambiguation
+- **User Story 3 (P2 - Phase 5)**: Can start after Foundational (Phase 2) - Builds on US1 but independently testable
+- **User Story 4 (P2 - Phase 6)**: Can start after Foundational (Phase 2) - Enhances US1 but independently testable
+- **User Story 5 (P3 - Phase 7)**: Can start after Foundational (Phase 2) - Extends US1 capabilities
 
 ### Within Each User Story
 
@@ -354,7 +395,7 @@
 - Phase 1: All tasks marked [P] can run in parallel (T002, T003, T004)
 - Phase 2: Configuration, Message Conversion, and initial Context Management tests can run in parallel
 - Within each user story: Multiple [RED] test tasks can be written in parallel before implementation
-- Phase 7: All polish tasks marked [P] can run in parallel
+- Phase 8: All polish tasks marked [P] can run in parallel
 
 ---
 
@@ -390,12 +431,13 @@ Task T015: "Implement ContextManager with tiktoken encoding"
 
 1. Complete Setup + Foundational → Foundation ready (~9-11 hours)
 2. Add User Story 1 → Test independently → Deploy/Demo (MVP! +9-11 hours)
-3. Add User Story 2 → Test independently → Deploy/Demo (+3-4 hours)
-4. Add User Story 3 → Test independently → Deploy/Demo (+5-6 hours with all edge case validation)
-5. Add User Story 4 → Test independently → Deploy/Demo (+2-3 hours)
-6. Polish → Final hardening (+2-3 hours)
+3. Add User Story 2 (Partial Title Search) → Test independently → Deploy/Demo (+2-3 hours)
+4. Add User Story 3 (Multi-Turn Context) → Test independently → Deploy/Demo (+3-4 hours)
+5. Add User Story 4 (Intelligent Parsing) → Test independently → Deploy/Demo (+5-6 hours with all edge case validation)
+6. Add User Story 5 (Batch Operations) → Test independently → Deploy/Demo (+2-3 hours)
+7. Polish → Final hardening (+2-3 hours)
 
-**Total Feature Estimate**: ~30-38 hours for all user stories + polish + edge case handling
+**Total Feature Estimate**: ~32-41 hours for all user stories + polish + edge case handling
 
 ### Parallel Team Strategy
 
@@ -404,9 +446,10 @@ With multiple developers:
 1. Team completes Setup + Foundational together (~7-9 hours)
 2. Once Foundational is done:
    - Developer A: User Story 1 (P1 - highest priority)
-   - Developer B: User Story 2 (P2)
-   - Developer C: User Story 3 (P2)
-3. User Story 4 (P3) after P2 stories complete
+   - Developer B: User Story 2 (P2 - Partial Title Search)
+   - Developer C: User Story 3 (P2 - Multi-Turn Context)
+   - Developer D: User Story 4 (P2 - Intelligent Parsing)
+3. User Story 5 (P3 - Batch Operations) after P2 stories complete
 4. Polish phase together
 
 ---
@@ -418,8 +461,11 @@ With multiple developers:
 - ✅ T001-T005: Setup tasks (10-20 min each)
 - ✅ T006-T028: Foundational RED-GREEN-REFACTOR cycles (15-25 min each)
 - ✅ T029-T060: User Story 1 implementation (15-30 min each)
-- ✅ T061-T094: User Stories 2-4 (15-25 min each)
-- ✅ T095-T107: Polish tasks (10-20 min each)
+- ✅ T061-T081: User Story 2 (Partial Title Search) implementation (15-25 min each)
+- ✅ T082-T093: User Story 3 (Multi-Turn Context) implementation (15-25 min each)
+- ✅ T094-T105: User Story 4 (Intelligent Parsing) implementation (15-25 min each)
+- ✅ T106-T115: User Story 5 (Batch Operations) implementation (15-25 min each)
+- ✅ T116-T128: Polish tasks (10-20 min each)
 
 ### Tasks That Could Be Split (if needed)
 
@@ -437,13 +483,14 @@ None - all tasks are already atomic and sized appropriately for 15-30 minute exe
 - ✅ Timezone handling infrastructure (T028a-T028e) for accurate date/time parsing
 - ✅ Task context metadata (T023a-T023e) for ordinal reference resolution (Edge Case #3)
 - ✅ Timezone integration in agent service (T042a-T042c, T047a) and endpoint
-- ✅ Timezone validation tests (T073a-T073b, T080a-T080c) for cross-timezone scenarios
-- ✅ Edge case validation (T076a-T076c) for EOD, week boundaries, task context
-- ✅ Edge case E2E tests (T083a-T083d) for priority normalization, EOD, locale handling
+- ✅ Partial title search infrastructure (T061-T081) for natural task referencing with disambiguation
+- ✅ Timezone validation tests (T094a-T094b, T101a-T101c) for cross-timezone scenarios
+- ✅ Edge case validation (T097a-T097c) for EOD, week boundaries, task context
+- ✅ Edge case E2E tests (T104a-T104d) for priority normalization, EOD, locale handling
 - ✅ E2E workflow tests (T055-T060) for comprehensive validation
-- ✅ Multi-turn conversation tests (T061-T072) for context management
-- ✅ Batch operations tests (T085-T094) for P3 story
-- ✅ Security validation tasks (T105-T107) for production readiness
+- ✅ Multi-turn conversation tests (T082-T093) for context management
+- ✅ Batch operations tests (T106-T115) for P3 story
+- ✅ Security validation tasks (T126-T128) for production readiness
 
 ### Tasks Removed (vs over-engineered approach)
 
@@ -463,7 +510,8 @@ None - all tasks are already atomic and sized appropriately for 15-30 minute exe
 - Verify tests fail before implementing (critical for TDD)
 - Commit after each GREEN or REFACTOR step
 - Stop at any checkpoint to validate story independently
-- **Total of 132 tasks** organized into 7 phases (updated with timezone + edge case handling)
+- **Total of 128 tasks** organized into 8 phases (includes partial title search with disambiguation)
 - All tasks sized for 15-30 minute execution windows
 - Timezone support added via X-Timezone header throughout user stories
 - Edge cases 1-4 integrated: EOD interpretation, week boundaries, task ID context, priority normalization
+- Partial title search (US2) leverages existing task context infrastructure for disambiguation

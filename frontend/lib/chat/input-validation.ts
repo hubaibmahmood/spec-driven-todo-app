@@ -24,7 +24,7 @@ const UNSUPPORTED_PATTERNS = [
   { pattern: /(search|google|look up)\s+(for|on|about)/i, type: 'search' },
   { pattern: /(open|launch|start)\s+(app|application|program)/i, type: 'system' },
   { pattern: /(download|upload|transfer)\s+file/i, type: 'file' },
-  { pattern: /(order|buy|purchase|shop)/i, type: 'commerce' },
+  { pattern: /^(order|buy|purchase|shop)\s+(me|for\s+me|online|now)/i, type: 'commerce' },
 ];
 
 // Help request patterns

@@ -49,16 +49,24 @@ logger.info("MCP server initialized with 5 tools")
 
 def main():
     """Run the MCP server."""
+    import os
+    
+    # Get port from environment variable (Railway/Render) or settings
+    # Railway provides PORT, so we check that first
+    port = int(os.environ.get("PORT", settings.mcp_server_port))
+    
     logger.info(
         "Starting todo-mcp-server",
         extra={
             "backend_url": settings.fastapi_base_url,
             "log_level": settings.mcp_log_level,
+            "port": port,
         },
     )
 
-    # Run server with streamable HTTP transport for AI agent integration on port 8001
-    mcp.run(transport="streamable-http", port=8001)
+    # Run server with streamable HTTP transport
+    # host="0.0.0.0" is required for Docker/Railway deployment
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":

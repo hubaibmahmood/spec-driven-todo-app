@@ -39,6 +39,19 @@ export function useTasks(): UseTasksReturn {
     loadTodos();
   }, [loadTodos]);
 
+  // Listen for tasks-updated events from chat panel
+  useEffect(() => {
+    const handleTasksUpdated = () => {
+      loadTodos();
+    };
+
+    window.addEventListener('tasks-updated', handleTasksUpdated);
+
+    return () => {
+      window.removeEventListener('tasks-updated', handleTasksUpdated);
+    };
+  }, [loadTodos]);
+
   // Toggle task status (complete/incomplete)
   const handleToggleStatus = useCallback(async (id: string) => {
     const todo = todos.find(t => t.id === id);

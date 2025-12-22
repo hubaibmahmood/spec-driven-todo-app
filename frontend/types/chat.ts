@@ -14,6 +14,7 @@ export interface Message {
     taskId?: string;             // Affected task UUID
     status?: 'pending' | 'success' | 'error';
     errorMessage?: string;       // If operation failed
+    operations?: ToolCallOperation[];  // List of tool call operations
   };
 }
 
@@ -70,12 +71,22 @@ export interface TaskOperation {
 }
 
 /**
+ * Tool call operation from backend
+ */
+export interface ToolCallOperation {
+  tool_name: string;             // MCP tool name (e.g., "create_task")
+  status: 'success' | 'error';   // Operation status
+  details?: string;              // Optional details
+}
+
+/**
  * Response from POST /api/chat endpoint
  */
 export interface ChatApiResponse {
-  conversationId: string;        // Conversation UUID (created or existing)
-  message: Message;              // AI assistant's response message
-  operations?: TaskOperation[];  // List of task operations performed (if any)
+  conversation_id: number;       // Conversation ID (created or existing)
+  user_message: string;          // Echo of user message
+  assistant_message: string;     // AI assistant's response
+  operations?: ToolCallOperation[];  // List of tool call operations performed (if any)
 }
 
 /**

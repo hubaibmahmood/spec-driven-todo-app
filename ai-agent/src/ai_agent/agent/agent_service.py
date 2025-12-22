@@ -301,12 +301,30 @@ class AgentService:
 
 Current time in user's timezone: {current_time}
 
-When parsing dates/times from user input:
-- Use the timezone: {user_timezone}
-- "today" means today in {user_timezone}
-- "tomorrow" means tomorrow in {user_timezone}
-- "EOD" (end of day) means 23:59:59 in {user_timezone}
-- Always convert to UTC before storing
+CRITICAL DATE/TIME HANDLING INSTRUCTIONS:
+When the user mentions dates/times, you MUST follow these rules EXACTLY:
+
+1. The user's timezone is: {user_timezone}
+2. Use the current time shown above to determine what "today" and "tomorrow" mean
+3. When creating due_date values:
+   - Extract the DATE from the current time shown above
+   - "today" = the current date shown above (e.g., if current time is "2025-12-22 15:30:45", today is 2025-12-22)
+   - "tomorrow" = one day after the current date shown above
+   - "EOD" or "end of day" = 23:59:59 on the specified day
+
+4. Format due_date as ISO 8601 WITH TIMEZONE:
+   - CORRECT: "2025-12-22T17:00:00+05:00" (for a task due at 5pm in Asia/Karachi)
+   - CORRECT: "2025-12-22T23:59:59+05:00" (for EOD today in Asia/Karachi)
+   - WRONG: "2025-12-22T17:00:00Z" (this is UTC, not the user's timezone)
+   - WRONG: "2025-12-23T17:00:00+05:00" (this is tomorrow, not today)
+
+5. NEVER convert to UTC yourself - pass the date in the user's timezone, the backend will handle conversion
+
+EXAMPLE: If current time is "2025-12-22 15:30:45 Asia/Karachi (+05)" and user says "set task for today at 5pm":
+- Correct due_date: "2025-12-22T17:00:00+05:00"
+- Date is 2025-12-22 (TODAY from the current time shown)
+- Time is 17:00:00 (5pm as requested)
+- Timezone is +05:00 (Asia/Karachi offset)
 
 Priority mapping:
 - "urgent", "critical", "asap" → Priority.URGENT

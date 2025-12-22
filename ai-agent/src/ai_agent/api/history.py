@@ -40,6 +40,8 @@ class ConversationDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     messages: list[MessageResponse]
+    has_more: bool = False
+    total_count: int = 0
 
 
 @router.get("/conversations", response_model=list[ConversationListResponse])
@@ -77,12 +79,19 @@ async def get_conversation(
     conversation_id: int,
     user_id: CurrentUser,
     db: DbSession,
+    limit: int = 5,  # Changed to 5 for testing pagination
+    offset: int = 0,
 ) -> ConversationDetailResponse:
     """
-    Get conversation details including all messages.
+    Get conversation details including messages with pagination.
 
     Returns 404 if conversation doesn't exist or user doesn't have access.
     Messages are ordered chronologically (oldest first).
+
+    Args:
+        conversation_id: ID of the conversation
+        limit: Maximum number of messages to return (default: 50)
+        offset: Number of messages to skip (default: 0)
     """
     # Validate conversation ownership
     conv_statement = select(Conversation).where(
@@ -98,14 +107,28 @@ async def get_conversation(
             detail="Conversation not found or you don't have access",
         )
 
-    # Get messages for this conversation
+    # Count total messages
+    from sqlalchemy import func
+    count_statement = (
+        select(func.count(Message.id))
+        .where(Message.conversation_id == conversation_id)
+    )
+    count_result = await db.execute(count_statement)
+    total_count = count_result.scalar() or 0
+
+    # Get messages for this conversation with pagination (newest first for pagination)
     msg_statement = (
         select(Message)
         .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc())
+        .order_by(Message.created_at.desc())  # Most recent first
+        .offset(offset)
+        .limit(limit)
     )
     msg_result = await db.execute(msg_statement)
-    messages = msg_result.scalars().all()
+    messages = list(reversed(msg_result.scalars().all()))  # Reverse to chronological order
+
+    # Determine if there are more messages
+    has_more = (offset + len(messages)) < total_count
 
     return ConversationDetailResponse(
         id=conversation.id,  # type: ignore
@@ -122,4 +145,6 @@ async def get_conversation(
             )
             for msg in messages
         ],
+        has_more=has_more,
+        total_count=total_count,
     )

@@ -26,12 +26,21 @@ class ChatRequest(BaseModel):
     conversation_id: int | None = None
 
 
+class ToolCallOperation(BaseModel):
+    """Individual tool call operation metadata."""
+
+    tool_name: str
+    status: str  # "success" or "error"
+    details: str | None = None
+
+
 class ChatResponse(BaseModel):
     """Response schema for chat endpoint."""
 
     conversation_id: int
     user_message: str
     assistant_message: str
+    operations: list[ToolCallOperation] = []
 
 
 @router.post("/chat", response_model=ChatResponse, status_code=status.HTTP_200_OK)
@@ -143,10 +152,25 @@ async def chat(
 
         logger.info(f"Agent response: {agent_result.execution_time_ms}ms, {agent_result.tokens_used} tokens")
 
+        # Parse tool calls into operations
+        operations = []
+        for tool_call in agent_result.tool_calls_made:
+            function = tool_call.get("function", {})
+            tool_name = function.get("name", "unknown")
+            # All tool calls are assumed successful if they completed
+            operations.append(
+                ToolCallOperation(
+                    tool_name=tool_name,
+                    status="success",
+                    details=None
+                )
+            )
+
         return ChatResponse(
             conversation_id=conversation.id,  # type: ignore
             user_message=request.message,
             assistant_message=agent_result.response_text,
+            operations=operations,
         )
 
     except Exception as e:

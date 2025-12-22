@@ -44,9 +44,7 @@ export async function sendChatMessage(
 
     const data: ChatApiResponse = await response.json();
 
-    // Parse ISO date strings to Date objects
-    data.message.timestamp = parseISODate(data.message.timestamp);
-
+    // No need to parse dates - response contains simple strings
     return data;
   } catch (error) {
     if (error instanceof Error) {

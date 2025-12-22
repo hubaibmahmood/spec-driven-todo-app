@@ -7,10 +7,12 @@ from typing import AsyncGenerator
 try:
     from mcp import ClientSession
     from mcp.client.streamable_http import streamable_http_client
+    import httpx
 except ImportError:
     # Fallback for testing or when MCP not installed
     streamable_http_client = None  # type: ignore
     ClientSession = None  # type: ignore
+    httpx = None  # type: ignore
 
 from ai_agent.agent.config import AgentConfig
 
@@ -85,21 +87,32 @@ async def create_mcp_connection(
     )
 
     try:
-        # Connect to streamable HTTP server
-        async with streamable_http_client(config.mcp_server_url) as (
-            read_stream,
-            write_stream,
-            _,
-        ):
-            # Create a session using the client streams
-            async with ClientSession(read_stream, write_stream) as session:
-                logger.debug(f"MCP connection established for user {user_id}")
-                # Initialize the connection
-                await session.initialize()
-                
-                # Wrap session in adapter for openai-agents SDK compatibility
-                adapter = MCPServerAdapter(session, "todo_mcp_server")
-                yield adapter
+        # Create custom HTTP client with X-User-ID header for authentication
+        custom_headers = {"X-User-ID": user_id}
+        http_client = httpx.AsyncClient(headers=custom_headers, timeout=30.0)
+
+        try:
+            # Connect to streamable HTTP server with custom client
+            async with streamable_http_client(
+                config.mcp_server_url,
+                http_client=http_client
+            ) as (
+                read_stream,
+                write_stream,
+                _,
+            ):
+                # Create a session using the client streams
+                async with ClientSession(read_stream, write_stream) as session:
+                    logger.debug(f"MCP connection established for user {user_id}")
+                    # Initialize the connection
+                    await session.initialize()
+
+                    # Wrap session in adapter for openai-agents SDK compatibility
+                    adapter = MCPServerAdapter(session, "todo_mcp_server")
+                    yield adapter
+        finally:
+            # Close the HTTP client
+            await http_client.aclose()
 
     except ConnectionError as e:
         logger.error(

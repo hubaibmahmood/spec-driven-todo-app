@@ -5,6 +5,7 @@ from typing import Any
 
 import httpx
 from fastmcp import Context
+from fastmcp.server.dependencies import get_http_headers
 from pydantic import ValidationError
 
 from ..client import BackendClient
@@ -48,13 +49,15 @@ async def create_task(
         Validation Error: {"error_type": "validation_error", "message": "...", ...}
         Auth Error: {"error_type": "authentication_error", "message": "...", ...}
     """
-    # Extract user_id from MCP session metadata
-    # For MVP/testing, use a default test user
-    # TODO: In production, integrate with better-auth to get real user_id from session
-    try:
-        user_id = getattr(ctx.request_context, "user_id", None) or "test_user_123"
-    except AttributeError:
+    # Extract user_id from HTTP headers using FastMCP helper
+    headers = get_http_headers()
+    user_id = headers.get('X-User-ID') or headers.get('x-user-id')
+
+    # Fallback for testing/debugging
+    if not user_id:
         user_id = "test_user_123"
+        logger.warning(f"Could not extract user_id from X-User-ID header, using fallback: {user_id}")
+        logger.info(f"Available headers: {list(headers.keys())}")
 
     logger.info(f"Using user_id: {user_id}")
 

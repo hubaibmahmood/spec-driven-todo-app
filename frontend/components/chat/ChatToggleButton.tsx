@@ -20,8 +20,9 @@ export default function ChatToggleButton({ onClick, isOpen = false }: ChatToggle
     <button
       onClick={onClick}
       aria-label="Open chat panel"
-      className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:h-16 md:w-16"
-      title="Chat with AI assistant"
+      aria-expanded={isOpen}
+      className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-400 focus:ring-offset-2 md:h-16 md:w-16"
+      title="Chat with AI assistant (opens dialog)"
     >
       {/* Chat icon (message bubble) */}
       <svg

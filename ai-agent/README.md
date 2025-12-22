@@ -11,6 +11,7 @@ A FastAPI-based AI agent service that combines natural language understanding wi
 - ✅ **Multi-Turn Context**: Maintains conversation history with smart token budget management
 - ✅ **Timezone-Aware Parsing**: Understands dates/times in user's timezone (via X-Timezone header)
 - ✅ **Tool Call Tracking**: Logs and persists AI tool usage for observability
+- ✅ **Real-Time Operation Feedback**: Returns detailed operation status for frontend UI display (Spec 009 Phase 6)
 - ✅ **Graceful Degradation**: 503 error handling when AI services unavailable
 
 ### 💬 Chat Infrastructure (Spec 007)
@@ -199,9 +200,18 @@ Content-Type: application/json
 {
   "conversation_id": 1,
   "user_message": "Add a task to buy groceries tomorrow at 5pm",
-  "assistant_message": "I've added 'Buy groceries' to your tasks for tomorrow at 5:00 PM."
+  "assistant_message": "I've added 'Buy groceries' to your tasks for tomorrow at 5:00 PM.",
+  "operations": [
+    {
+      "tool_name": "create_task",
+      "status": "success",
+      "details": null
+    }
+  ]
 }
 ```
+
+**Note**: The `operations` array contains metadata about which MCP tools were called during request processing. This enables real-time feedback in the frontend UI (checkmarks for successful operations, warning icons for failures).
 
 **Supported Natural Language Commands**:
 - "show my tasks" / "list all tasks"
@@ -570,6 +580,11 @@ uv sync
   - **Chat Endpoint** - Enhanced `/api/chat` with agent integration
   - **E2E Testing** - Complete workflow tests (list, create, update, complete tasks)
   - **Test Coverage**: 52/54 tests passing (96%)
+
+### Completed (Recent) ✅
+
+#### Spec 009: Frontend Chat Integration - Phase 6
+- [x] **Real-Time Task Operation Feedback**: Returns operation status in chat responses for frontend UI display
 
 ### In Progress 🔨
 

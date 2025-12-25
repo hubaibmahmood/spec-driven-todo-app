@@ -9,13 +9,13 @@ from src.database.connection import engine
 async def create_tables(engine_instance: AsyncEngine = engine) -> None:
     """
     Create all tables defined in Base metadata.
-    
+
     Only creates tables that don't already exist.
     Excludes tables owned by auth server (users, user_sessions).
     """
     # Filter metadata to only include FastAPI-owned tables
     from sqlalchemy.schema import CreateTable
-    
+
     async with engine_instance.begin() as conn:
         # Only create tasks table (exclude users and user_sessions)
         for table in Base.metadata.sorted_tables:
@@ -27,7 +27,7 @@ async def create_tables(engine_instance: AsyncEngine = engine) -> None:
 async def drop_tables(engine_instance: AsyncEngine = engine) -> None:
     """
     Drop all FastAPI-owned tables.
-    
+
     WARNING: This will delete all data in the tasks table.
     Only use for testing or development reset.
     """

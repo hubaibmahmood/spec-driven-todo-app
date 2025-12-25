@@ -42,9 +42,10 @@ export async function fetchWithRetry<T>(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
 
-      // Don't retry for authentication errors (401) or client errors (4xx)
-      if (error instanceof Error && error.message.includes('401')) {
-        throw error;
+      // Check if this error should be retried
+      if (!isRetryableError(lastError)) {
+        // Don't retry client errors (400, 401, 403, 404) - throw immediately
+        throw lastError;
       }
 
       // Don't retry if this was the last attempt
@@ -60,7 +61,7 @@ export async function fetchWithRetry<T>(
     }
   }
 
-  // All retries exhausted
+  // All retries exhausted (only for retryable errors)
   throw new Error(
     `Network request failed after ${opts.maxRetries} retries: ${lastError?.message || 'Unknown error'}`
   );

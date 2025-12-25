@@ -9,9 +9,10 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
 
 from src.config import settings
-from src.api.routers import health, tasks
+from src.api.routers import health, tasks, api_keys
 from src.database.connection import engine
 from src.api.schemas.error import ErrorResponse
+from src.api.middleware import SecurityHeadersMiddleware
 
 
 @asynccontextmanager
@@ -53,9 +54,18 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Accept", "Content-Type", "Authorization", "X-Timezone"],
-    expose_headers=["Content-Type", "Retry-After"],
+    expose_headers=[
+        "Content-Type",
+        "Retry-After",
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+    ],
     max_age=600,
 )
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 # Error Handlers
@@ -212,6 +222,7 @@ async def internal_server_error_handler(
 # Register routers
 app.include_router(health.router)
 app.include_router(tasks.router)
+app.include_router(api_keys.router)
 
 
 def main():

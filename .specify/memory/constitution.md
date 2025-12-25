@@ -36,8 +36,12 @@ Code quality and maintainability standards:
 - MUST use descriptive variable and function names
 - MUST avoid premature optimization or over-engineering
 - YAGNI (You Aren't Gonna Need It) principle applies: only implement requested features
+- MUST use modern Python APIs and avoid deprecated functions:
+  - **DateTime**: ALWAYS use `datetime.now(UTC)` instead of deprecated `datetime.utcnow()`
+  - Import: `from datetime import datetime, UTC`
+  - Rationale: `datetime.utcnow()` is deprecated in Python 3.12+ and will be removed in future versions
 
-**Rationale**: Clean code reduces cognitive load, eases maintenance, and prevents technical debt. Simplicity enables faster iteration and reduces bugs.
+**Rationale**: Clean code reduces cognitive load, eases maintenance, and prevents technical debt. Simplicity enables faster iteration and reduces bugs. Using modern, non-deprecated APIs ensures long-term code compatibility and follows current Python best practices.
 
 ### III. Proper Project Structure
 

@@ -1,11 +1,14 @@
 """Context management for agent execution including token counting and history loading."""
 
+import logging
 import tiktoken
 from datetime import datetime, timedelta
 from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ai_agent.database.models import Conversation, Message
+
+logger = logging.getLogger(__name__)
 
 
 class ContextManager:
@@ -104,11 +107,96 @@ class ContextManager:
         # Return system messages + kept messages in chronological order
         return system_msgs + kept_msgs
 
+    def _contains_task_references(self, content: str) -> bool:
+        """Check if content contains task-specific references.
+
+        Returns True if the message mentions tasks, task IDs, or task operations,
+        indicating it should be removed to prevent stale data confusion.
+
+        Args:
+            content: Message content to check
+
+        Returns:
+            True if content mentions tasks, False otherwise
+        """
+        import re
+
+        # Patterns that indicate task-specific content
+        task_patterns = [
+            r'\btask\s+\d+',           # "task 22", "Task 2"
+            r'\(id\s*\d+\)',           # "(ID 2)"
+            r'\bid\s*[:=]?\s*\d+',     # "ID: 22"
+            r'found\s+\d+\s+task',     # "found 2 tasks"
+            r'have\s+\d+\s+task',      # "you have 3 tasks"
+            r'i\s+see\s+\d+\s+task',   # "I see two tasks"
+            r'there\s+(is|are)\s+\d+\s+task',  # "there are 2 tasks"
+            r'description:\s*"',       # Task descriptions
+            r'priority:\s*(high|medium|low|urgent)',  # Task priorities
+        ]
+
+        content_lower = content.lower()
+        for pattern in task_patterns:
+            if re.search(pattern, content_lower):
+                return True
+
+        return False
+
+    def _sanitize_task_references(self, content: str) -> str:
+        """Remove specific task ID references from assistant messages.
+
+        This prevents the AI from seeing outdated task data in conversation history.
+        Keeps the general context but removes specific task IDs/details that may be stale.
+
+        Args:
+            content: Original message content
+
+        Returns:
+            Sanitized content with task-specific details removed
+        """
+        import re
+
+        # Comprehensive patterns to catch all task ID variations
+        # These patterns are applied in order, each replacing matches with placeholders
+        patterns_to_sanitize = [
+            # Pattern 1: "Task 2:", "Task 22:", etc.
+            (r'Task\s+\d+:', ''),
+
+            # Pattern 2: "(ID 2)", "(ID 22)", etc.
+            (r'\(ID\s+\d+\)', ''),
+
+            # Pattern 3: "(Task 2)", "(Task 22)", etc.
+            (r'\(Task\s+\d+\)', ''),
+
+            # Pattern 4: "Task ID: 2", "Task ID=22", "task id 2", etc.
+            (r'Task\s+ID\s*[:=]?\s*\d+', ''),
+
+            # Pattern 5: "ID: 2", "ID 22", "id 2", etc. (standalone)
+            (r'\bID\s*[:=]?\s*\d+\b', ''),
+
+            # Pattern 6: "task with ID 2", etc.
+            (r'task\s+with\s+ID\s+\d+', 'task'),
+
+            # Pattern 7: "the task #2", "task #22", etc.
+            (r'task\s*#\s*\d+', 'task'),
+        ]
+
+        sanitized = content
+        for pattern, replacement in patterns_to_sanitize:
+            sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+
+        # Clean up extra whitespace caused by removals
+        sanitized = re.sub(r'\s+', ' ', sanitized)
+        sanitized = re.sub(r'\s+([.,!?])', r'\1', sanitized)  # Fix spacing before punctuation
+        sanitized = sanitized.strip()
+
+        return sanitized
+
     async def load_conversation_history(
         self,
         conversation_id: int,
         user_id: str,
-        session: AsyncSession
+        session: AsyncSession,
+        sanitize_task_refs: bool = True
     ) -> list[dict[str, Any]]:
         """Load conversation history from database with ownership validation.
 
@@ -117,11 +205,14 @@ class ContextManager:
         2. Validates user owns the conversation (security check)
         3. Loads messages in chronological order
         4. Converts database messages to agent message format
+        5. Optionally sanitizes task-specific references to prevent stale data issues
 
         Args:
             conversation_id: ID of conversation to load
             user_id: ID of user requesting the history (for ownership check)
             session: Async database session
+            sanitize_task_refs: If True, removes specific task IDs from assistant messages
+                               to prevent AI from referencing deleted/outdated tasks (default: True)
 
         Returns:
             List of messages in agent format (role, content)
@@ -164,15 +255,32 @@ class ContextManager:
 
         # Convert to agent message format
         agent_messages: list[dict[str, Any]] = []
+        sanitized_count = 0
+        removed_count = 0
+
         for msg in db_messages:
+            content = msg.content
+
+            # Remove assistant messages that mention tasks to prevent stale data confusion
+            if sanitize_task_refs and msg.role == "assistant":
+                # Check if message mentions task-specific information
+                if self._contains_task_references(content):
+                    removed_count += 1
+                    continue  # Skip this message entirely
+
             agent_msg = {
                 "role": msg.role,
-                "content": msg.content
+                "content": content
             }
             # Include metadata if present (e.g., tool_calls)
             if msg.message_metadata:
                 agent_msg.update(msg.message_metadata)
             agent_messages.append(agent_msg)
+
+        logger.debug(
+            f"Loaded {len(agent_messages)} messages from conversation {conversation_id} "
+            f"(removed {removed_count} messages with task references)"
+        )
 
         return agent_messages
 

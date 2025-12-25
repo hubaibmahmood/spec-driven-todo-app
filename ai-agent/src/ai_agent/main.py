@@ -1,5 +1,6 @@
 """FastAPI application entry point for AI Agent service."""
 
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -7,6 +8,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s: %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+
+# Set specific loggers to INFO to see our debug logs
+logging.getLogger("ai_agent").setLevel(logging.INFO)
+logging.getLogger("ai_agent.agent.context_manager").setLevel(logging.INFO)
+logging.getLogger("ai_agent.api.chat").setLevel(logging.INFO)
 
 # Create FastAPI app
 app = FastAPI(

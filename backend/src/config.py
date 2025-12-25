@@ -2,6 +2,7 @@
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
+from cryptography.fernet import Fernet, InvalidToken
 
 
 class Settings(BaseSettings):
@@ -13,6 +14,9 @@ class Settings(BaseSettings):
     # Authentication Configuration
     SESSION_HASH_SECRET: str = "dev-secret-key-change-in-production"
     SERVICE_AUTH_TOKEN: str = ""  # Service-to-service authentication token
+
+    # API Key Encryption Configuration
+    ENCRYPTION_KEY: str = ""  # Fernet encryption key for API keys (REQUIRED in production)
 
     # Application Configuration
     ENVIRONMENT: str = "development"
@@ -44,6 +48,18 @@ class Settings(BaseSettings):
     def is_development(self) -> bool:
         """Check if running in development environment."""
         return self.ENVIRONMENT.lower() == "development"
+
+    def validate_encryption_key(self) -> None:
+        """Validate that ENCRYPTION_KEY is a valid Fernet key."""
+        if not self.ENCRYPTION_KEY:
+            raise ValueError(
+                "ENCRYPTION_KEY is required. Generate one with: "
+                "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            )
+        try:
+            Fernet(self.ENCRYPTION_KEY.encode())
+        except Exception as e:
+            raise ValueError(f"Invalid ENCRYPTION_KEY format: {e}") from e
 
     model_config = SettingsConfigDict(
         env_file=".env",

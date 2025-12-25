@@ -1,6 +1,7 @@
 """Chat endpoints for AI Agent service."""
 
 import logging
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Header, status
@@ -13,6 +14,7 @@ from ai_agent.agent.agent_service import AgentService
 from ai_agent.agent.config import AgentConfig
 from ai_agent.agent.context_manager import ContextManager
 from ai_agent.agent.timezone_utils import extract_timezone
+from ai_agent.services.api_key_retrieval import ApiKeyRetrievalService
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +67,39 @@ async def chat(
         user_timezone = extract_timezone(x_timezone)
         logger.debug(f"Using timezone: {user_timezone}")
 
-        # Initialize agent configuration
-        config = AgentConfig()
+        # Fetch user-specific API key from backend
+        backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+        service_auth_token = os.getenv("SERVICE_AUTH_TOKEN", "")
+
+        try:
+            api_key_service = ApiKeyRetrievalService(backend_url=backend_url)
+            user_api_key = await api_key_service.get_user_api_key(user_id, service_auth_token)
+        except ValueError as e:
+            # Service authentication failed - this is a configuration error, not user error
+            logger.error(f"Service authentication error: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal service configuration error. Please contact support."
+            )
+        except Exception as e:
+            logger.error(f"Failed to retrieve API key: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to retrieve API key: {str(e)}"
+            )
+
+        # Check if user has configured an API key
+        if not user_api_key:
+            logger.info(f"User {user_id[:8]}... has no API key configured")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please configure your Gemini API key in Settings to use AI features. "
+                       "Visit the Settings page to add your API key."
+            )
+
+        # Initialize agent configuration with user-specific API key
+        # Override the default AGENT_GEMINI_API_KEY with user's key
+        config = AgentConfig(gemini_api_key=user_api_key)
         agent_service = AgentService(config)
         context_manager = ContextManager()
 
@@ -107,7 +140,7 @@ async def chat(
             await db.commit()
             await db.refresh(conversation)
 
-        # Load conversation history
+        # Load conversation history (now with aggressive task-reference removal)
         history = await context_manager.load_conversation_history(
             session=db,
             conversation_id=conversation.id,  # type: ignore
@@ -173,9 +206,12 @@ async def chat(
             operations=operations,
         )
 
+    except HTTPException:
+        # Re-raise HTTPException without modification (preserves status code and detail)
+        raise
     except Exception as e:
         logger.error(f"Chat endpoint error: {e}", exc_info=True)
-        # Graceful degradation
+        # Graceful degradation for unexpected errors
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI service temporarily unavailable. Please try again.",

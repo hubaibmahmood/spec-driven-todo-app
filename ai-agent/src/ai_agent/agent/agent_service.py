@@ -82,7 +82,7 @@ class AgentService:
         return RunConfig(
             model=model,
             model_provider=external_client,
-            tracing_disabled=True,  # Disable tracing for MVP
+            tracing_disabled=False,  # Enable tracing to debug ghost task issue
         )
 
     async def initialize_agent(self, mcp_server) -> Agent:
@@ -142,8 +142,26 @@ class AgentService:
         # Get run configuration
         run_config = self.create_run_config()
 
-        # Execute agent with Runner.run()
-        result = await Runner.run(agent, input=messages, run_config=run_config)
+        # Execute agent with Runner.run() WITH TRACING
+        from agents import trace
+
+        with trace("Task Management Chat") as t:
+            result = await Runner.run(agent, input=messages, run_config=run_config)
+
+            # Log trace information
+            logger.info(f"📍 Trace ID: {t.trace_id}")
+            logger.info(f"📍 Trace URL: https://platform.openai.com/playground/traces/{t.trace_id}")
+
+        # Log tool results to debug ghost tasks
+        logger.info(f"🔧 Agent made {len(result.new_items)} new items")
+        for idx, item in enumerate(result.new_items):
+            if hasattr(item, 'role'):
+                logger.info(f"  Item {idx}: role={item.role}")
+                if item.role == 'tool' and hasattr(item, 'content'):
+                    content_preview = str(item.content)[:500]
+                    logger.info(f"  📊 Tool response: {content_preview}")
+                elif item.role == 'assistant' and hasattr(item, 'content'):
+                    logger.info(f"  💬 Assistant says: {str(item.content)[:200]}")
 
         # Calculate execution time in milliseconds
         execution_time_ms = int((time.time() - start_time) * 1000)

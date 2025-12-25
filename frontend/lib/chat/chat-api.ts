@@ -39,7 +39,20 @@ export async function sendChatMessage(
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to send chat message: ${response.statusText}`);
+      // Try to parse error response body for better error messages
+      let errorMessage = `Failed to send chat message: ${response.statusText}`;
+
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          // Use the backend's error detail message (e.g., "Please configure your Gemini API key...")
+          errorMessage = errorData.detail;
+        }
+      } catch {
+        // If JSON parsing fails, stick with statusText
+      }
+
+      throw new Error(errorMessage);
     }
 
     const data: ChatApiResponse = await response.json();

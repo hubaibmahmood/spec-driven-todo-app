@@ -12,8 +12,9 @@ export interface Message {
   metadata?: {                   // Optional AI agent operation metadata
     operation?: 'create_task' | 'update_task' | 'delete_task' | 'list_tasks' | 'mark_complete';
     taskId?: string;             // Affected task UUID
-    status?: 'pending' | 'success' | 'error';
+    status?: 'pending' | 'success' | 'error' | 'guidance';
     errorMessage?: string;       // If operation failed
+    examples?: string[];         // Example prompts for guidance messages
     operations?: ToolCallOperation[];  // List of tool call operations
   };
 }

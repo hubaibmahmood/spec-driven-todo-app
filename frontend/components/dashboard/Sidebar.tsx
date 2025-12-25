@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CheckSquare, X, LogOut } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Settings, X, LogOut } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -70,6 +70,18 @@ export function Sidebar({ isOpen, onClose, onLogout, user }: SidebarProps) {
             >
               <CheckSquare className="w-5 h-5" />
               My Tasks
+            </Link>
+            <Link
+              href="/dashboard/settings"
+              onClick={onClose}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                isActive('/dashboard/settings')
+                  ? 'text-indigo-600 bg-indigo-50'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+              Settings
             </Link>
           </nav>
 

@@ -283,7 +283,20 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           }
 
           if (!response.ok) {
-            throw new Error(`Failed to send message: ${response.statusText}`);
+            // Try to parse error response body for user-friendly error messages
+            let errorMessage = `Failed to send message: ${response.statusText}`;
+
+            try {
+              const errorData = await response.json();
+              if (errorData.detail) {
+                // Use the backend's error detail message (e.g., "Please configure your Gemini API key...")
+                errorMessage = errorData.detail;
+              }
+            } catch {
+              // If JSON parsing fails, stick with statusText
+            }
+
+            throw new Error(errorMessage);
           }
 
           return response.json();

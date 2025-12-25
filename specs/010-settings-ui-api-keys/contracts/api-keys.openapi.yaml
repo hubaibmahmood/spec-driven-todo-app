@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: User API Keys Management API
+  description: |
+    API endpoints for managing user-specific API keys (initially Gemini).
+    All endpoints require authentication via better-auth session token.
+  version: 1.0.0
+  contact:
+    name: FastAPI Backend Team
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://api.yourdomain.com
+    description: Production
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/user-api-keys/current:
+    get:
+      summary: Get current user's API key status
+      description: |
+        Returns the masked API key and validation status for the authenticated user.
+        The actual API key is NOT returned (only masked version like "AIza...xyz").
+      operationId: getCurrentApiKey
+      tags:
+        - API Keys
+      responses:
+        '200':
+          description: API key status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyStatusResponse'
+              examples:
+                configured:
+                  summary: User has configured an API key
+                  value:
+                    configured: true
+                    provider: gemini
+                    masked_key: "AIza...xyz"
+                    validation_status: "success"
+                    last_validated_at: "2025-12-24T10:30:00Z"
+                not_configured:
+                  summary: User has not configured an API key
+                  value:
+                    configured: false
+                    provider: gemini
+                    masked_key: null
+                    validation_status: null
+                    last_validated_at: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete current user's API key
+      description: Removes the authenticated user's stored API key permanently.
+      operationId: deleteApiKey
+      tags:
+        - API Keys
+      responses:
+        '200':
+          description: API key deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                status: "success"
+                message: "API key removed successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No API key configured for this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "No API key configured"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/user-api-keys:
+    post:
+      summary: Save or update user's API key
+      description: |
+        Encrypts and stores the user's Gemini API key.
+        If a key already exists for this user, it will be updated.
+        Validates format before saving.
+      operationId: saveApiKey
+      tags:
+        - API Keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveApiKeyRequest'
+            example:
+              api_key: "AIzaSyDPjJjPjVq_yqBN6OdqY5Hk3gV4ZfmULeo"
+      responses:
+        '200':
+          description: API key saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveApiKeyResponse'
+              example:
+                status: "success"
+                message: "API key saved successfully"
+                masked_key: "AIza...Leo"
+        '400':
+          description: Validation error (invalid format, empty key, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_format:
+                  summary: Invalid API key format
+                  value:
+                    detail: "Invalid API key format. Gemini API keys typically start with 'AIza'"
+                empty_key:
+                  summary: Empty API key
+                  value:
+                    detail: "API key cannot be empty"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/user-api-keys/test:
+    post:
+      summary: Test API key connectivity
+      description: |
+        Validates the API key by making a minimal request to Gemini API.
+        Does NOT save the key. Use this to verify a key before saving.
+        Timeout: 10 seconds.
+      operationId: testApiKey
+      tags:
+        - API Keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestApiKeyRequest'
+            example:
+              api_key: "AIzaSyDPjJjPjVq_yqBN6OdqY5Hk3gV4ZfmULeo"
+      responses:
+        '200':
+          description: API key is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                status: "success"
+                message: "API key is valid"
+        '400':
+          description: API key validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_key:
+                  summary: Invalid or expired API key
+                  value:
+                    detail: "API key is invalid or expired"
+                network_error:
+                  summary: Network timeout
+                  value:
+                    detail: "Request timeout after 10 seconds"
+                rate_limited:
+                  summary: Rate limited
+                  value:
+                    detail: "API key quota exceeded. Check your Gemini console."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: better-auth session token (Authorization: Bearer <token>)
+
+  schemas:
+    SaveApiKeyRequest:
+      type: object
+      required:
+        - api_key
+      properties:
+        api_key:
+          type: string
+          description: Plaintext Gemini API key (will be encrypted before storage)
+          example: "AIzaSyDPjJjPjVq_yqBN6OdqY5Hk3gV4ZfmULeo"
+          minLength: 20
+          maxLength: 500
+
+    TestApiKeyRequest:
+      type: object
+      required:
+        - api_key
+      properties:
+        api_key:
+          type: string
+          description: Gemini API key to test (not saved)
+          example: "AIzaSyDPjJjPjVq_yqBN6OdqY5Hk3gV4ZfmULeo"
+          minLength: 20
+          maxLength: 500
+
+    ApiKeyStatusResponse:
+      type: object
+      required:
+        - configured
+        - provider
+      properties:
+        configured:
+          type: boolean
+          description: Whether user has configured an API key
+          example: true
+        provider:
+          type: string
+          description: Provider name
+          example: "gemini"
+        masked_key:
+          type: string
+          nullable: true
+          description: Masked API key (e.g., "AIza...xyz"). NULL if not configured.
+          example: "AIza...Leo"
+        validation_status:
+          type: string
+          nullable: true
+          enum: [success, failure, null]
+          description: Last validation result. NULL if never tested.
+          example: "success"
+        last_validated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO 8601 timestamp of last Test Connection. NULL if never tested.
+          example: "2025-12-24T10:30:00Z"
+
+    SaveApiKeyResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          enum: [success]
+          example: "success"
+        message:
+          type: string
+          example: "API key saved successfully"
+        masked_key:
+          type: string
+          description: Masked version of saved key
+          example: "AIza...Leo"
+
+    SuccessResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          enum: [success]
+          example: "success"
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: "Invalid API key format"
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "Invalid or expired session token"
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: "Bearer"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            detail: "Internal server error"
+
+tags:
+  - name: API Keys
+    description: Endpoints for managing user-specific LLM API keys

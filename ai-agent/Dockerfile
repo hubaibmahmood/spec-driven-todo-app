@@ -7,17 +7,16 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files first for better caching
+# Copy dependency files and source code
 COPY pyproject.toml ./
 COPY README.md ./
-
-# Install dependencies (ignoring lock file if missing)
-RUN uv pip install --system --no-cache .
-
-# Copy source code and database migration files
 COPY src ./src
 COPY alembic ./alembic
 COPY alembic.ini ./
+
+# Install dependencies and project
+# We copy source code first because 'pip install .' needs to build the wheel from source
+RUN uv pip install --system --no-cache .
 
 # Environment variables
 ENV PYTHONPATH=/app/src

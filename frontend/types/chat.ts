@@ -16,7 +16,6 @@ export interface Message {
     errorMessage?: string;       // If operation failed
     examples?: string[];         // Example prompts for guidance messages
     operations?: ToolCallOperation[];  // List of tool call operations
-    examples?: string[];         // Example prompts for guidance messages
   };
 }
 

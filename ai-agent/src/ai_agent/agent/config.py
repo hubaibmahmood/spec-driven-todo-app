@@ -48,6 +48,12 @@ class AgentConfig(BaseSettings):
         le=10,
     )
 
+    # OpenAI API Configuration (Optional - for tracing only)
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key for tracing (optional - tracing disabled if not provided)",
+    )
+
     # Agent Behavior
     system_prompt: str = Field(
         default="""You are a helpful task management assistant. Use the available tools to help users manage their tasks.
@@ -91,6 +97,11 @@ WRONG: list_tasks() → 1 result → "I see two tasks" (remembering deleted task
         ge=0.0,
         le=2.0,
     )
+
+    @property
+    def is_tracing_enabled(self) -> bool:
+        """Check if tracing is enabled (requires OpenAI API key)."""
+        return bool(self.openai_api_key and self.openai_api_key.strip())
 
     # Context Window Management
     token_budget: int = Field(

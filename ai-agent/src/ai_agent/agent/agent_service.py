@@ -63,6 +63,9 @@ class AgentService:
         """
         Create RunConfig with Gemini model configuration.
 
+        Tracing is automatically disabled if OPENAI_API_KEY is not configured.
+        This ensures the app works gracefully without tracing when the key is missing.
+
         Returns:
             RunConfig configured for Gemini API execution
 
@@ -78,11 +81,19 @@ class AgentService:
         # Configure OpenAI Chat Completions model with Gemini
         model = OpenAIChatCompletionsModel(model="gemini-2.5-flash", openai_client=external_client)
 
+        # Conditionally enable/disable tracing based on OpenAI API key availability
+        tracing_disabled = not self.config.is_tracing_enabled
+
+        if tracing_disabled:
+            logger.info("⚠️ Tracing disabled: OPENAI_API_KEY not configured")
+        else:
+            logger.info("✅ Tracing enabled with OpenAI API key")
+
         # Configure run settings
         return RunConfig(
             model=model,
             model_provider=external_client,
-            tracing_disabled=False,  # Enable tracing to debug ghost task issue
+            tracing_disabled=tracing_disabled,
         )
 
     async def initialize_agent(self, mcp_server) -> Agent:
@@ -142,15 +153,27 @@ class AgentService:
         # Get run configuration
         run_config = self.create_run_config()
 
-        # Execute agent with Runner.run() WITH TRACING
-        from agents import trace
+        # Execute agent with conditional tracing
+        # Tracing requires OPENAI_API_KEY; falls back gracefully if not available
+        if self.config.is_tracing_enabled:
+            try:
+                # Execute with tracing
+                from agents import trace
 
-        with trace("Task Management Chat") as t:
+                with trace("Task Management Chat") as t:
+                    result = await Runner.run(agent, input=messages, run_config=run_config)
+
+                    # Log trace information
+                    logger.info(f"📍 Trace ID: {t.trace_id}")
+                    logger.info(f"📍 Trace URL: https://platform.openai.com/playground/traces/{t.trace_id}")
+            except Exception as e:
+                # Tracing failed, but don't break the app
+                logger.warning(f"⚠️ Tracing failed (continuing without tracing): {e}")
+                # Execute without tracing
+                result = await Runner.run(agent, input=messages, run_config=run_config)
+        else:
+            # Execute without tracing (OPENAI_API_KEY not configured)
             result = await Runner.run(agent, input=messages, run_config=run_config)
-
-            # Log trace information
-            logger.info(f"📍 Trace ID: {t.trace_id}")
-            logger.info(f"📍 Trace URL: https://platform.openai.com/playground/traces/{t.trace_id}")
 
         # Log tool results to debug ghost tasks
         logger.info(f"🔧 Agent made {len(result.new_items)} new items")

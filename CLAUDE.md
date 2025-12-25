@@ -223,10 +223,11 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - TypeScript 5.x + React 18+ (Next.js frontend) (009-frontend-chat-integration)
 - Python cryptography (Fernet encryption), google-generativeai SDK (010-settings-ui-api-keys)
 - React hooks (useApiKey), better-auth session integration, TypeScript interfaces (010-settings-ui-api-keys)
-- Service-to-service authentication (X-Service-Auth header pattern) (010-settings-ui-api-keys)
+- Service-to-service authentication (X-Service-Auth header pattern), in-memory rate limiting (010-settings-ui-api-keys)
 
 ## Recent Changes
-- 010-settings-ui-api-keys: Implemented per-user API key management with Fernet encryption, service-to-service auth pattern, Settings UI with masked inputs, AI agent integration for user-specific keys
+- **Python Best Practice**: ALWAYS use `datetime.now(UTC)` instead of deprecated `datetime.utcnow()`. Import: `from datetime import datetime, UTC`. Updated constitution.md with this requirement.
+- 010-settings-ui-api-keys: Implemented per-user API key management with Fernet encryption, service-to-service auth pattern, Settings UI with masked inputs, AI agent integration for user-specific keys, rate limiting (5 tests/hour) with user-friendly error messages
 - 006-mcp-server-integration: Replaced bulk_delete_tasks tool with mark_task_completed (dedicated tool for marking tasks complete); update_task now handles only title/description/priority/due_date
 - 002-crud-operations: Confirmed interactive CLI pattern (no argparse - uses input() for interactive menu)
 - 001-add-task: Added Python 3.12+ + dataclasses (models), pytest (testing), ruff (linting), mypy (type checking)

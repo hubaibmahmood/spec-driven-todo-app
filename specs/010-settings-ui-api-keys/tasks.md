@@ -179,8 +179,8 @@
 
 **Purpose**: Improvements that affect multiple user stories and ensure production readiness
 
-- [ ] T065 [P] Add rate limiting to POST /api/user-api-keys/test endpoint (max 5 tests per hour per user) using FastAPI middleware
-- [ ] T066 [P] Add security headers to API responses (no-cache for API key endpoints, HSTS, etc.)
+- [X] T065 [P] Add rate limiting to POST /api/user-api-keys/test endpoint (max 5 tests per hour per user) using FastAPI middleware
+- [X] T066 [P] Add security headers to API responses (no-cache for API key endpoints, HSTS, etc.)
 - [X] T067 [P] Verify no API keys are logged in plaintext (audit all logging statements in backend)
 - [X] T068 [P] Add structured audit logging for API key operations (create, test, delete) without logging key values in backend
 - [ ] T069 [P] Update OpenAPI/Swagger documentation for new API key endpoints with security notes
@@ -188,7 +188,7 @@
 - [X] T071 Add toast notifications for success/error messages using frontend notification system (if available)
 - [ ] T072 Test responsive design on mobile (320px width) and desktop (2560px width) - verify touch targets ≥44px
 - [ ] T073 Add ARIA labels and test keyboard navigation for accessibility (WCAG 2.1 AA compliance)
-- [ ] T074 Add error boundary to Settings page to catch and display React errors gracefully
+- [X] T074 Add error boundary to Settings page to catch and display React errors gracefully
 - [ ] T075 Run backend test suite with coverage report `pytest --cov=src --cov-report=term-missing`
 - [ ] T076 Run frontend test suite `npm test -- --coverage`
 - [X] T077 Update CLAUDE.md with new technologies (cryptography, google-generativeai, PasswordInput pattern)

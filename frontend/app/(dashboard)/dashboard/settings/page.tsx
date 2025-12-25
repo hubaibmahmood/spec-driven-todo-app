@@ -4,20 +4,18 @@ import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Save, Trash2 } from 'lucide-react';
 import { ApiKeyInput } from '@/components/settings/ApiKeyInput';
 import { ApiKeyStatus } from '@/components/settings/ApiKeyStatus';
-import { TestConnectionButton } from '@/components/settings/TestConnectionButton';
 import { useApiKey } from '@/lib/hooks/useApiKey';
 import { useSession } from '@/lib/auth-client';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const { data: session } = useSession();
   const {
     status,
     loading,
     error: apiError,
-    testStatus,
     fetchStatus,
     saveApiKey: saveApiKeyAction,
-    testConnection: testConnectionAction,
     deleteApiKey: deleteApiKeyAction,
     clearError,
   } = useApiKey();
@@ -52,47 +50,13 @@ export default function SettingsPage() {
 
       setNotification({
         type: 'success',
-        message: 'API key saved successfully',
+        message: 'API key validated and saved successfully',
       });
 
       setApiKey('');
       setTimeout(() => setNotification(null), 5000);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save API key';
-      setNotification({
-        type: 'error',
-        message: errorMessage,
-      });
-      setTimeout(() => setNotification(null), 5000);
-    }
-  };
-
-  const handleTestConnection = async () => {
-    const keyToTest = apiKey.trim() || '';
-
-    if (!keyToTest && !status.configured) {
-      setNotification({
-        type: 'error',
-        message: 'Please enter an API key first',
-      });
-      setTimeout(() => setNotification(null), 5000);
-      return;
-    }
-
-    clearError();
-
-    try {
-      // Test with entered key or fetch from backend if already saved
-      await testConnectionAction(keyToTest);
-
-      setNotification({
-        type: 'success',
-        message: testStatus.message || 'API key is valid and working',
-      });
-
-      setTimeout(() => setNotification(null), 5000);
-    } catch (err) {
-      const errorMessage = testStatus.message || (err instanceof Error ? err.message : 'Connection test failed');
       setNotification({
         type: 'error',
         message: errorMessage,
@@ -207,14 +171,8 @@ export default function SettingsPage() {
                   `}
                 >
                   <Save size={18} strokeWidth={2} />
-                  <span>{loading ? 'Saving...' : 'Save API Key'}</span>
+                  <span>{loading ? 'Validating & Saving...' : 'Save & Validate API Key'}</span>
                 </button>
-
-                <TestConnectionButton
-                  onClick={handleTestConnection}
-                  loading={testStatus.testing}
-                  disabled={!apiKey && !status.configured}
-                />
 
                 {status.configured && (
                   <button
@@ -244,8 +202,8 @@ export default function SettingsPage() {
             {/* Help Text */}
             <div className="pt-4 border-t border-slate-200">
               <p className="text-sm text-slate-700">
-                <strong className="font-bold">Note:</strong> Your API key is encrypted and stored securely.
-                It will only be used for AI-powered features within this application.{' '}
+                <strong className="font-bold">Note:</strong> When you save your API key, we'll automatically validate it with the Gemini API to ensure it's working.
+                Your key is encrypted and stored securely for AI-powered features.{' '}
                 <a
                   href="https://aistudio.google.com/apikey"
                   target="_blank"
@@ -260,5 +218,19 @@ export default function SettingsPage() {
         </section>
       </div>
     </>
+  );
+}
+
+/**
+ * Settings Page with Error Boundary
+ *
+ * Wraps the Settings page content with an ErrorBoundary to catch and handle
+ * React errors gracefully, preventing the entire application from crashing.
+ */
+export default function SettingsPage() {
+  return (
+    <ErrorBoundary>
+      <SettingsPageContent />
+    </ErrorBoundary>
   );
 }

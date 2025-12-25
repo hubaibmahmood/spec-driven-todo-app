@@ -116,6 +116,9 @@ export async function saveApiKey(
 
 /**
  * Test API key connectivity.
+ *
+ * Rate limit: 5 tests per hour per user.
+ * If rate limit is exceeded, a 429 error will be thrown with a user-friendly message.
  */
 export async function testApiKey(apiKey: string): Promise<TestApiKeyResponse> {
   const response = await authenticatedFetch('/api/user-api-keys/test', {
@@ -127,6 +130,12 @@ export async function testApiKey(apiKey: string): Promise<TestApiKeyResponse> {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'Failed to test API key' }));
+
+    // Handle rate limit (429) with the specific error message from backend
+    if (response.status === 429) {
+      throw new Error(errorData.detail || 'Rate limit exceeded. Please try again later.');
+    }
+
     throw new Error(errorData.detail || 'Failed to test API key');
   }
 

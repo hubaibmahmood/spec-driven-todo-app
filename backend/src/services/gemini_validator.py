@@ -1,12 +1,12 @@
 """Gemini API key validation service."""
 
 import asyncio
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 try:
     from google import genai
+    from google.api_core.exceptions import ResourceExhausted, Unauthenticated
     from google.genai import types
-    from google.api_core.exceptions import Unauthenticated, ResourceExhausted
 except ImportError:
     # Allow importing even if google-genai is not installed (for testing)
     genai = None
@@ -41,7 +41,7 @@ class GeminiValidator:
         if len(api_key) < 20:
             return False, "API key is too short (minimum 20 characters)"
 
-        if not api_key.startswith('AIza'):
+        if not api_key.startswith("AIza"):
             return False, "Invalid format. Gemini API keys typically start with 'AIza'"
 
         return True, None
@@ -77,12 +77,9 @@ class GeminiValidator:
             # Run in thread pool to avoid blocking async event loop
             response = await asyncio.wait_for(
                 asyncio.to_thread(
-                    lambda: client.models.generate_content(
-                        model='gemini-1.5-flash',
-                        contents='hi'
-                    )
+                    lambda: client.models.generate_content(model="gemini-2.5-flash", contents="hi")
                 ),
-                timeout=10.0  # 10-second timeout requirement
+                timeout=10.0,  # 10-second timeout requirement
             )
 
             # Verify response is valid

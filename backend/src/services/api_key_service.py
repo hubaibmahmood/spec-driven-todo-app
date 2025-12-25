@@ -1,6 +1,6 @@
 """Service for managing encrypted API keys."""
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
@@ -60,7 +60,7 @@ class ApiKeyService:
         if existing:
             # Update existing key
             existing.encrypted_key = encrypted_key
-            existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            existing.updated_at = datetime.now(UTC)
             # Reset validation status when key changes
             existing.validation_status = None
             existing.last_validated_at = None
@@ -177,6 +177,6 @@ class ApiKeyService:
             return None
 
         record.validation_status = status
-        record.last_validated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        record.last_validated_at = datetime.now(UTC)
         await self.session.flush()
         return record

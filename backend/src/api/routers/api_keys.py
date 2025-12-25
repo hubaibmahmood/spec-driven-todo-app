@@ -1,14 +1,13 @@
 """API routes for user API key management."""
 
 import logging
+from datetime import datetime, UTC
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.schemas.api_key import (
     SaveApiKeyRequest,
     SaveApiKeyResponse,
-    TestApiKeyRequest,
-    TestApiKeyResponse,
     ApiKeyStatusResponse,
     DeleteApiKeyResponse,
     mask_api_key,
@@ -16,6 +15,7 @@ from src.api.schemas.api_key import (
 from src.services.api_key_service import ApiKeyService
 from src.services.encryption_service import EncryptionService
 from src.services.gemini_validator import GeminiValidator
+from src.services.rate_limiter import api_key_test_limiter
 from src.database.connection import get_db
 from src.config import settings
 from src.api.dependencies import get_current_user
@@ -160,7 +160,7 @@ async def get_current_api_key(
     response_model=SaveApiKeyResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Save or update API key",
-    description="Encrypt and store the user's Gemini API key"
+    description="Validate with Gemini API, then encrypt and store the user's API key"
 )
 async def save_api_key(
     request: SaveApiKeyRequest,
@@ -169,16 +169,69 @@ async def save_api_key(
     session: AsyncSession = Depends(get_db),
 ):
     """
-    Save or update user's API key.
+    Save or update user's API key with automatic validation.
 
-    Validates format, encrypts, and stores the API key.
+    Flow:
+    1. Check rate limit (5 validation tests per hour)
+    2. Validates format
+    3. Tests connectivity with Gemini API
+    4. Only saves if test succeeds
+    5. Updates validation status in database
 
     Returns:
         - success: bool
         - message: str
         - masked_key: str - Masked version of the saved key
+
+    Raises:
+        - 400: Invalid format or API key test failed
+        - 429: Rate limit exceeded (5 tests per hour)
+        - 500: Encryption or database error
     """
-    # Validate format before saving
+    # Step 1: Check rate limit (5 validation tests per hour)
+    is_allowed, remaining, window_end = api_key_test_limiter.check_rate_limit(user_id)
+
+    if not is_allowed:
+        # Calculate minutes until reset
+        now = datetime.now(UTC)
+        minutes_remaining = int((window_end - now).total_seconds() / 60)
+        hours = minutes_remaining // 60
+        minutes = minutes_remaining % 60
+
+        # Format time remaining message
+        if hours > 0:
+            time_msg = f"{hours} hour{'s' if hours > 1 else ''} and {minutes} minute{'s' if minutes != 1 else ''}"
+        else:
+            time_msg = f"{minutes} minute{'s' if minutes != 1 else ''}"
+
+        error_message = (
+            f"You've reached the limit of 5 API key validation tests per hour. "
+            f"Please try again in {time_msg}."
+        )
+
+        logger.warning(
+            f"Rate limit exceeded - user_id={user_id[:8]}... "
+            f"reset_in={minutes_remaining}min operation=save_api_key"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=error_message,
+            headers={
+                "X-RateLimit-Limit": "5",
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": window_end.isoformat(),
+                "Retry-After": str(minutes_remaining * 60)  # In seconds
+            }
+        )
+
+    # Log remaining attempts for monitoring
+    logger.info(
+        f"Rate limit check passed - user_id={user_id[:8]}... "
+        f"remaining_tests={remaining}/5 operation=save_api_key"
+    )
+
+    # Step 2: Validate format
     valid, error = GeminiValidator.validate_format(request.api_key)
     if not valid:
         raise HTTPException(
@@ -186,20 +239,41 @@ async def save_api_key(
             detail=error
         )
 
+    # Step 3: Test API key with Gemini API before saving
+    logger.info(
+        f"Testing API key before save - user_id={user_id[:8]}... "
+        f"provider={request.provider} operation=save_api_key"
+    )
+
+    valid, error = await GeminiValidator.validate_key(request.api_key)
+    if not valid:
+        logger.warning(
+            f"API key validation failed - user_id={user_id[:8]}... "
+            f"provider={request.provider} operation=save_api_key reason={error}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"API key validation failed: {error}"
+        )
+
+    # Step 4: Save encrypted key (validation succeeded)
     try:
-        # Save encrypted key
         await service.save_api_key(user_id, request.api_key, request.provider)
+
+        # Step 5: Update validation status to 'success'
+        await service.update_validation_status(user_id, "success", request.provider)
+
         await session.commit()
 
         # Audit log (no sensitive data)
         logger.info(
-            f"API key saved - user_id={user_id[:8]}... provider={request.provider} "
-            f"operation=save_api_key"
+            f"API key saved successfully - user_id={user_id[:8]}... "
+            f"provider={request.provider} validation_status=success operation=save_api_key"
         )
 
         return SaveApiKeyResponse(
             success=True,
-            message="API key saved successfully",
+            message="API key validated and saved successfully",
             masked_key=mask_api_key(request.api_key),
         )
     except ValueError as e:
@@ -212,58 +286,6 @@ async def save_api_key(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save API key: {str(e)}"
         )
-
-
-@router.post(
-    "/test",
-    response_model=TestApiKeyResponse,
-    summary="Test API key connectivity",
-    description="Validate API key by making a test request to Gemini API"
-)
-async def test_api_key(
-    request: TestApiKeyRequest,
-    user_id: str = Depends(get_current_user),
-    service: ApiKeyService = Depends(get_api_key_service),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Test API key connectivity.
-
-    Makes a minimal request to Gemini API to verify the key is valid.
-    Updates validation_status and last_validated_at in the database.
-
-    Returns:
-        - success: bool
-        - message: str - Human-readable test result
-        - validation_status: str - 'success' or 'failure'
-    """
-    # Validate API key with Gemini API
-    valid, error = await GeminiValidator.validate_key(request.api_key)
-
-    validation_status = "success" if valid else "failure"
-
-    # Update validation status in database if key exists
-    await service.update_validation_status(user_id, validation_status)
-    await session.commit()
-
-    # Audit log (no sensitive data)
-    logger.info(
-        f"API key tested - user_id={user_id[:8]}... validation_status={validation_status} "
-        f"operation=test_api_key"
-    )
-
-    if not valid:
-        return TestApiKeyResponse(
-            success=False,
-            message=error or "API key validation failed",
-            validation_status=validation_status,
-        )
-
-    return TestApiKeyResponse(
-        success=True,
-        message="API key is valid and working",
-        validation_status=validation_status,
-    )
 
 
 @router.delete(

@@ -155,8 +155,6 @@ class ContextManager:
         """
         import re
 
-        logger.debug(f"🔬 Sanitizing content (length={len(content)}): {content[:100]}...")
-
         # Comprehensive patterns to catch all task ID variations
         # These patterns are applied in order, each replacing matches with placeholders
         patterns_to_sanitize = [
@@ -190,9 +188,6 @@ class ContextManager:
         sanitized = re.sub(r'\s+', ' ', sanitized)
         sanitized = re.sub(r'\s+([.,!?])', r'\1', sanitized)  # Fix spacing before punctuation
         sanitized = sanitized.strip()
-
-        if sanitized != content:
-            logger.info(f"✂️ Sanitization changed content: {len(content)} → {len(sanitized)} chars")
 
         return sanitized
 
@@ -258,8 +253,6 @@ class ContextManager:
         )
         db_messages = result.scalars().all()
 
-        logger.info(f"🔍 load_conversation_history called: conv_id={conversation_id}, messages={len(db_messages)}, sanitize={sanitize_task_refs}")
-
         # Convert to agent message format
         agent_messages: list[dict[str, Any]] = []
         sanitized_count = 0
@@ -273,7 +266,6 @@ class ContextManager:
                 # Check if message mentions task-specific information
                 if self._contains_task_references(content):
                     removed_count += 1
-                    logger.info(f"🗑️ Removed assistant message {msg.id}: contains task references")
                     continue  # Skip this message entirely
 
             agent_msg = {
@@ -285,10 +277,10 @@ class ContextManager:
                 agent_msg.update(msg.message_metadata)
             agent_messages.append(agent_msg)
 
-        if removed_count > 0:
-            logger.info(
-                f"Removed {removed_count} assistant messages containing task references from conversation {conversation_id}"
-            )
+        logger.debug(
+            f"Loaded {len(agent_messages)} messages from conversation {conversation_id} "
+            f"(removed {removed_count} messages with task references)"
+        )
 
         return agent_messages
 

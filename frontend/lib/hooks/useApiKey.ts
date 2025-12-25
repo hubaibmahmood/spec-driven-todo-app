@@ -93,22 +93,31 @@ export function useApiKey(): UseApiKeyReturn {
 
   /**
    * Save or update API key.
+   *
+   * Since the backend now auto-validates the key on save, we fetch the
+   * updated status to get the validation result and timestamp.
    */
   const saveApiKey = useCallback(async (apiKey: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      const data = await saveApiKeyApi(apiKey);
+      await saveApiKeyApi(apiKey);
 
-      // Update status after successful save
-      setStatus(prev => ({
-        ...prev,
-        configured: true,
-        maskedKey: data.masked_key,
-        validationStatus: null, // Reset validation status when key changes
-        lastValidatedAt: null,
-      }));
+      // Fetch the updated status from backend to get validation result
+      // The backend auto-validates on save, so this will have validation_status='success'
+      // and the correct last_validated_at timestamp
+      const statusData = await getCurrentApiKey();
+
+      setStatus({
+        configured: statusData.configured,
+        provider: statusData.provider,
+        maskedKey: statusData.masked_key,
+        validationStatus: statusData.validation_status,
+        lastValidatedAt: statusData.last_validated_at,
+        createdAt: statusData.created_at,
+        updatedAt: statusData.updated_at,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save API key';
       setError(message);

@@ -1,197 +1,173 @@
-# Momentum - Full-Stack Task Management Platform
+# Momentum - AI-Powered Task Management Platform
 
-A production-ready, full-stack task management application built using **Spec-Driven Development (SDD)** methodology. This project demonstrates modern web application architecture with FastAPI backend, Next.js frontend, and microservices authentication.
+A production-ready, full-stack task management application with natural language AI integration, built using **Spec-Driven Development (SDD)** methodology. This project demonstrates modern microservices architecture with FastAPI backend, Next.js frontend, AI agent service, and dedicated authentication microservice.
 
 ## Architecture Overview
 
-Momentum is built as a modern microservices architecture with three core components:
+Momentum is built as a modern microservices architecture with five core services:
 
-- **Backend API** (Python/FastAPI) - RESTful API with PostgreSQL database, async operations
-- **Auth Server** (Node.js/TypeScript) - Dedicated authentication microservice using better-auth
-- **Frontend** (Next.js 16) - Modern dashboard with App Router, Server Components, and Tailwind CSS
+```
+┌─────────────┐
+│  Frontend   │ (Next.js 16 - Port 3000)
+│  Dashboard  │ • Task Management UI
+└──────┬──────┘ • AI Chat Interface
+       │        • Real-time Updates
+       ├─────────────────┬─────────────────┬──────────────┐
+       │                 │                 │              │
+┌──────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐ ┌────▼─────┐
+│   Backend   │  │  AI Agent   │  │ Auth Server │ │   MCP    │
+│     API     │  │   Service   │  │   Service   │ │  Server  │
+└─────────────┘  └─────────────┘  └─────────────┘ └──────────┘
+   Port 8000        Port 8002        Port 3002      Port 8001
+       │                 │                 │              │
+       └─────────────────┴─────────────────┴──────────────┘
+                            │
+                   ┌────────▼────────┐
+                   │   PostgreSQL    │
+                   │ (Neon Serverless)│
+                   └─────────────────┘
+```
+
+- **Frontend** (Next.js 16) - Modern dashboard with real-time updates and AI chat interface
+- **Backend API** (FastAPI) - RESTful API with task management and API key encryption
+- **AI Agent** (FastAPI + Gemini) - Natural language task management via conversational AI
+- **Auth Server** (Node.js/better-auth) - Email/password authentication and session management
+- **MCP Server** (Python/FastMCP) - Tool integration layer for AI agent capabilities
 
 All services share a single PostgreSQL database (Neon serverless) for data consistency and simplified deployment.
 
 ## Features
 
-### Current Capabilities
+### 🤖 AI-Powered Task Management
+- **Natural Language Interface** - Manage tasks through conversational AI using Gemini 2.5 Flash
+- **Intelligent Parsing** - Understands dates, priorities, and context ("add urgent task for tomorrow")
+- **Multi-Turn Conversations** - Maintains context across chat sessions with smart token management
+- **Real-Time Feedback** - Instant UI updates showing operation status (success/failure indicators)
+- **User-Specific API Keys** - Encrypted Gemini API key storage per user with Fernet encryption
+- **Timezone-Aware** - Automatically interprets dates/times in user's local timezone
 
-#### Backend API (FastAPI)
-- **RESTful Endpoints** - Complete CRUD operations for tasks
-- **User Authentication** - Session-based auth with JWT tokens
-- **Database Integration** - PostgreSQL with SQLAlchemy 2.0 async ORM
-- **Rate Limiting** - User-based rate limiting (100 req/min read, 30 req/min write)
-- **CORS Support** - Configured for cross-origin requests
-- **Input Validation** - Pydantic models with comprehensive validation
-- **Error Handling** - Structured error responses with proper HTTP status codes
-- **Database Migrations** - Alembic for schema versioning
-- **Task Filtering** - User-specific task isolation
+### 🎯 Task Management
+- **Complete CRUD Operations** - Create, read, update, delete tasks via UI or natural language
+- **Priority Levels** - URGENT, HIGH, MEDIUM, LOW priority support
+- **Due Dates & Deadlines** - Task scheduling with timezone awareness
+- **Real-Time Updates** - Dashboard cards update instantly without page refresh
+- **Event-Driven Architecture** - Custom events sync UI across all components
+- **User Isolation** - Each user can only access their own tasks
 
-#### Authentication Server (better-auth)
-- **Email/Password Auth** - Secure registration and login with bcrypt hashing
+### 🔐 Authentication & Security
+- **Email/Password Authentication** - Secure registration and login with bcrypt hashing
 - **Email Verification** - Mandatory verification using Resend email service
-- **OAuth Integration** - Google sign-in support
 - **Session Management** - Multiple concurrent sessions with device tracking
-- **Password Recovery** - Secure password reset flow
-- **JWT Tokens** - 15-minute access tokens, 7-day refresh tokens
-- **Database-Driven** - Session validation against PostgreSQL
+- **Password Recovery** - Secure password reset flow via email
+- **Service-to-Service Auth** - X-Service-Auth header pattern for microservices
+- **API Key Encryption** - Fernet encryption for user API keys at rest
 
-#### Frontend Dashboard (Next.js)
-- **Modern UI** - Responsive design with Tailwind CSS 4
-- **Authentication** - Sign-in/Sign-up forms integrated with auth server
-- **Task Management** - Complete CRUD operations via API
-- **Real-time Stats** - Dashboard with task statistics and completion rates
-- **Search & Filter** - Filter by status (All/Active/Completed) with URL state
-- **Priority & Due Dates** - Task priority levels and deadline tracking
-- **Mobile Responsive** - Sidebar navigation with mobile toggle
-- **Email Verification** - Full-width modern verification pages
+### 💻 Modern Frontend
+- **Next.js 16 App Router** - Server Components and optimized rendering
+- **Responsive Design** - Mobile-first approach with Tailwind CSS 4
+- **Floating Chat Widget** - Collapsible AI chat panel for natural language task management
+- **Processing Indicators** - Shows "Processing..." while AI agent works
+- **Conversation History** - Persistent chat sessions across page navigation
+- **Error Handling** - Clear error messages with warning icons
+
+### ⚡ Performance & Infrastructure
+- **Async Operations** - Non-blocking database queries with SQLAlchemy async
+- **Connection Pooling** - Optimized database connection management
+- **Rate Limiting** - User-based rate limits with Redis
+- **Custom Migrations** - Python-based database migration scripts
+- **CORS Configuration** - Proper cross-origin support for microservices
 
 ## Quick Start
 
 ### Prerequisites
 
-- **Python 3.12+** - For backend API
+- **Python 3.12+** - For backend API, AI agent, and MCP server
 - **Node.js 20+** - For auth server and frontend
-- **PostgreSQL** - Neon serverless PostgreSQL (or local instance)
+- **PostgreSQL** - Neon serverless PostgreSQL recommended
+- **Redis** - For rate limiting (optional)
 - **uv** - Python package manager ([install](https://github.com/astral-sh/uv))
+- **Gemini API Key** - From [Google AI Studio](https://ai.google.dev/)
+- **Resend API Key** - From [resend.com](https://resend.com) for email verification
+
+> **📚 Detailed Setup**: Each service has its own comprehensive README with detailed setup instructions:
+> - [Backend API](./backend/README.md) - Port 8000
+> - [AI Agent](./ai-agent/README.md) - Port 8002
+> - [Auth Server](./auth-server/README.md) - Port 3002
+> - [Frontend](./frontend/README.md) - Port 3000
+> - [MCP Server](./mcp-server/README.md) - Port 8001
 
 ### Full Stack Setup
 
-#### 1. Clone Repository
+#### 1. Clone and Setup Database
 
 ```bash
 git clone https://github.com/hubaibmahmood/momentum.git
 cd momentum
+
+# Create a Neon PostgreSQL database at https://neon.tech
+# Note your DATABASE_URL - it will be used in all service .env files
 ```
 
-#### 2. Database Setup
+#### 2. Start Services (in order)
 
-Create a Neon PostgreSQL database or use a local PostgreSQL instance:
-
-```bash
-# Set up your DATABASE_URL in .env files (see .env.example in each directory)
-# Example: postgresql+asyncpg://user:password@host/database
-```
-
-#### 3. Backend API Setup
-
+**Backend API** (Port 8000)
 ```bash
 cd backend
-
-# Create .env file (copy from .env.example and configure)
-cp .env.example .env
-
-# Install dependencies
+cp .env.example .env  # Configure DATABASE_URL and secrets
 uv sync
-
-# Run database migrations
-alembic upgrade head
-
-# Start the FastAPI server
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+uv run python -c "import asyncio; from src.database.migrations import init_db; asyncio.run(init_db())"
+uv run uvicorn src.api.main:app --reload --port 8000
 ```
 
-Backend API will be available at `http://localhost:8000`
-
-#### 4. Auth Server Setup
-
+**Auth Server** (Port 3002)
 ```bash
 cd auth-server
-
-# Create .env file (copy from .env.example and configure)
-cp .env.example .env
-
-# Install dependencies
-npm install
-
-# Generate Prisma client
-npx prisma generate
-
-# Push database schema
-npx prisma db push
-
-# Start the auth server
+cp .env.example .env  # Configure DATABASE_URL, RESEND_API_KEY
+npm install && npx prisma generate && npx prisma db push
 npm run dev
 ```
 
-Auth server will be available at `http://localhost:3001`
+**MCP Server** (Port 8001)
+```bash
+cd mcp-server
+cp .env.example .env  # Configure SERVICE_AUTH_TOKEN
+uv sync
+uv run python -m src.server
+```
 
-#### 5. Frontend Setup
+**AI Agent** (Port 8002)
+```bash
+cd ai-agent
+cp .env.example .env  # Configure AGENT_GEMINI_API_KEY, BACKEND_URL
+uv sync
+uv run alembic upgrade head
+uv run uvicorn ai_agent.main:app --reload --port 8002
+```
 
+**Frontend** (Port 3000)
 ```bash
 cd frontend
-
-# Create .env file (copy from .env.example and configure)
-cp .env.example .env
-
-# Install dependencies
+cp .env.local.example .env.local  # Configure API URLs
 npm install
-
-# Start the Next.js development server
 npm run dev
 ```
 
-Frontend will be available at `http://localhost:3000`
+> **🔧 Service Order Matters**: Start services in the order shown above. AI Agent depends on Backend and MCP Server.
 
-### Environment Variables
+### Key Environment Variables
 
-Each component requires specific environment variables. See `.env.example` files in:
-- `backend/.env.example` - Database URL, CORS origins, session secret
-- `auth-server/.env.example` - Database URL, better-auth config, Resend API key, OAuth credentials
-- `frontend/.env.example` - Backend API URL, Auth server URL
+**Critical Shared Variables** (must match across services):
+- `DATABASE_URL` - PostgreSQL connection string (all Python services)
+- `SERVICE_AUTH_TOKEN` - Service-to-service auth token (backend ↔ ai-agent ↔ mcp-server)
+- `SESSION_HASH_SECRET` - Session token hashing (backend ↔ auth-server)
 
-## Project Structure
+**Service-Specific**:
+- `AGENT_GEMINI_API_KEY` - Gemini API key (ai-agent)
+- `RESEND_API_KEY` + `EMAIL_FROM` - Email service (auth-server)
+- `ENCRYPTION_KEY` - Fernet key for API key encryption (backend)
 
-```
-momentum/
-├── backend/                      # FastAPI REST API
-│   ├── src/
-│   │   ├── api/                 # API layer
-│   │   │   ├── main.py         # FastAPI application
-│   │   │   ├── routers/        # API route handlers
-│   │   │   └── schemas/        # Pydantic models
-│   │   ├── database/           # Database layer
-│   │   │   ├── connection.py  # SQLAlchemy engine
-│   │   │   └── models/        # ORM models
-│   │   ├── services/           # Business logic
-│   │   └── config.py           # Configuration settings
-│   ├── alembic/                # Database migrations
-│   ├── tests/                  # API tests
-│   └── pyproject.toml          # Python dependencies
-│
-├── auth-server/                 # Authentication microservice
-│   ├── src/
-│   │   ├── auth/               # better-auth configuration
-│   │   ├── config/             # Server configuration
-│   │   └── index.ts            # Express server
-│   ├── api/                    # Vercel serverless functions
-│   ├── prisma/                 # Prisma schema for auth tables
-│   └── package.json            # Node.js dependencies
-│
-├── frontend/                    # Next.js dashboard
-│   ├── app/                    # Next.js App Router
-│   │   ├── (auth)/            # Auth routes (sign-in, sign-up)
-│   │   ├── dashboard/         # Protected dashboard routes
-│   │   └── layout.tsx         # Root layout
-│   ├── components/             # React components
-│   ├── lib/                    # Utilities and API clients
-│   ├── hooks/                  # Custom React hooks
-│   └── package.json            # Node.js dependencies
-│
-├── specs/                       # Feature specifications (SDD)
-│   ├── 003-fastapi-rest-api/   # Backend API specification
-│   ├── 004-auth-server/        # Authentication service spec
-│   └── 005-nextjs-dashboard-migration/  # Frontend dashboard spec
-│
-├── history/prompts/             # Development history (PHRs)
-│   ├── constitution/           # Project principles
-│   ├── 001-add-task/          # Feature development records
-│   └── .../                   # Other feature histories
-│
-└── .specify/                    # SpecKit Plus framework
-    ├── memory/                 # Constitution and guidelines
-    └── templates/              # Spec templates
-```
+> See individual `.env.example` files in each service directory for complete configuration details.
+
 
 ## Development Workflow
 
@@ -297,45 +273,41 @@ npm run lint
 
 ## Tech Stack
 
-### Backend API
-- **Framework**: FastAPI 0.104+
-- **Language**: Python 3.12+
-- **Database**: PostgreSQL (Neon serverless)
-- **ORM**: SQLAlchemy 2.0+ (async)
-- **Migrations**: Alembic 1.13+
-- **Validation**: Pydantic 2.0+
-- **Server**: Uvicorn (ASGI)
-- **Rate Limiting**: SlowAPI with Redis
-- **Testing**: pytest, pytest-asyncio, httpx
-- **Type Checking**: mypy
-- **Linting**: ruff
+### Backend Services
 
-### Authentication Server
-- **Framework**: Express.js
-- **Language**: TypeScript 5.x
-- **Runtime**: Node.js 20+
-- **Auth Library**: better-auth 1.4+
-- **Database ORM**: Prisma
-- **Email Service**: Resend
-- **Password Hashing**: bcrypt
-- **Deployment**: Vercel serverless functions
+**Backend API** (Python/FastAPI)
+- FastAPI 0.127.0+, SQLAlchemy 2.0 (async), Pydantic 2.0+
+- Custom Python migrations, Fernet encryption
+- Redis rate limiting, CORS middleware
 
-### Frontend
-- **Framework**: Next.js 16.0+ (App Router)
-- **Language**: TypeScript 5.x
-- **Runtime**: Node.js 20+
-- **UI Library**: React 19.2+
-- **Styling**: Tailwind CSS 4
-- **Charts**: Recharts 3.5+
-- **Icons**: Lucide React
-- **State Management**: URL Search Params
-- **Deployment**: Netlify
+**AI Agent** (Python/FastAPI + Gemini)
+- OpenAI Agents SDK 0.6.4+, Gemini 2.5 Flash backend
+- MCP 1.25.0+ (Model Context Protocol), tiktoken
+- SQLModel + Alembic, timezone-aware parsing
 
-### Development Framework
-- **Methodology**: [SpecKit Plus](https://github.com/panaversity/spec-kit-plus) - Spec-Driven Development
-- **Version Control**: Git with feature branch workflow
-- **Documentation**: Markdown specs with traceability
-- **AI Assistant**: [Claude Code](https://claude.com/claude-code) for development
+**MCP Server** (Python/FastMCP)
+- FastMCP (official MCP Python SDK), httpx (async client)
+- Service-to-service authentication pattern
+
+### Frontend & Auth
+
+**Frontend** (TypeScript/Next.js)
+- Next.js 16+ (App Router), React 18+, TypeScript 5.x
+- Tailwind CSS 4, date-fns, better-auth client
+- Real-time event-driven UI updates
+
+**Auth Server** (TypeScript/Node.js)
+- Express.js, better-auth 1.4+, Prisma ORM
+- Resend email service, bcrypt hashing
+- Vercel serverless deployment
+
+### Infrastructure
+
+- **Database**: Neon Serverless PostgreSQL (shared)
+- **Cache**: Redis (rate limiting)
+- **Package Managers**: uv (Python), npm (Node.js)
+- **Development**: SpecKit Plus (Spec-Driven Development)
+- **AI Tools**: Claude Code, Google AI Studio (Gemini)
 
 ## Architecture Decisions
 
@@ -424,17 +396,36 @@ This project is a demonstration of Spec-Driven Development methodology.
 
 ## Project Status
 
-**Current Version**: 1.0.0 (Full-Stack Production Release)
+**Current Version**: 2.0.0 (AI-Powered Production Release)
 
-### Completed Features
+### Latest Updates (2025)
 
-- ✅ **Backend API (FastAPI)** - RESTful API with PostgreSQL, authentication, rate limiting
-- ✅ **Authentication Server** - better-auth microservice with email verification and OAuth
-- ✅ **Frontend Dashboard** - Next.js 16 with modern UI, task management, and statistics
-- ✅ **Database Integration** - SQLAlchemy async ORM with Alembic migrations
-- ✅ **User Authentication** - JWT tokens, session management, password recovery
-- ✅ **Task Management** - CRUD operations with priority levels and due dates
-- ✅ **Cloud Deployment** - Production-ready deployment on Render, Vercel, and Netlify
+**🤖 AI Integration (Specs 007-010)**
+- ✅ Natural language task management with Gemini 2.5 Flash
+- ✅ Conversational AI with multi-turn context (800k token budget)
+- ✅ MCP server integration for tool calling
+- ✅ Per-user encrypted API key storage
+- ✅ Real-time operation feedback in chat UI
+
+**💬 Enhanced Frontend (Spec 009)**
+- ✅ Floating chat widget with conversation history
+- ✅ Real-time dashboard updates (no page refresh needed)
+- ✅ Event-driven architecture for instant UI sync
+- ✅ Processing indicators and error handling
+
+**🔐 Security Improvements (Spec 010)**
+- ✅ Service-to-service authentication pattern
+- ✅ Fernet encryption for API keys at rest
+- ✅ Rate limiting for test operations (5/hour per user)
+
+### Core Features
+
+- ✅ **Backend API** - FastAPI with async PostgreSQL, custom migrations, API key encryption
+- ✅ **AI Agent Service** - Gemini-powered natural language task management
+- ✅ **MCP Server** - Tool integration layer with service-to-service auth
+- ✅ **Auth Server** - Email/password auth with email verification (no OAuth currently)
+- ✅ **Frontend** - Next.js 16 with real-time updates and AI chat interface
+- ✅ **Cloud Deployment** - Production-ready on Render, Vercel, and Netlify
 
 ### Development Methodology
 

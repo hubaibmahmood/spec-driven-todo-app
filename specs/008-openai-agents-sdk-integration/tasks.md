@@ -194,33 +194,33 @@
 
 ### MCP Server Tool Development
 
-- [ ] T061 [RED] [US2] Write failing test for search_tasks_by_title tool in mcp-server/tests/tools/test_search_tasks_by_title.py
-- [ ] T062 [GREEN] [US2] Create search_tasks_by_title.py in mcp-server/src/tools/ with FastMCP tool decorator
-- [ ] T063 [GREEN] [US2] Implement case-insensitive partial match query (SQL ILIKE %query%) in search function
-- [ ] T064 [GREEN] [US2] Return all matching tasks with id, title, description, priority, due_date, status
-- [ ] T065 [GREEN] [US2] Add user_id filtering to ensure users only search their own tasks
-- [ ] T066 [REFACTOR] [US2] Add error handling for empty queries and database errors
-- [ ] T067 [REFACTOR] [US2] Add validation for minimum query length (2 characters)
+- [X] T061 [RED] [US2] Write failing test for search_tasks_by_title tool in mcp-server/tests/tools/test_search_tasks_by_title.py
+- [X] T062 [GREEN] [US2] Create search_tasks_by_title.py in mcp-server/src/tools/ with FastMCP tool decorator
+- [X] T063 [GREEN] [US2] Implement case-insensitive partial match query (SQL ILIKE %query%) in search function
+- [X] T064 [GREEN] [US2] Return all matching tasks with id, title, description, priority, due_date, status
+- [X] T065 [GREEN] [US2] Add user_id filtering to ensure users only search their own tasks
+- [X] T066 [REFACTOR] [US2] Add error handling for empty queries and database errors
+- [X] T067 [REFACTOR] [US2] Add validation for minimum query length (2 characters)
 
 ### Agent Integration - Disambiguation Logic
 
-- [ ] T068 [RED] [US2] Write failing test for single match auto-proceed in ai-agent/tests/agent/integration/test_partial_title_search.py
-- [ ] T069 [RED] [US2] Write failing test for multiple matches disambiguation flow
-- [ ] T070 [RED] [US2] Write failing test for no matches with helpful error message
-- [ ] T071 [GREEN] [US2] Update system_prompt in agent_service.py with search_tasks_by_title usage instructions
-- [ ] T072 [GREEN] [US2] Add disambiguation logic to system_prompt: single match → proceed, multiple → present numbered options
-- [ ] T073 [GREEN] [US2] Integrate search results with existing task context storage (use store_task_list_context from T023b)
-- [ ] T074 [GREEN] [US2] Enable ordinal resolution for disambiguation responses (leverage resolve_ordinal_reference from T023d)
-- [ ] T075 [REFACTOR] [US2] Add system prompt examples: "I found 2 tasks:\n1. Buy groceries\n2. Organize groceries\nWhich one?"
-- [ ] T076 [REFACTOR] [US2] Add no-match guidance: "I couldn't find any tasks matching 'xyz'. Would you like to list all tasks?"
+- [X] T068 [RED] [US2] Write failing test for single match auto-proceed in ai-agent/tests/agent/integration/test_partial_title_search.py
+- [X] T069 [RED] [US2] Write failing test for multiple matches disambiguation flow
+- [X] T070 [RED] [US2] Write failing test for no matches with helpful error message
+- [X] T071 [GREEN] [US2] Update system_prompt in agent_service.py with search_tasks_by_title usage instructions
+- [X] T072 [GREEN] [US2] Add disambiguation logic to system_prompt: single match → proceed, multiple → present numbered options
+- [X] T073 [GREEN] [US2] Integrate search results with existing task context storage (use store_task_list_context from T023b)
+- [X] T074 [GREEN] [US2] Enable ordinal resolution for disambiguation responses (leverage resolve_ordinal_reference from T023d)
+- [X] T075 [REFACTOR] [US2] Add system prompt examples: "I found 2 tasks:\n1. Buy groceries\n2. Organize groceries\nWhich one?"
+- [X] T076 [REFACTOR] [US2] Add no-match guidance: "I couldn't find any tasks matching 'xyz'. Would you like to list all tasks?"
 
 ### End-to-End Testing for User Story 2
 
-- [ ] T077 [GREEN] [US2] Run E2E test: "update grocery task" with 2 matches → disambiguation → "first one" → success
-- [ ] T078 [GREEN] [US2] Run E2E test: "delete my meeting task" with 1 match → auto proceed with confirmation
-- [ ] T079 [GREEN] [US2] Run E2E test: "mark xyz task complete" with 0 matches → helpful error message
-- [ ] T080 [GREEN] [US2] Run E2E test: multi-word partial match "update my buy groc task" → finds "Buy groceries"
-- [ ] T081 [REFACTOR] [US2] Add search accuracy metrics logging (match rate, disambiguation rate)
+- [X] T077 [GREEN] [US2] Run E2E test: "update grocery task" with 2 matches → disambiguation → "first one" → success
+- [X] T078 [GREEN] [US2] Run E2E test: "delete my meeting task" with 1 match → auto proceed with confirmation
+- [X] T079 [GREEN] [US2] Run E2E test: "mark xyz task complete" with 0 matches → helpful error message
+- [X] T080 [GREEN] [US2] Run E2E test: multi-word partial match "update my buy groc task" → finds "Buy groceries"
+- [X] T081 [REFACTOR] [US2] Add search accuracy metrics logging (match rate, disambiguation rate)
 
 **Checkpoint**: At this point, users can reference tasks by partial title with intelligent disambiguation
 
@@ -234,27 +234,27 @@
 
 ### Context Persistence Testing
 
-- [ ] T082 [RED] [US3] Write failing test for multi-turn context preservation in ai-agent/tests/agent/integration/test_multi_turn.py
-- [ ] T083 [RED] [US3] Write failing test for follow-up question understanding ("delete the second one")
-- [ ] T084 [RED] [US3] Write failing test for incremental task creation across turns
+- [X] T082 [RED] [US3] Write failing test for multi-turn context preservation in ai-agent/tests/agent/integration/test_multi_turn.py
+- [X] T083 [RED] [US3] Write failing test for follow-up question understanding ("delete the second one")
+- [X] T084 [RED] [US3] Write failing test for incremental task creation across turns
 
 ### Conversation History Enhancement
 
-- [ ] T085 [GREEN] [US3] Verify load_conversation_history() correctly loads messages in chronological order
-- [ ] T086 [GREEN] [US3] Add test for conversation history ordering in test_context_loading.py
-- [ ] T087 [REFACTOR] [US3] Optimize database query with eager loading for large conversations
+- [X] T085 [GREEN] [US3] Verify load_conversation_history() correctly loads messages in chronological order
+- [X] T086 [GREEN] [US3] Add test for conversation history ordering in test_context_loading.py
+- [X] T087 [REFACTOR] [US3] Optimize database query with eager loading for large conversations
 
 ### Multi-Turn Integration
 
-- [ ] T088 [GREEN] [US3] Test /api/chat with conversation_id to ensure history is passed to agent
-- [ ] T089 [GREEN] [US3] Verify agent responses reference prior context appropriately
-- [ ] T090 [REFACTOR] [US3] Add conversation state validation in chat endpoint
+- [X] T088 [GREEN] [US3] Test /api/chat with conversation_id to ensure history is passed to agent
+- [X] T089 [GREEN] [US3] Verify agent responses reference prior context appropriately
+- [X] T090 [REFACTOR] [US3] Add conversation state validation in chat endpoint
 
 ### End-to-End Multi-Turn Testing
 
-- [ ] T091 [GREEN] [US3] Run E2E test for 3-turn conversation with context references
-- [ ] T092 [GREEN] [US3] Run E2E test for 10-turn conversation to verify SC-003 (context accuracy)
-- [ ] T093 [REFACTOR] [US3] Add metrics logging for conversation turn count and context accuracy
+- [X] T091 [GREEN] [US3] Run E2E test for 3-turn conversation with context references
+- [X] T092 [GREEN] [US3] Run E2E test for 10-turn conversation to verify SC-003 (context accuracy)
+- [X] T093 [REFACTOR] [US3] Add metrics logging for conversation turn count and context accuracy
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently
 
@@ -268,36 +268,36 @@
 
 ### Validation Testing
 
-- [ ] T094 [RED] [US4] Write failing test for relative date parsing ("next Wednesday") in ai-agent/tests/agent/integration/test_parsing_validation.py
-- [ ] T094a [RED] [US4] Write failing test for timezone-aware time parsing ("tomorrow at 9pm" with X-Timezone header)
-- [ ] T094b [RED] [US4] Write failing test for UTC fallback when X-Timezone header missing
-- [ ] T095 [RED] [US4] Write failing test for invalid date detection ("February 30th")
-- [ ] T096 [RED] [US4] Write failing test for missing required fields (title not provided)
-- [ ] T097 [RED] [US4] Write failing test for priority extraction from natural language ("urgent task")
-- [ ] T097a [RED] [US4] Write failing test for EOD time interpretation ("by EOD" → 23:59:59 user timezone)
-- [ ] T097b [RED] [US4] Write failing test for week boundary interpretation ("this week" with locale)
-- [ ] T097c [RED] [US4] Write failing test for task context ordinal references ("mark the first one complete")
+- [X] T094 [RED] [US4] Write failing test for relative date parsing ("next Wednesday") in ai-agent/tests/agent/integration/test_parsing_validation.py
+- [X] T094a [RED] [US4] Write failing test for timezone-aware time parsing ("tomorrow at 9pm" with X-Timezone header)
+- [X] T094b [RED] [US4] Write failing test for UTC fallback when X-Timezone header missing
+- [X] T095 [RED] [US4] Write failing test for invalid date detection ("February 30th")
+- [X] T096 [RED] [US4] Write failing test for missing required fields (title not provided)
+- [X] T097 [RED] [US4] Write failing test for priority extraction from natural language ("urgent task")
+- [X] T097a [RED] [US4] Write failing test for EOD time interpretation ("by EOD" → 23:59:59 user timezone)
+- [X] T097b [RED] [US4] Write failing test for week boundary interpretation ("this week" with locale)
+- [X] T097c [RED] [US4] Write failing test for task context ordinal references ("mark the first one complete")
 
 ### Agent Prompt Enhancement
 
-- [ ] T098 [GREEN] [US4] Update system_prompt with: date parsing instructions, EOD/COB definitions, week boundary rules, priority mapping table
-- [ ] T099 [GREEN] [US4] Add validation guidelines: clarification triggers, enum validation, ambiguity detection
-- [ ] T100 [REFACTOR] [US4] Extract system prompt to template file for easier maintenance
+- [X] T098 [GREEN] [US4] Update system_prompt with: date parsing instructions, EOD/COB definitions, week boundary rules, priority mapping table
+- [X] T099 [GREEN] [US4] Add validation guidelines: clarification triggers, enum validation, ambiguity detection
+- [X] T100 [REFACTOR] [US4] Extract system prompt to template file for easier maintenance
 
 ### Validation Integration Testing
 
-- [ ] T101 [GREEN] [US4] Run E2E test for relative date parsing with Gemini
-- [ ] T101a [GREEN] [US4] Run E2E test for timezone-aware parsing ("9pm" with America/New_York → correct UTC conversion)
-- [ ] T101b [GREEN] [US4] Run E2E test for cross-timezone scenarios (user in Asia/Tokyo creates "9am" task → correct UTC)
-- [ ] T101c [GREEN] [US4] Run E2E test for UTC fallback behavior (no X-Timezone header provided)
-- [ ] T102 [GREEN] [US4] Run E2E test for invalid date detection and clarification request
-- [ ] T103 [GREEN] [US4] Run E2E test for missing field detection and follow-up question
-- [ ] T104 [GREEN] [US4] Run E2E test for priority keyword extraction (urgent, high, low)
-- [ ] T104a [GREEN] [US4] Run E2E test for priority normalization ("critical" → "Urgent", "important" → "High")
-- [ ] T104b [GREEN] [US4] Run E2E test for EOD interpretation and UTC conversion
-- [ ] T104c [GREEN] [US4] Run E2E test for week boundary filtering with different locales
-- [ ] T104d [GREEN] [US4] Run E2E test for task context resolution after displaying list
-- [ ] T105 [REFACTOR] [US4] Add validation accuracy metrics logging
+- [X] T101 [GREEN] [US4] Run E2E test for relative date parsing with Gemini
+- [X] T101a [GREEN] [US4] Run E2E test for timezone-aware parsing ("9pm" with America/New_York → correct UTC conversion)
+- [X] T101b [GREEN] [US4] Run E2E test for cross-timezone scenarios (user in Asia/Tokyo creates "9am" task → correct UTC)
+- [X] T101c [GREEN] [US4] Run E2E test for UTC fallback behavior (no X-Timezone header provided)
+- [X] T102 [GREEN] [US4] Run E2E test for invalid date detection and clarification request
+- [X] T103 [GREEN] [US4] Run E2E test for missing field detection and follow-up question
+- [X] T104 [GREEN] [US4] Run E2E test for priority keyword extraction (urgent, high, low)
+- [X] T104a [GREEN] [US4] Run E2E test for priority normalization ("critical" → "Urgent", "important" → "High")
+- [X] T104b [GREEN] [US4] Run E2E test for EOD interpretation and UTC conversion
+- [X] T104c [GREEN] [US4] Run E2E test for week boundary filtering with different locales
+- [X] T104d [GREEN] [US4] Run E2E test for task context resolution after displaying list
+- [X] T105 [REFACTOR] [US4] Add validation accuracy metrics logging
 
 **Checkpoint**: All high-priority user stories (P1, P2) should now be independently functional
 
@@ -311,22 +311,22 @@
 
 ### Batch Operations Testing
 
-- [ ] T106 [RED] [US5] Write failing test for bulk complete operation in ai-agent/tests/agent/integration/test_batch_operations.py
-- [ ] T107 [RED] [US5] Write failing test for bulk delete operation
-- [ ] T108 [RED] [US5] Write failing test for filtered list with batch action
+- [X] T106 [RED] [US5] Write failing test for bulk complete operation in ai-agent/tests/agent/integration/test_batch_operations.py
+- [X] T107 [RED] [US5] Write failing test for bulk delete operation
+- [X] T108 [RED] [US5] Write failing test for filtered list with batch action
 
 ### Agent Prompt Enhancement for Batch
 
-- [ ] T109 [GREEN] [US5] Update system_prompt to handle batch operation requests
-- [ ] T110 [GREEN] [US5] Add confirmation flow to system_prompt for destructive batch operations
-- [ ] T111 [REFACTOR] [US5] Document batch operation patterns in system prompt
+- [X] T109 [GREEN] [US5] Update system_prompt to handle batch operation requests
+- [X] T110 [GREEN] [US5] Add confirmation flow to system_prompt for destructive batch operations
+- [X] T111 [REFACTOR] [US5] Document batch operation patterns in system prompt
 
 ### Batch Integration Testing
 
-- [ ] T112 [GREEN] [US5] Run E2E test for "mark all high priority tasks as done"
-- [ ] T113 [GREEN] [US5] Run E2E test for "delete all completed tasks" with confirmation
-- [ ] T114 [GREEN] [US5] Run E2E test for filtered batch operations
-- [ ] T115 [REFACTOR] [US5] Add batch operation size limits and warnings
+- [X] T112 [GREEN] [US5] Run E2E test for "mark all high priority tasks as done"
+- [X] T113 [GREEN] [US5] Run E2E test for "delete all completed tasks" with confirmation
+- [X] T114 [GREEN] [US5] Run E2E test for filtered batch operations
+- [X] T115 [REFACTOR] [US5] Add batch operation size limits and warnings
 
 **Checkpoint**: All user stories should now be independently functional
 

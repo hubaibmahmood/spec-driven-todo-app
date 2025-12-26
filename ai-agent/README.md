@@ -87,6 +87,7 @@ ai-agent/
 - PostgreSQL database (Neon recommended)
 - **Gemini API Key** from [Google AI Studio](https://ai.google.dev/)
 - **MCP Server** running (from spec 006) at http://localhost:8001/mcp
+- **Backend API** running at http://localhost:8000 (for API key management)
 - Valid better-auth session token for authentication
 
 ## Quick Start
@@ -106,29 +107,55 @@ uv sync
 Create a `.env` file in the `ai-agent/` directory:
 
 ```env
-# 🆕 AI Agent Configuration (Spec 008)
-GEMINI_API_KEY=your_gemini_api_key_here
-MCP_SERVER_URL=http://localhost:8001/mcp
-AGENT_TEMPERATURE=0.7
-TOKEN_BUDGET=800000
-MCP_TIMEOUT=10
-MCP_RETRY_ATTEMPTS=3
+# Database Connection
+DATABASE_URL=postgresql+asyncpg://user:password@host:port/database
 
-# Database Configuration
-DATABASE_URL=postgresql+asyncpg://user:password@host:port/database?ssl=require
+# Backend Service Configuration
+# URL of the FastAPI backend for fetching user API keys
+# Must match the backend service URL
+BACKEND_URL=http://localhost:8000
 
-# Service Authentication
-SERVICE_AUTH_TOKEN=your_secret_token
+# Service Authentication (for service-to-service calls)
+# Token for authenticating requests to backend microservice
+# Must match SERVICE_AUTH_TOKEN in backend/.env
+# Generate with: openssl rand -hex 32
+SERVICE_AUTH_TOKEN=your-service-auth-token-change-this
 
 # Application Settings
 ENV=development
 LOG_LEVEL=INFO
+
+# CORS Configuration (comma-separated list of allowed origins)
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+
+# Gemini API Configuration (requires AGENT_ prefix)
+AGENT_GEMINI_API_KEY=your_gemini_api_key_here
+
+# OpenAI API Configuration (OPTIONAL - for tracing only)
+# If not provided, tracing is automatically disabled and the app works normally
+# Only needed for debugging with OpenAI trace visualization
+# AGENT_OPENAI_API_KEY=your-openai-api-key-here
+
+# MCP Server Configuration (requires AGENT_ prefix)
+AGENT_MCP_SERVER_URL=http://localhost:8001/mcp
+AGENT_MCP_TIMEOUT=10
+AGENT_MCP_RETRY_ATTEMPTS=3
+
+# Agent Configuration (requires AGENT_ prefix)
+AGENT_TEMPERATURE=0.7
+AGENT_TOKEN_BUDGET=800000
+AGENT_ENCODING_NAME=cl100k_base
+# AGENT_SYSTEM_PROMPT can be set to customize the agent's behavior
+# AGENT_SYSTEM_PROMPT=You are a helpful task management assistant.
 ```
 
 **Important Notes**:
 - Use `ssl=require` (not `sslmode=require`) for asyncpg compatibility
 - Get your Gemini API key from [Google AI Studio](https://ai.google.dev/)
+- `SERVICE_AUTH_TOKEN` must match the backend configuration
+- `BACKEND_URL` must point to the FastAPI backend service
 - Ensure the MCP server (spec 006) is running before starting this service
+- OpenAI API key is optional and only needed for tracing/debugging
 
 ### 3. Database Setup
 
@@ -146,13 +173,13 @@ This creates the following tables:
 
 ```bash
 # Development mode (with auto-reload)
-uv run uvicorn ai_agent.main:app --reload --port 8001
+uv run uvicorn ai_agent.main:app --reload --port 8002
 
 # Production mode
-uv run uvicorn ai_agent.main:app --host 0.0.0.0 --port 8001
+uv run uvicorn ai_agent.main:app --host 0.0.0.0 --port 8002
 ```
 
-The service will start at `http://localhost:8001`
+The service will start at `http://localhost:8002`
 
 ## API Endpoints
 
@@ -286,7 +313,7 @@ All API endpoints (except `/health`) require Bearer token authentication:
 
 ```bash
 curl -H "Authorization: Bearer <your_session_token>" \
-  http://localhost:8001/api/conversations
+  http://localhost:8002/api/conversations
 ```
 
 The service validates tokens against the `user_sessions` table managed by better-auth.
@@ -368,9 +395,9 @@ uv run alembic current
 
 Interactive API documentation is available when the service is running:
 
-- **Swagger UI**: http://localhost:8001/docs
-- **ReDoc**: http://localhost:8001/redoc
-- **OpenAPI JSON**: http://localhost:8001/openapi.json
+- **Swagger UI**: http://localhost:8002/docs
+- **ReDoc**: http://localhost:8002/redoc
+- **OpenAPI JSON**: http://localhost:8002/openapi.json
 
 ## Error Handling
 
@@ -398,16 +425,21 @@ The service returns standard HTTP error codes:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | Yes | - | Gemini API key from Google AI Studio |
-| `MCP_SERVER_URL` | Yes | `http://localhost:8001/mcp` | MCP server endpoint URL |
 | `DATABASE_URL` | Yes | - | PostgreSQL connection string (asyncpg format) |
+| `BACKEND_URL` | Yes | `http://localhost:8000` | FastAPI backend URL for API key management |
+| `SERVICE_AUTH_TOKEN` | Yes | - | Service-to-service authentication token (must match backend) |
+| `AGENT_GEMINI_API_KEY` | Yes | - | Gemini API key from Google AI Studio |
+| `AGENT_MCP_SERVER_URL` | Yes | `http://localhost:8001/mcp` | MCP server endpoint URL |
 | `AGENT_TEMPERATURE` | No | `0.7` | AI model temperature (0.0-2.0) |
-| `TOKEN_BUDGET` | No | `800000` | Maximum tokens for conversation context |
-| `MCP_TIMEOUT` | No | `10` | MCP server timeout in seconds |
-| `MCP_RETRY_ATTEMPTS` | No | `3` | Number of retry attempts for MCP calls |
-| `SERVICE_AUTH_TOKEN` | No | - | Service-to-service authentication token |
+| `AGENT_TOKEN_BUDGET` | No | `800000` | Maximum tokens for conversation context |
+| `AGENT_ENCODING_NAME` | No | `cl100k_base` | Token encoding name for tiktoken |
+| `AGENT_MCP_TIMEOUT` | No | `10` | MCP server timeout in seconds |
+| `AGENT_MCP_RETRY_ATTEMPTS` | No | `3` | Number of retry attempts for MCP calls |
+| `AGENT_OPENAI_API_KEY` | No | - | OpenAI API key (optional, for tracing only) |
+| `AGENT_SYSTEM_PROMPT` | No | - | Custom system prompt (optional) |
 | `ENV` | No | `development` | Environment (development/production) |
 | `LOG_LEVEL` | No | `INFO` | Logging level (DEBUG/INFO/WARNING/ERROR) |
+| `CORS_ORIGINS` | No | `http://localhost:3000,http://localhost:3001` | Comma-separated list of allowed origins |
 
 ### Connection Pooling
 
@@ -432,14 +464,14 @@ See the [quickstart guide](../specs/007-chat-persistence/quickstart.md) for comp
 export TOKEN="your_session_token_here"
 
 # Create conversation
-curl -X POST http://localhost:8001/api/chat \
+curl -X POST http://localhost:8002/api/chat \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello"}' | jq '.'
 
 # List conversations
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8001/api/conversations | jq '.'
+  http://localhost:8002/api/conversations | jq '.'
 ```
 
 ### Automated Testing

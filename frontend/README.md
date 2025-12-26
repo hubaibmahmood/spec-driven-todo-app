@@ -21,6 +21,8 @@ A Next.js-based frontend for managing tasks with AI-powered chat assistance. Bui
 - ✅ **Timezone-Aware**: Handles dates/times in user's local timezone
 - ✅ **Optimistic UI**: Instant visual feedback with backend sync
 - ✅ **Error Handling**: Clear error messages with ⚠️ icons when operations fail
+- ✅ **Real-Time Updates**: Dashboard cards update instantly without page refresh
+- ✅ **Event-Driven Architecture**: Custom events sync UI across all components
 
 ## Technology Stack
 
@@ -49,11 +51,6 @@ Create a `.env.local` file:
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_AI_AGENT_URL=http://localhost:8002
 NEXT_PUBLIC_AUTH_URL=http://localhost:3002
-
-# Better Auth
-BETTER_AUTH_SECRET=your_secret_here
-BETTER_AUTH_URL=http://localhost:3002
-DATABASE_URL=postgresql://user:password@host:port/database?sslmode=require
 ```
 
 ### 3. Run Development Server
@@ -63,33 +60,6 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
-
-## Project Structure
-
-```
-frontend/
-├── app/                    # Next.js App Router
-│   ├── (dashboard)/       # Dashboard layout & pages
-│   ├── login/             # Login page
-│   └── register/          # Register page
-├── components/
-│   ├── chat/              # Chat components (Spec 009)
-│   │   ├── ChatPanel.tsx      # Main chat widget
-│   │   ├── ChatMessage.tsx    # Message display with operation feedback
-│   │   └── ChatToggleButton.tsx
-│   ├── dashboard/         # Dashboard components
-│   └── tasks/             # Task management components
-├── hooks/
-│   ├── useChat.ts         # Chat functionality hook
-│   └── useTasks.ts        # Task management hook
-├── lib/
-│   ├── chat/              # Chat utilities
-│   │   ├── chat-api.ts        # Chat API client
-│   │   └── panel-state.ts     # Panel state management
-│   └── utils/             # Shared utilities
-└── types/
-    └── chat.ts            # TypeScript interfaces
-```
 
 ## Recent Updates
 

@@ -66,6 +66,8 @@ export function useTasks(): UseTasksReturn {
 
     try {
       await todoApi.toggleStatus(id, todo.status);
+      // Dispatch event to notify all components
+      window.dispatchEvent(new CustomEvent('tasks-updated'));
     } catch (error) {
       // Revert on error
       console.error("Failed to toggle status", error);
@@ -86,6 +88,8 @@ export function useTasks(): UseTasksReturn {
 
     try {
       await todoApi.delete(id);
+      // Dispatch event to notify all components
+      window.dispatchEvent(new CustomEvent('tasks-updated'));
     } catch (error) {
       console.error("Failed to delete task", error);
       // Revert on error
@@ -106,6 +110,9 @@ export function useTasks(): UseTasksReturn {
         // Call API
         const updated = await todoApi.update(editingTodo.id, taskData);
         setTodos(prev => prev.map(t => t.id === editingTodo.id ? updated : t));
+
+        // Dispatch event to notify all components
+        window.dispatchEvent(new CustomEvent('tasks-updated'));
       } else {
         // Create new task - Optimistic Update
         const tempId = `temp-${Date.now()}`;
@@ -130,6 +137,9 @@ export function useTasks(): UseTasksReturn {
 
           // Replace optimistic task with real one from server
           setTodos(prev => prev.map(t => t.id === tempId ? newTodo : t));
+
+          // Dispatch event to notify all components
+          window.dispatchEvent(new CustomEvent('tasks-updated'));
         } catch (apiError) {
           // Remove optimistic task on error
           setTodos(prev => prev.filter(t => t.id !== tempId));

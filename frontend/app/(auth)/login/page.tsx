@@ -1,18 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+// Loading fallback component
+function LoginLoading() {
+  return (
+    <div className="p-8 pt-0 flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-3" />
+        <p className="text-sm text-slate-500">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main login form component that uses useSearchParams
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check for password reset success message
+  useEffect(() => {
+    if (searchParams.get('reset') === 'success') {
+      setSuccessMessage('Your password has been reset successfully! Please log in with your new password.');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +64,20 @@ export default function LoginPage() {
       <p className="text-slate-500 text-center mb-8 text-sm">
         Enter your details to access your workspace
       </p>
+
+      {successMessage && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-emerald-900 mb-1">Password Reset Complete</p>
+              <p className="text-sm text-emerald-700 leading-relaxed">
+                {successMessage}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 p-3 text-sm text-red-500 bg-red-50 rounded-lg border border-red-200 text-center">
@@ -81,6 +117,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
             >
                 {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -88,6 +125,14 @@ export default function LoginPage() {
                     <Eye className="w-5 h-5" />
                 )}
             </button>
+          </div>
+          <div className="text-right mt-1">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors"
+            >
+              Forgot Password?
+            </Link>
           </div>
         </div>
 
@@ -119,5 +164,14 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+// Default export with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginForm />
+    </Suspense>
   );
 }

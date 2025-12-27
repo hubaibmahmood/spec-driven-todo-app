@@ -28,11 +28,11 @@
 
 **Estimated Time**: ~1.5 hours
 
-- [ ] T001 [P] Create `lib/validation/` directory and implement email validation helper function in `frontend/lib/validation/password.ts`
-- [ ] T002 [P] Define TypeScript interfaces (PasswordValidation, RateLimitCheck) in `frontend/lib/validation/password.ts`
-- [ ] T003 [P] Implement password validation function with 5 regex rules (length, uppercase, lowercase, number, special char) in `frontend/lib/validation/password.ts`
-- [ ] T004 [P] Implement rate limiting utilities with localStorage (checkRateLimit, recordAttempt) in `frontend/lib/validation/rate-limit.ts`
-- [ ] T005 [P] Implement token format validator function with regex pattern in `frontend/lib/validation/password.ts`
+- [X] T001 [P] Create `lib/validation/` directory and implement email validation helper function in `frontend/lib/validation/password.ts`
+- [X] T002 [P] Define TypeScript interfaces (PasswordValidation, RateLimitCheck) in `frontend/lib/validation/password.ts`
+- [X] T003 [P] Implement password validation function with 5 regex rules (length, uppercase, lowercase, number, special char) in `frontend/lib/validation/password.ts`
+- [X] T004 [P] Implement rate limiting utilities with localStorage (checkRateLimit, recordAttempt) in `frontend/lib/validation/rate-limit.ts`
+- [X] T005 [P] Implement token format validator function with regex pattern in `frontend/lib/validation/password.ts`
 
 ---
 
@@ -44,8 +44,8 @@
 
 **Estimated Time**: ~30 minutes
 
-- [ ] T006 Verify better-auth client SDK configuration in `frontend/lib/auth-client.ts` and create auth route directories `app/(auth)/forgot-password/` and `app/(auth)/reset-password/`
-- [ ] T007 [P] Define shared TypeScript form state interfaces (ForgotPasswordFormState, ResetPasswordFormState) in `frontend/lib/types/password-reset.ts`
+- [X] T006 Verify better-auth client SDK configuration in `frontend/lib/auth-client.ts` and create auth route directories `app/(auth)/forgot-password/` and `app/(auth)/reset-password/`
+- [X] T007 [P] Define shared TypeScript form state interfaces (ForgotPasswordFormState, ResetPasswordFormState) in `frontend/lib/types/password-reset.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -61,14 +61,14 @@
 
 ### UI Components for User Story 1
 
-- [ ] T008 [US1] Create forgot password page component shell with basic layout, heading, description, and "Back to Login" link in `frontend/app/(auth)/forgot-password/page.tsx`
-- [ ] T009 [US1] Add email input field with Mail icon, placeholder, and Tailwind styling in `frontend/app/(auth)/forgot-password/page.tsx`
-- [ ] T010 [US1] Implement form state management with useState hooks (email, isLoading, error, successMessage, rateLimitRemaining) in `frontend/app/(auth)/forgot-password/page.tsx`
-- [ ] T011 [US1] Add client-side email format validation on form submit using email regex in `frontend/app/(auth)/forgot-password/page.tsx`
-- [ ] T012 [US1] Integrate rate limit check before API call using checkRateLimit and record attempts on success using recordAttempt in `frontend/app/(auth)/forgot-password/page.tsx`
-- [ ] T013 [US1] Implement authClient.forgetPassword API integration with onRequest, onSuccess, and onError callbacks in `frontend/app/(auth)/forgot-password/page.tsx`
-- [ ] T014 [US1] Implement success message and error message display system with styled alert boxes (green for success, red for errors) in `frontend/app/(auth)/forgot-password/page.tsx`
-- [ ] T015 [US1] Implement loading state with Loader2 spinner icon and disabled button during API submission in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T008 [US1] Create forgot password page component shell with basic layout, heading, description, and "Back to Login" link in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T009 [US1] Add email input field with Mail icon, placeholder, and Tailwind styling in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T010 [US1] Implement form state management with useState hooks (email, isLoading, error, successMessage, rateLimitRemaining) in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T011 [US1] Add client-side email format validation on form submit using email regex in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T012 [US1] Integrate rate limit check before API call using checkRateLimit and record attempts on success using recordAttempt in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T013 [US1] Implement authClient.forgetPassword API integration with onRequest, onSuccess, and onError callbacks in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T014 [US1] Implement success message and error message display system with styled alert boxes (green for success, red for errors) in `frontend/app/(auth)/forgot-password/page.tsx`
+- [X] T015 [US1] Implement loading state with Loader2 spinner icon and disabled button during API submission in `frontend/app/(auth)/forgot-password/page.tsx`
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can request password reset emails
 
@@ -84,25 +84,25 @@
 
 ### URL Handling and Token Validation for User Story 2
 
-- [ ] T016 [US2] Create reset password page component shell with basic layout, heading, description, and "Back to Login" link in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T017 [US2] Extract token from URL query params using useSearchParams hook in useEffect in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T018 [US2] Implement client-side token format validation using regex and display error with link to request new reset in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T019 [US2] Add missing token error handling with error message display and auto-redirect to `/forgot-password` after 3 seconds in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T016 [US2] Create reset password page component shell with basic layout, heading, description, and "Back to Login" link in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T017 [US2] Extract token from URL query params using useSearchParams hook in useEffect in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T018 [US2] Implement client-side token format validation using regex and display error with link to request new reset in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T019 [US2] Add missing token error handling with error message display and auto-redirect to `/forgot-password` after 3 seconds in `frontend/app/(auth)/reset-password/page.tsx`
 
 ### Password Input and Validation for User Story 2
 
-- [ ] T020 [US2] Implement form state management with useState hooks (token, tokenError, newPassword, confirmPassword, showPassword, showConfirmPassword, isLoading, error, passwordValidation, passwordsMatch) in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T021 [US2] Add new password input field with Lock icon, password masking, and Eye/EyeOff toggle button in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T022 [US2] Add confirm password input field with Lock icon, password masking, and Eye/EyeOff toggle button in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T023 [US2] Implement real-time password validation on input change using validatePassword utility with dynamic error list display in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T024 [US2] Implement password match validation on confirm password input change with mismatch error display in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T020 [US2] Implement form state management with useState hooks (token, tokenError, newPassword, confirmPassword, showPassword, showConfirmPassword, isLoading, error, passwordValidation, passwordsMatch) in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T021 [US2] Add new password input field with Lock icon, password masking, and Eye/EyeOff toggle button in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T022 [US2] Add confirm password input field with Lock icon, password masking, and Eye/EyeOff toggle button in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T023 [US2] Implement real-time password validation on input change using validatePassword utility with dynamic error list display in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T024 [US2] Implement password match validation on confirm password input change with mismatch error display in `frontend/app/(auth)/reset-password/page.tsx`
 
 ### API Integration and Completion for User Story 2
 
-- [ ] T025 [US2] Implement authClient.resetPassword API integration with token and newPassword parameters in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T026 [US2] Handle successful reset: check for existing session using getSession, sign out if logged in, and redirect to `/login?reset=success` in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T027 [US2] Implement comprehensive API error handling for expired token, invalid token, and password validation errors with user-friendly messages in `frontend/app/(auth)/reset-password/page.tsx`
-- [ ] T028 [US2] Implement loading state with Loader2 spinner and conditionally disabled submit button based on validation state (passwordValidation.isValid, passwordsMatch) in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T025 [US2] Implement authClient.resetPassword API integration with token and newPassword parameters in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T026 [US2] Handle successful reset: check for existing session using getSession, sign out if logged in, and redirect to `/login?reset=success` in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T027 [US2] Implement comprehensive API error handling for expired token, invalid token, and password validation errors with user-friendly messages in `frontend/app/(auth)/reset-password/page.tsx`
+- [X] T028 [US2] Implement loading state with Loader2 spinner and conditionally disabled submit button based on validation state (passwordValidation.isValid, passwordsMatch) in `frontend/app/(auth)/reset-password/page.tsx`
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - complete password reset flow functional
 
@@ -118,13 +118,13 @@
 
 ### Login Page Enhancements for User Story 3
 
-- [ ] T029 [US3] Add "Forgot Password?" link below password input, import useSearchParams, and add successMessage state in `frontend/app/(auth)/login/page.tsx`
-- [ ] T030 [US3] Implement useEffect to check for `?reset=success` query param and display success message banner with green styling in `frontend/app/(auth)/login/page.tsx`
+- [X] T029 [US3] Add "Forgot Password?" link below password input, import useSearchParams, and add successMessage state in `frontend/app/(auth)/login/page.tsx`
+- [X] T030 [US3] Implement useEffect to check for `?reset=success` query param and display success message banner with green styling in `frontend/app/(auth)/login/page.tsx`
 
 ### Accessibility and Polish for User Story 3
 
-- [ ] T031 [US3] Add comprehensive accessibility attributes (aria-labels to password toggles, role="alert" to errors, aria-busy to buttons) across both password reset pages
-- [ ] T032 [US3] Verify mobile responsive design and test form layouts on various viewport sizes (320px, 768px, 1024px)
+- [X] T031 [US3] Add comprehensive accessibility attributes (aria-labels to password toggles, role="alert" to errors, aria-busy to buttons) across both password reset pages
+- [X] T032 [US3] Verify mobile responsive design and test form layouts on various viewport sizes (320px, 768px, 1024px)
 
 **Checkpoint**: All user stories should now be independently functional with excellent UX
 
@@ -136,10 +136,10 @@
 
 **Estimated Time**: ~1 hour
 
-- [ ] T033 [P] Validate error handling, loading states, and rate limiting behavior across both pages with various network conditions
-- [ ] T034 [P] Validate security features (email enumeration prevention, auto-redirect, token validation) and UX edge cases (malformed tokens, expired links)
-- [ ] T035 [P] Run complete manual testing checklist from `specs/011-reset-password-frontend/quickstart.md`
-- [ ] T036 [P] Verify integration with existing better-auth server from spec 004 and test end-to-end reset flow with actual email delivery
+- [X] T033 [P] Validate error handling, loading states, and rate limiting behavior across both pages with various network conditions
+- [X] T034 [P] Validate security features (email enumeration prevention, auto-redirect, token validation) and UX edge cases (malformed tokens, expired links)
+- [X] T035 [P] Run complete manual testing checklist from `specs/011-reset-password-frontend/quickstart.md`
+- [X] T036 [P] Verify integration with existing better-auth server from spec 004 and test end-to-end reset flow with actual email delivery
 
 ---
 

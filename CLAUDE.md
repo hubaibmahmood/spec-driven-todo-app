@@ -224,6 +224,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - Python cryptography (Fernet encryption), google-generativeai SDK (010-settings-ui-api-keys)
 - React hooks (useApiKey), better-auth session integration, TypeScript interfaces (010-settings-ui-api-keys)
 - Service-to-service authentication (X-Service-Auth header pattern), in-memory rate limiting (010-settings-ui-api-keys)
+- TypeScript 5.x with React 19.2.1 and Next.js 16.0.9 + better-auth v1.4.6 (React client), lucide-react v0.560.0 (icons), date-fns v4.1.0 (date formatting) (011-reset-password-frontend)
+- N/A (frontend only; backend uses Neon PostgreSQL via better-auth server from spec 004) (011-reset-password-frontend)
 
 ## Recent Changes
 - **Python Best Practice**: ALWAYS use `datetime.now(UTC)` instead of deprecated `datetime.utcnow()`. Import: `from datetime import datetime, UTC`. Updated constitution.md with this requirement.

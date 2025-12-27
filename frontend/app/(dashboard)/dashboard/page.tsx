@@ -129,7 +129,7 @@ function TaskItem({
   const isCompleted = todo.status === Status.COMPLETED;
 
   return (
-    <div className="group bg-white rounded-xl p-4 border border-stone-100 hover:border-violet-200 hover:shadow-md transition-all duration-200">
+    <div className="group bg-white rounded-xl p-4 border border-stone-100 hover:border-indigo-200 hover:shadow-md transition-all duration-200">
       <div className="flex items-start gap-4">
         {/* Checkbox */}
         <button
@@ -137,7 +137,7 @@ function TaskItem({
           className={`flex-shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 transition-all duration-200 ${
             isCompleted
               ? "bg-emerald-500 border-emerald-500"
-              : "border-stone-300 hover:border-violet-400"
+              : "border-stone-300 hover:border-indigo-400"
           }`}
         >
           {isCompleted && (
@@ -245,7 +245,7 @@ function TaskProgress({
                 x2="100%"
                 y2="100%"
               >
-                <stop offset="0%" stopColor="#8b5cf6" />
+                <stop offset="0%" stopColor="#6366f1" />
                 <stop offset="100%" stopColor="#6366f1" />
               </linearGradient>
             </defs>
@@ -261,7 +261,7 @@ function TaskProgress({
         <div className="space-y-4 flex-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500" />
+              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-500" />
               <span className="text-sm font-medium text-stone-600">
                 Completed
               </span>
@@ -372,7 +372,7 @@ function DashboardContent() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-stone-500">Loading your tasks...</p>
         </div>
       </div>
@@ -380,7 +380,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-violet-50/30 px-4 py-5">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-indigo-50/30 px-4 py-5">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="animate-fade-in">
@@ -399,8 +399,8 @@ function DashboardContent() {
             icon={ListTodo}
             label="Total Tasks"
             value={stats.total}
-            accentColor="bg-violet-500"
-            bgColor="bg-violet-300"
+            accentColor="bg-indigo-500"
+            bgColor="bg-indigo-300"
           />
           <StatsCard
             icon={CheckCircle2}
@@ -440,7 +440,7 @@ function DashboardContent() {
               </div>
               <Link
                 href="/dashboard/tasks"
-                className="px-4 py-2 bg-violet-600 text-white rounded-xl font-semibold hover:bg-violet-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 hover:shadow-lg hover:scale-105 transition-all duration-200"
               >
                 View All →
               </Link>
@@ -462,8 +462,8 @@ function DashboardContent() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl border border-stone-100 p-12 text-center">
-                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-violet-600" />
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-indigo-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-stone-900 mb-2">
                   All caught up!
@@ -481,7 +481,7 @@ function DashboardContent() {
             {/* Upcoming Tasks Widget */}
             <div className="bg-white rounded-2xl p-6 border border-stone-100 shadow-sm">
               <div className="flex items-center gap-2 mb-6">
-                <Calendar className="w-5 h-5 text-violet-600" />
+                <Calendar className="w-5 h-5 text-indigo-600" />
                 <h3 className="text-lg font-bold text-stone-900">
                   Upcoming Tasks
                 </h3>
@@ -543,7 +543,7 @@ export default function DashboardPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center h-screen">
-          <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
         </div>
       }
     >

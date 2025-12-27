@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail, Lock, User, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 import { signUp } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { validatePassword, type PasswordValidation } from "@/lib/validation/password";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -13,7 +14,17 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [passwordValidation, setPasswordValidation] = useState<PasswordValidation | null>(null);
   const router = useRouter();
+
+  // Real-time password validation
+  useEffect(() => {
+    if (password.length > 0) {
+      setPasswordValidation(validatePassword(password));
+    } else {
+      setPasswordValidation(null);
+    }
+  }, [password]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +110,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
             >
                 {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -107,12 +119,42 @@ export default function RegisterPage() {
                 )}
             </button>
           </div>
+
+          {/* Password requirements - elegant grid layout */}
+          {password.length > 0 && passwordValidation && (
+            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-xs font-medium text-slate-600 mb-2">Password must contain:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <PasswordRequirement
+                  met={password.length >= 8}
+                  text="8+ characters"
+                />
+                <PasswordRequirement
+                  met={/[A-Z]/.test(password)}
+                  text="Uppercase letter"
+                />
+                <PasswordRequirement
+                  met={/[a-z]/.test(password)}
+                  text="Lowercase letter"
+                />
+                <PasswordRequirement
+                  met={/[0-9]/.test(password)}
+                  text="Number"
+                />
+                <PasswordRequirement
+                  met={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)}
+                  text="Special character"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || (password.length > 0 && !passwordValidation?.isValid)}
           className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-all shadow-sm shadow-indigo-200 mt-6 disabled:opacity-70 disabled:cursor-not-allowed"
+          aria-busy={isLoading}
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -136,6 +178,22 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+    </div>
+  );
+}
+
+// Password requirement indicator component
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
+        met ? 'bg-emerald-500' : 'bg-slate-300'
+      }`} />
+      <span className={`text-xs transition-colors ${
+        met ? 'text-emerald-700 font-medium' : 'text-slate-500'
+      }`}>
+        {text}
+      </span>
     </div>
   );
 }

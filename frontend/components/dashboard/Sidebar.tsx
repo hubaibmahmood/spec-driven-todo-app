@@ -36,12 +36,9 @@ export function Sidebar({ isOpen, onClose, onLogout, user }: SidebarProps) {
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="h-full flex flex-col">
-          <div className="p-6 flex items-center justify-between border-b border-slate-100">
-            <div className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
-              <CheckSquare className="w-8 h-8" />
-              <span>Momentum</span>
-            </div>
-            <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-slate-600">
+          {/* Mobile close button */}
+          <div className="lg:hidden flex justify-end p-4">
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
               <X className="w-6 h-6" />
             </button>
           </div>

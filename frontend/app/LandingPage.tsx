@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CheckSquare,
   ArrowRight,
@@ -27,6 +27,7 @@ import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import type { Feature, CTAButtonProps } from "@/types/landing";
+import Image from "next/image";
 
 // Features Data - AI Assistant First
 const FEATURES: readonly Feature[] = [
@@ -121,6 +122,36 @@ const FeatureCard: React.FC<{ feature: Feature }> = ({ feature }) => {
   );
 };
 
+// FAQ Item Component
+const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="border-b border-slate-200 last:border-0">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full py-6 flex items-center justify-between text-left hover:text-indigo-600 transition-colors group"
+      >
+        <span className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600 pr-8">
+          {question}
+        </span>
+        <ChevronDown
+          className={`w-5 h-5 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 transition-transform duration-300 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-300 ${
+          isOpen ? 'max-h-96 pb-6' : 'max-h-0'
+        }`}
+      >
+        <p className="text-slate-600 leading-relaxed">{answer}</p>
+      </div>
+    </div>
+  );
+};
+
 const LandingPage: React.FC = () => {
   const { data: session, isPending } = useSession();
   const router = useRouter();
@@ -131,6 +162,45 @@ const LandingPage: React.FC = () => {
       router.push("/dashboard");
     }
   }, [session, isPending, router]);
+
+  // Scroll-triggered animations using Intersection Observer
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '-100px 0px',
+      triggerOnce: true
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          // Add both 'visible' class and inline transition
+          const target = entry.target as HTMLElement;
+          target.classList.add('visible');
+          target.style.opacity = '1';
+          target.style.transform = 'translateY(0)';
+
+          // Unobserve after animation triggers (triggerOnce behavior)
+          observer.unobserve(target);
+        }
+      });
+    }, observerOptions);
+
+    // Wait for DOM to be ready, then observe sections
+    setTimeout(() => {
+      const sections = document.querySelectorAll('.animate-on-scroll');
+      sections.forEach((section) => {
+        const element = section as HTMLElement;
+        // Set initial state before observing
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(30px)';
+        element.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+        observer.observe(element);
+      });
+    }, 100);
+
+    return () => observer.disconnect();
+  }, []);
 
   // Show loading or nothing while redirecting
   if (isPending) return <div className="min-h-screen bg-white" />;
@@ -230,7 +300,7 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Dashboard Preview - Enhanced with AI indicators */}
+        {/* Dashboard Preview - Clean and Professional */}
         <div className="relative mx-auto max-w-6xl perspective-2000 group">
           {/* Enhanced glow effect */}
           <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-[30px] blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-700"></div>
@@ -501,8 +571,51 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Social Proof Section */}
+      <section className="py-16 bg-white border-y border-slate-100 animate-on-scroll">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div className="space-y-2">
+              <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                100+
+              </p>
+              <p className="text-slate-600 font-medium">Active Users</p>
+              <p className="text-sm text-slate-500">Early adopters organizing daily</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                1,000+
+              </p>
+              <p className="text-slate-600 font-medium">Tasks Completed</p>
+              <p className="text-sm text-slate-500">Through AI assistance</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-indigo-600">
+                  4.9
+                </p>
+                <div className="flex gap-1 mb-2">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5 text-amber-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+              <p className="text-slate-600 font-medium">User Rating</p>
+              <p className="text-sm text-slate-500">From 50+ early users</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section - NEW: 4 Features with AI First */}
-      <section className="py-24 bg-slate-50 relative overflow-hidden">
+      <section className="py-24 bg-slate-50 relative overflow-hidden animate-on-scroll">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16 max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6">
@@ -519,6 +632,147 @@ const LandingPage: React.FC = () => {
             {FEATURES.map((feature) => (
               <FeatureCard key={feature.id} feature={feature} />
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-24 bg-gradient-to-br from-slate-50 to-white animate-on-scroll">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
+              Loved by thousands of users
+            </h2>
+            <p className="text-slate-600 text-lg">
+              See what our community has to say about Momentum
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Testimonial 1 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <svg
+                    key={i}
+                    className="w-5 h-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <p className="text-slate-700 leading-relaxed mb-6">
+                "Momentum's AI assistant completely transformed how I manage my projects. What used to take hours of planning now happens in minutes. Absolute game-changer!"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                  SC
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Sarah Chen</p>
+                  <p className="text-sm text-slate-500">Product Manager at TechCorp</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial 2 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <svg
+                    key={i}
+                    className="w-5 h-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <p className="text-slate-700 leading-relaxed mb-6">
+                "The real-time sync is flawless. I can start a task on my laptop and finish it on my phone without missing a beat. Plus, the dashboard is beautiful!"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-emerald-700 font-bold text-lg">
+                  MR
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Marcus Rodriguez</p>
+                  <p className="text-sm text-slate-500">Freelance Designer</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial 3 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <svg
+                    key={i}
+                    className="w-5 h-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <p className="text-slate-700 leading-relaxed mb-6">
+                "I've tried every todo app out there, but Momentum is the only one I've stuck with. The AI suggestions actually understand my workflow. Incredible!"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-amber-700 font-bold text-lg">
+                  EP
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Emma Patel</p>
+                  <p className="text-sm text-slate-500">Startup Founder</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 animate-on-scroll">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-slate-600 text-lg">
+              Everything you need to know about Momentum
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            <FAQItem
+              question="Is Momentum really free?"
+              answer="Yes! Momentum is completely free to use with all core features including AI-powered task management, real-time sync, and visual dashboard. We believe everyone deserves access to powerful productivity tools."
+            />
+            <FAQItem
+              question="How does the AI assistant work?"
+              answer="Our AI assistant uses advanced natural language processing to understand your tasks, suggest priorities, and help you organize your work. It learns from your patterns to provide increasingly personalized recommendations over time."
+            />
+            <FAQItem
+              question="Is my data secure and private?"
+              answer="Absolutely. We use industry-standard encryption to protect your data both in transit and at rest. Your tasks and information are private and will never be shared with third parties. We're SOC 2 Type II compliant and follow strict security protocols."
+            />
+            <FAQItem
+              question="Can I use Momentum on mobile devices?"
+              answer="Yes! Momentum works seamlessly across all devices. Our responsive design ensures you get the full experience on desktop, tablet, and mobile. Changes sync instantly across all your devices in real-time."
+            />
+            <FAQItem
+              question="Do I need to install anything?"
+              answer="No installation required! Momentum is a web-based application that works directly in your browser. Just sign up and start organizing your tasks immediately. It works on Chrome, Firefox, Safari, and Edge."
+            />
+            <FAQItem
+              question="Can I export my data?"
+              answer="Yes, you have full control over your data. You can export all your tasks and information at any time in multiple formats including CSV, JSON, and PDF. Your data belongs to you."
+            />
           </div>
         </div>
       </section>

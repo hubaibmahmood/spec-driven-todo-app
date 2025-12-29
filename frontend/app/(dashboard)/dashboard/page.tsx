@@ -14,6 +14,9 @@ import {
   Trash2,
   Calendar,
   MoreVertical,
+  CheckSquare,
+  LayoutDashboard,
+  AlertCircle,
 } from "lucide-react";
 
 // Types
@@ -396,32 +399,32 @@ function DashboardContent() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
           <StatsCard
-            icon={ListTodo}
+            icon={LayoutDashboard}
             label="Total Tasks"
             value={stats.total}
-            accentColor="bg-indigo-500"
-            bgColor="bg-indigo-300"
+            accentColor="bg-indigo-600"
+            bgColor="bg-indigo-100"
           />
           <StatsCard
-            icon={CheckCircle2}
+            icon={CheckSquare}
             label="Completed"
             value={stats.completed}
-            accentColor="bg-emerald-800"
-            bgColor="bg-emerald-300"
+            accentColor="bg-emerald-600"
+            bgColor="bg-emerald-100"
           />
           <StatsCard
             icon={Clock}
             label="Pending"
             value={stats.pending}
-            accentColor="bg-amber-500"
-            bgColor="bg-amber-300"
+            accentColor="bg-amber-600"
+            bgColor="bg-amber-100"
           />
           <StatsCard
-            icon={AlertTriangle}
+            icon={AlertCircle}
             label="Overdue"
             value={stats.overdue}
-            accentColor="bg-rose-500"
-            bgColor="bg-rose-300"
+            accentColor="bg-rose-600"
+            bgColor="bg-rose-100"
           />
         </div>
 

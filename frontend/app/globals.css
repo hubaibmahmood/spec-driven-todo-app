@@ -39,6 +39,8 @@ body {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
+
+        /* Landing Page Animations */
         @keyframes blob {
           0% { transform: translate(0px, 0px) scale(1); }
           33% { transform: translate(30px, -50px) scale(1.1); }
@@ -48,9 +50,57 @@ body {
         .animate-blob {
           animation: blob 7s infinite;
         }
+
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes gradient-x {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-gradient-x {
+          background-size: 200% auto;
+          animation: gradient-x 3s ease infinite;
+        }
+
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.8s ease-out forwards;
+        }
+
+        /* Scroll animation handled by inline styles via Intersection Observer */
+        .animate-on-scroll {
+          will-change: opacity, transform;
+        }
+
         .animation-delay-2000 {
           animation-delay: 2s;
         }
         .animation-delay-4000 {
           animation-delay: 4s;
+        }
+        .delay-100 {
+          animation-delay: 100ms;
+        }
+        .delay-200 {
+          animation-delay: 200ms;
+        }
+
+        /* Smooth scroll behavior */
+        html {
+          scroll-behavior: smooth;
         }

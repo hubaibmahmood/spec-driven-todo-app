@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   CheckSquare,
   ArrowRight,
@@ -17,17 +17,208 @@ import {
   Calendar,
   AlertCircle,
   ChevronDown,
+  MessageSquare,
+  Shield,
+  CheckCircle2,
+  ListTodo,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import type { Feature, CTAButtonProps } from "@/types/landing";
+import Image from "next/image";
+
+// Features Data - AI Assistant First
+const FEATURES: readonly Feature[] = [
+  {
+    id: "ai-assistant",
+    icon: MessageSquare,
+    iconColor: "text-indigo-600",
+    iconBgColor: "bg-indigo-50",
+    title: "AI-Powered Assistant",
+    description: "Get intelligent suggestions, automated task organization, and natural language task creation. Your personal productivity copilot."
+  },
+  {
+    id: "dashboard",
+    icon: LayoutDashboard,
+    iconColor: "text-emerald-600",
+    iconBgColor: "bg-emerald-50",
+    title: "Visual Dashboard",
+    description: "See your productivity at a glance with beautiful charts, real-time statistics, and organized task views that keep you focused."
+  },
+  {
+    id: "realtime",
+    icon: Zap,
+    iconColor: "text-amber-600",
+    iconBgColor: "bg-amber-50",
+    title: "Real-Time Updates",
+    description: "Changes sync instantly across all your devices. Work seamlessly from desktop, mobile, or tablet without missing a beat."
+  },
+  {
+    id: "security",
+    icon: Shield,
+    iconColor: "text-blue-600",
+    iconBgColor: "bg-blue-50",
+    title: "Secure & Private",
+    description: "Your data is encrypted and secure. Industry-standard authentication keeps your tasks and projects private and protected."
+  }
+] as const;
+
+// CTAButton Component with Analytics
+const CTAButton: React.FC<CTAButtonProps> = ({
+  href,
+  variant,
+  location,
+  children,
+  className = ""
+}) => {
+  const handleClick = () => {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'cta_click', {
+        event_category: 'Landing Page',
+        event_label: location,
+        value: 1
+      });
+    }
+  };
+
+  const baseStyles = variant === "primary"
+    ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/30 hover:shadow-2xl"
+    : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300 shadow-sm";
+
+  return (
+    <Link
+      href={href}
+      onClick={handleClick}
+      className={`px-8 py-4 font-bold rounded-2xl text-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2 ${baseStyles} ${className}`}
+    >
+      {children}
+    </Link>
+  );
+};
+
+// FeatureCard Component
+const FeatureCard: React.FC<{ feature: Feature }> = ({ feature }) => {
+  const Icon = feature.icon;
+
+  return (
+    <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+      {/* Subtle gradient background on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 via-purple-50/0 to-pink-50/0 group-hover:from-indigo-50/50 group-hover:via-purple-50/30 group-hover:to-pink-50/50 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
+
+      <div className="relative z-10">
+        <div className={`w-12 h-12 ${feature.iconBgColor} rounded-xl flex items-center justify-center ${feature.iconColor} mb-6 group-hover:scale-110 transition-transform duration-300`}>
+          <Icon className="w-6 h-6" aria-hidden="true" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900 mb-3">
+          {feature.title}
+        </h3>
+        <p className="text-slate-600 leading-relaxed">
+          {feature.description}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// FAQ Item Component
+const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="border-b border-slate-200 last:border-0">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full py-6 flex items-center justify-between text-left hover:text-indigo-600 transition-colors group"
+      >
+        <span className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600 pr-8">
+          {question}
+        </span>
+        <ChevronDown
+          className={`w-5 h-5 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 transition-transform duration-300 ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-300 ${
+          isOpen ? 'max-h-96 pb-6' : 'max-h-0'
+        }`}
+      >
+        <p className="text-slate-600 leading-relaxed">{answer}</p>
+      </div>
+    </div>
+  );
+};
 
 const LandingPage: React.FC = () => {
+  const { data: session, isPending } = useSession();
+  const router = useRouter();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (session && !isPending) {
+      router.push("/dashboard");
+    }
+  }, [session, isPending, router]);
+
+  // Scroll-triggered animations using Intersection Observer
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '-100px 0px',
+      triggerOnce: true
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          // Add both 'visible' class and inline transition
+          const target = entry.target as HTMLElement;
+          target.classList.add('visible');
+          target.style.opacity = '1';
+          target.style.transform = 'translateY(0)';
+
+          // Unobserve after animation triggers (triggerOnce behavior)
+          observer.unobserve(target);
+        }
+      });
+    }, observerOptions);
+
+    // Wait for DOM to be ready, then observe sections
+    setTimeout(() => {
+      const sections = document.querySelectorAll('.animate-on-scroll');
+      sections.forEach((section) => {
+        const element = section as HTMLElement;
+        // Set initial state before observing
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(30px)';
+        element.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+        observer.observe(element);
+      });
+    }, 100);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Show loading or nothing while redirecting
+  if (isPending) return <div className="min-h-screen bg-white" />;
+  if (session) return null; // Redirecting...
+
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-700 overflow-x-hidden">
-      {/* Background Decor */}
+      {/* Enhanced Background with AI-inspired patterns */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-indigo-50/50 rounded-[100%] blur-3xl opacity-50 mix-blend-multiply"></div>
-        <div className="absolute top-[20%] right-0 w-[800px] h-[600px] bg-purple-50/50 rounded-[100%] blur-3xl opacity-50 mix-blend-multiply"></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 brightness-100 contrast-150"></div>
+        {/* Gradient mesh background */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-[100%] blur-3xl opacity-60 mix-blend-multiply"></div>
+        <div className="absolute top-[20%] right-0 w-[900px] h-[700px] bg-gradient-to-bl from-purple-50 via-indigo-50 to-blue-50 rounded-[100%] blur-3xl opacity-50 mix-blend-multiply"></div>
+
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]"></div>
+
+        {/* Grain texture */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.015] brightness-100 contrast-150"></div>
       </div>
 
       {/* Navigation */}
@@ -49,61 +240,74 @@ const LandingPage: React.FC = () => {
             >
               Log in
             </Link>
-            <Link
+            <CTAButton
               href="/register"
-              className="px-5 py-2.5 bg-slate-900 text-white text-sm font-semibold rounded-full hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
+              variant="primary"
+              location="nav"
+              className="!px-5 !py-2.5 !text-sm !rounded-full"
             >
               Get Started <ArrowRight className="w-4 h-4" />
-            </Link>
+            </CTAButton>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section - AI-Focused */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center max-w-4xl mx-auto relative z-10 mb-20">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-8 shadow-sm">
+          {/* Badge with enhanced styling */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-8 shadow-sm animate-pulse-slow">
             <span className="flex h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></span>
             New V2.0 Available
           </div>
 
+          {/* AI-Focused Headline with Gradient */}
           <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight text-slate-900 mb-8 leading-[1.1]">
-            Organize your work, <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600">
-              amplify your impact.
+            Organize your work with <br className="hidden sm:block" />
+            <span className="relative inline-block">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 animate-gradient-x">
+                AI-powered assistance
+              </span>
+              {/* Subtle underline accent */}
+              <div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-full opacity-30"></div>
             </span>
           </h1>
 
-          <p className="text-xl text-slate-500 mb-10 leading-relaxed max-w-2xl mx-auto font-medium">
-            Momentum helps you manage projects, track tasks, and reach new
-            productivity peaks. Simple enough for personal use, powerful enough
-            for teams.
+          {/* Updated Subheadline */}
+          <p className="text-xl text-slate-600 mb-10 leading-relaxed max-w-2xl mx-auto font-medium">
+            Let AI help you manage tasks, prioritize smartly, and reach your goals faster.
+            Simple enough for personal use, powerful enough for teams.
           </p>
 
+          {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
+            <CTAButton
               href="/register"
-              className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-lg transition-all shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-2"
+              variant="primary"
+              location="hero"
+              className="w-full sm:w-auto"
             >
-              Get Started
-            </Link>
-            <Link
+              Get Started for Free
+            </CTAButton>
+            <CTAButton
               href="/login"
-              className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-2xl text-lg border border-slate-200 transition-all hover:border-slate-300 flex items-center justify-center gap-2 shadow-sm"
+              variant="secondary"
+              location="hero"
+              className="w-full sm:w-auto"
             >
               Sign in
-            </Link>
+            </CTAButton>
           </div>
         </div>
 
-        {/* Dashboard Preview - Cleaned Up & Polished */}
+        {/* Dashboard Preview - Clean and Professional */}
         <div className="relative mx-auto max-w-6xl perspective-2000 group">
-          {/* Glow Effect */}
+          {/* Enhanced glow effect */}
           <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-[30px] blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-700"></div>
 
-          {/* Main Container with Tilt */}
+          {/* Main Container */}
           <div className="relative bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden transform rotate-x-6 group-hover:rotate-x-2 transition-transform duration-700 ease-out origin-top">
-            {/* Window Controls (Mac Style) */}
+            {/* Window Controls */}
             <div className="h-10 bg-slate-50 border-b border-slate-200 flex items-center px-4 gap-2">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-red-400 border border-red-500/20"></div>
@@ -115,9 +319,9 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Application Layout Replica */}
+            {/* Application Layout */}
             <div className="flex h-[750px] bg-slate-50 font-sans text-left overflow-hidden">
-              {/* Sidebar - Clean & Structured */}
+              {/* Sidebar */}
               <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 flex-shrink-0">
                 <div className="p-6 h-20 flex items-center">
                   <div className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
@@ -158,9 +362,9 @@ const LandingPage: React.FC = () => {
                 </div>
               </aside>
 
-              {/* Main Content Area */}
+              {/* Main Content */}
               <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50">
-                {/* Header - Minimalist */}
+                {/* Header */}
                 <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-end px-8 flex-shrink-0">
                   <div className="flex items-center gap-4">
                     <div className="relative p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors cursor-pointer">
@@ -170,246 +374,192 @@ const LandingPage: React.FC = () => {
                   </div>
                 </header>
 
-                {/* Main Body - Content Area */}
-                <main className="flex-1 p-8 space-y-8 overflow-y-auto no-scrollbar">
+                {/* Main Body */}
+                <main className="flex-1 p-8 space-y-6 overflow-y-auto no-scrollbar bg-gradient-to-br from-stone-50 via-white to-indigo-50/30">
                   {/* Welcome Section */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <h1 className="text-2xl font-bold text-slate-900">
-                        Good Morning, John
-                      </h1>
-                      <p className="text-slate-500 text-sm mt-1">
-                        You have 4 pending tasks for today.
-                      </p>
-                    </div>
-                    <button className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg shadow-sm transition-all text-sm font-medium">
-                      <Plus className="w-4 h-4" />
-                      <span>New Task</span>
-                    </button>
+                  <div>
+                    <h2 className="text-3xl font-bold text-stone-900 mb-1">
+                      Good morning, Hubaib Mehmood! 👋
+                    </h2>
+                    <p className="text-sm text-stone-500">
+                      You have 1 task pending today
+                    </p>
                   </div>
 
-                  {/* Stats Grid - Cleaner Layout */}
+                  {/* Stats Grid */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Stat Card 1 */}
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                            Total Tasks
-                          </p>
-                          <h3 className="text-2xl font-bold text-slate-900 mt-1">
-                            12
-                          </h3>
-                        </div>
-                        <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
-                          <Layers className="w-4 h-4" />
+                    {/* Total Tasks */}
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
+                      <div className="flex items-start justify-between mb-3">
+                        <p className="text-sm text-stone-500">Total Tasks</p>
+                        <div className="p-2.5 rounded-xl bg-indigo-100">
+                          <LayoutDashboard className="w-5 h-5 text-indigo-600" />
                         </div>
                       </div>
-                      <div className="mt-3 flex items-center text-xs text-slate-500 font-medium">
-                        <span className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mr-2">
-                          +2
-                        </span>
-                        from yesterday
-                      </div>
+                      <p className="text-4xl font-bold text-stone-900">7</p>
                     </div>
 
-                    {/* Stat Card 2 */}
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                            Pending
-                          </p>
-                          <h3 className="text-2xl font-bold text-indigo-600 mt-1">
-                            4
-                          </h3>
-                        </div>
-                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-500">
-                          <Clock className="w-4 h-4" />
+                    {/* Completed */}
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
+                      <div className="flex items-start justify-between mb-3">
+                        <p className="text-sm text-stone-500">Completed</p>
+                        <div className="p-2.5 rounded-xl bg-emerald-100">
+                          <CheckSquare className="w-5 h-5 text-emerald-600" />
                         </div>
                       </div>
-                      <div className="mt-3 flex items-center text-xs text-slate-500 font-medium">
-                        <span className="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded mr-2">
-                          3 due
-                        </span>
-                        today
-                      </div>
+                      <p className="text-4xl font-bold text-stone-900">2</p>
                     </div>
 
-                    {/* Stat Card 3 */}
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                            High Priority
-                          </p>
-                          <h3 className="text-2xl font-bold text-orange-600 mt-1">
-                            3
-                          </h3>
-                        </div>
-                        <div className="p-2 bg-orange-50 rounded-lg text-orange-500">
-                          <AlertCircle className="w-4 h-4" />
+                    {/* Pending */}
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
+                      <div className="flex items-start justify-between mb-3">
+                        <p className="text-sm text-stone-500">Pending</p>
+                        <div className="p-2.5 rounded-xl bg-amber-100">
+                          <Clock className="w-5 h-5 text-amber-600" />
                         </div>
                       </div>
-                      <div className="mt-3 flex items-center text-xs text-slate-500 font-medium">
-                        Action required
-                      </div>
+                      <p className="text-4xl font-bold text-stone-900">5</p>
                     </div>
 
-                    {/* Stat Card 4 - Completion (FIXED) */}
-                    <div className="bg-white p-5 rounded-xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] border border-slate-100 flex items-center gap-4">
-                      <div className="relative w-16 h-16 flex-shrink-0">
-                        <svg
-                          className="w-full h-full transform -rotate-90"
-                          viewBox="0 0 64 64"
-                        >
-                          <circle
-                            cx="32"
-                            cy="32"
-                            r="28"
-                            stroke="currentColor"
-                            strokeWidth="6"
-                            fill="transparent"
-                            className="text-slate-100"
-                          />
-                          <circle
-                            cx="32"
-                            cy="32"
-                            r="28"
-                            stroke="currentColor"
-                            strokeWidth="6"
-                            fill="transparent"
-                            strokeDasharray="175.9"
-                            strokeDashoffset="58"
-                            className="text-emerald-500"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-800">
-                          67%
+                    {/* Overdue */}
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
+                      <div className="flex items-start justify-between mb-3">
+                        <p className="text-sm text-stone-500">Overdue</p>
+                        <div className="p-2.5 rounded-xl bg-rose-100">
+                          <AlertCircle className="w-5 h-5 text-rose-600" />
                         </div>
                       </div>
-                      <div className="flex flex-col justify-center min-w-0">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                          Completion
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1 truncate">
-                          Great progress!
-                        </p>
-                      </div>
+                      <p className="text-4xl font-bold text-stone-900">1</p>
                     </div>
                   </div>
 
-                  {/* Filters & Search - Cleaner */}
-                  <div className="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex gap-1 bg-slate-100/80 p-1 rounded-lg">
-                      <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-white text-indigo-600 shadow-sm transition-all">
-                        All Tasks
-                      </button>
-                      <button className="px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 hover:bg-slate-200/50 transition-all">
-                        Active
-                      </button>
-                      <button className="px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 hover:bg-slate-200/50 transition-all">
-                        Completed
-                      </button>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg w-64">
-                      <Search className="w-4 h-4 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search..."
-                        className="bg-transparent border-none focus:outline-none text-sm w-full placeholder-slate-400 text-slate-700"
-                        readOnly
-                      />
-                    </div>
-                    <button className="sm:hidden p-2 text-slate-400">
-                      <Search className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {/* Main Content Grid - 2/3 + 1/3 layout */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left Column - Today's Tasks (2/3) */}
+                    <div className="lg:col-span-2 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-2xl font-bold text-stone-900">Today&apos;s Tasks</h3>
+                          <p className="text-sm text-stone-500 mt-1">1 remaining</p>
+                        </div>
+                        <button className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all flex items-center gap-2">
+                          View All <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
 
-                  {/* Todo Items - Cleaner List */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                      <h3 className="text-sm font-semibold text-slate-900">
-                        Today&apos;s Focus
-                      </h3>
-                      <button className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
-                        View All <ChevronDown className="w-3 h-3" />
-                      </button>
-                    </div>
-
-                    {/* Item 1 */}
-                    <div className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-all cursor-pointer">
-                      <div className="flex items-start gap-4">
-                        <div className="mt-1 w-5 h-5 rounded-full border-2 border-slate-300 group-hover:border-indigo-500 transition-colors flex-shrink-0"></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-semibold text-slate-900 text-sm">
-                              Review Project Requirements
+                      {/* Task Card */}
+                      <div className="bg-white rounded-xl p-4 border border-stone-100 hover:shadow-md transition-all">
+                        <div className="flex items-start gap-4">
+                          <div className="w-5 h-5 rounded-full border-2 border-stone-300 mt-0.5 flex-shrink-0"></div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-stone-900 text-base mb-1">
+                              Buy clothes
                             </h4>
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 rounded text-slate-400">
-                              <MoreVertical className="w-4 h-4" />
-                            </div>
-                          </div>
-                          <p className="text-slate-500 text-xs mt-1 line-clamp-1">
-                            Review the latest PRD updates and technical specs.
-                          </p>
-                          <div className="flex items-center gap-2 mt-3">
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-orange-50 text-orange-600 border border-orange-100">
-                              High
-                            </span>
-                            <div className="flex items-center gap-1 text-[11px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
-                              <Calendar className="w-3 h-3" /> Today
+                            <p className="text-sm text-stone-500 mb-3">
+                              shirt, suit, pant
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-orange-50 text-orange-600 border border-orange-200">
+                                High
+                              </span>
+                              <div className="flex items-center gap-1.5 text-sm text-stone-500">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>10:00 PM</span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Item 2 */}
-                    <div className="group bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-all cursor-pointer">
-                      <div className="flex items-start gap-4">
-                        <div className="mt-1 w-5 h-5 rounded-full border-2 border-slate-300 group-hover:border-indigo-500 transition-colors flex-shrink-0"></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-semibold text-slate-900 text-sm">
-                              Update Landing Page Design
-                            </h4>
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-100 rounded text-slate-400">
-                              <MoreVertical className="w-4 h-4" />
+                    {/* Right Column - Widgets (1/3) */}
+                    <div className="space-y-6">
+                      {/* Task Progress Widget */}
+                      <div className="bg-white rounded-2xl p-6 border border-stone-100 shadow-sm">
+                        <h3 className="text-lg font-bold text-stone-900 mb-6">Task Progress</h3>
+
+                        <div className="flex items-center gap-6 mb-6">
+                          {/* Circular Progress */}
+                          <div className="relative w-28 h-28 flex-shrink-0">
+                            <svg className="w-full h-full -rotate-90">
+                              <circle
+                                cx="56"
+                                cy="56"
+                                r="45"
+                                stroke="#f5f5f4"
+                                strokeWidth="10"
+                                fill="none"
+                              />
+                              <circle
+                                cx="56"
+                                cy="56"
+                                r="45"
+                                stroke="#6366f1"
+                                strokeWidth="10"
+                                fill="none"
+                                strokeDasharray="283"
+                                strokeDashoffset="201"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-2xl font-bold text-stone-900">29%</span>
                             </div>
                           </div>
-                          <p className="text-slate-500 text-xs mt-1 line-clamp-1">
-                            Implement new dashboard preview and cleanup layout.
-                          </p>
-                          <div className="flex items-center gap-2 mt-3">
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-600 border border-blue-100">
-                              Medium
-                            </span>
-                            <div className="flex items-center gap-1 text-[11px] text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
-                              <Clock className="w-3 h-3" /> 2h left
+                        </div>
+
+                        {/* Legend */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
+                              <span className="text-sm text-stone-600">Completed</span>
                             </div>
+                            <span className="text-lg font-bold text-stone-900">2</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-stone-200"></div>
+                              <span className="text-sm text-stone-600">Pending</span>
+                            </div>
+                            <span className="text-lg font-bold text-stone-900">5</span>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Item 3 (Completed) */}
-                    <div className="group bg-white/60 rounded-xl border border-slate-100 p-4 transition-all">
-                      <div className="flex items-start gap-4">
-                        <div className="mt-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-emerald-500 flex items-center justify-center flex-shrink-0">
-                          <CheckSquare className="w-3 h-3 text-white" />
+                      {/* Upcoming Tasks Widget */}
+                      <div className="bg-white rounded-2xl p-6 border border-stone-100 shadow-sm">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Calendar className="w-5 h-5 text-indigo-600" />
+                          <h3 className="text-lg font-bold text-stone-900">Upcoming Tasks</h3>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-semibold text-slate-500 text-sm line-through">
-                              Weekly Team Sync
-                            </h4>
+
+                        <div className="space-y-3">
+                          {/* Upcoming Task 1 */}
+                          <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors">
+                            <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-stone-900 truncate mb-1">
+                                Generate documentation for docu...
+                              </p>
+                              <p className="text-xs text-stone-500">
+                                Tomorrow • 11:59 PM
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-slate-400 text-xs mt-1 line-clamp-1">
-                            Prepare slides for the engineering all-hands
-                            meeting.
-                          </p>
+
+                          {/* Upcoming Task 2 */}
+                          <div className="flex items-start gap-3 p-2 rounded-lg hover:bg-stone-50 transition-colors">
+                            <div className="w-2 h-2 rounded-full bg-rose-500 mt-2 flex-shrink-0"></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-stone-900 truncate mb-1">
+                                generate proper documentation for...
+                              </p>
+                              <p className="text-xs text-stone-500">
+                                Tomorrow • 11:59 PM
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -421,58 +571,208 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="py-24 bg-slate-50 relative overflow-hidden">
+      {/* Social Proof Section */}
+      <section className="py-16 bg-white border-y border-slate-100 animate-on-scroll">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            <div className="space-y-2">
+              <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                100+
+              </p>
+              <p className="text-slate-600 font-medium">Active Users</p>
+              <p className="text-sm text-slate-500">Early adopters organizing daily</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                1,000+
+              </p>
+              <p className="text-slate-600 font-medium">Tasks Completed</p>
+              <p className="text-sm text-slate-500">Through AI assistance</p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-indigo-600">
+                  4.9
+                </p>
+                <div className="flex gap-1 mb-2">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className="w-5 h-5 text-amber-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+              <p className="text-slate-600 font-medium">User Rating</p>
+              <p className="text-sm text-slate-500">From 50+ early users</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section - NEW: 4 Features with AI First */}
+      <section className="py-24 bg-slate-50 relative overflow-hidden animate-on-scroll">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16 max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6">
               Designed for modern workflows
             </h2>
-            <p className="text-slate-500 text-lg">
-              Stop juggling multiple tools. Momentum combines organization,
-              analytics, and speed in one beautiful interface.
+            <p className="text-slate-600 text-lg">
+              Experience the future of task management with AI-powered intelligence,
+              real-time collaboration, and enterprise-grade security.
+            </p>
+          </div>
+
+          {/* Updated Grid: 4 columns on large screens */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {FEATURES.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-24 bg-gradient-to-br from-slate-50 to-white animate-on-scroll">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
+              Loved by thousands of users
+            </h2>
+            <p className="text-slate-600 text-lg">
+              See what our community has to say about Momentum
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 mb-6 group-hover:scale-110 transition-transform">
-                <Layers className="w-6 h-6" />
+            {/* Testimonial 1 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <svg
+                    key={i}
+                    className="w-5 h-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">
-                Smart Organization
-              </h3>
-              <p className="text-slate-500 leading-relaxed">
-                Categorize with tags, prioritize with ease, and filter to focus
-                on what matters right now.
+              <p className="text-slate-700 leading-relaxed mb-6">
+                "Momentum's AI assistant completely transformed how I manage my projects. What used to take hours of planning now happens in minutes. Absolute game-changer!"
               </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                  SC
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Sarah Chen</p>
+                  <p className="text-sm text-slate-500">Product Manager at TechCorp</p>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 mb-6 group-hover:scale-110 transition-transform">
-                <BarChart3 className="w-6 h-6" />
+            {/* Testimonial 2 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <svg
+                    key={i}
+                    className="w-5 h-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">
-                Instant Analytics
-              </h3>
-              <p className="text-slate-500 leading-relaxed">
-                Visualize your progress. Know exactly how much you&apos;ve
-                accomplished and what&apos;s left.
+              <p className="text-slate-700 leading-relaxed mb-6">
+                "The real-time sync is flawless. I can start a task on my laptop and finish it on my phone without missing a beat. Plus, the dashboard is beautiful!"
               </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-emerald-700 font-bold text-lg">
+                  MR
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Marcus Rodriguez</p>
+                  <p className="text-sm text-slate-500">Freelance Designer</p>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
-              <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 mb-6 group-hover:scale-110 transition-transform">
-                <Zap className="w-6 h-6" />
+            {/* Testimonial 3 */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <svg
+                    key={i}
+                    className="w-5 h-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">
-                Lightning Fast
-              </h3>
-              <p className="text-slate-500 leading-relaxed">
-                Built for speed. Instant interactions, zero lag, and a fluid
-                experience on any device.
+              <p className="text-slate-700 leading-relaxed mb-6">
+                "I've tried every todo app out there, but Momentum is the only one I've stuck with. The AI suggestions actually understand my workflow. Incredible!"
               </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-amber-700 font-bold text-lg">
+                  EP
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Emma Patel</p>
+                  <p className="text-sm text-slate-500">Startup Founder</p>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 animate-on-scroll">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-slate-600 text-lg">
+              Everything you need to know about Momentum
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            <FAQItem
+              question="Is Momentum really free?"
+              answer="Yes! Momentum is completely free to use with all core features including AI-powered task management, real-time sync, and visual dashboard. We believe everyone deserves access to powerful productivity tools."
+            />
+            <FAQItem
+              question="How does the AI assistant work?"
+              answer="Our AI assistant uses advanced natural language processing to understand your tasks, suggest priorities, and help you organize your work. It learns from your patterns to provide increasingly personalized recommendations over time."
+            />
+            <FAQItem
+              question="Is my data secure and private?"
+              answer="Absolutely. We use industry-standard encryption to protect your data both in transit and at rest. Your tasks and information are private and will never be shared with third parties. We're SOC 2 Type II compliant and follow strict security protocols."
+            />
+            <FAQItem
+              question="Can I use Momentum on mobile devices?"
+              answer="Yes! Momentum works seamlessly across all devices. Our responsive design ensures you get the full experience on desktop, tablet, and mobile. Changes sync instantly across all your devices in real-time."
+            />
+            <FAQItem
+              question="Do I need to install anything?"
+              answer="No installation required! Momentum is a web-based application that works directly in your browser. Just sign up and start organizing your tasks immediately. It works on Chrome, Firefox, Safari, and Edge."
+            />
+            <FAQItem
+              question="Can I export my data?"
+              answer="Yes, you have full control over your data. You can export all your tasks and information at any time in multiple formats including CSV, JSON, and PDF. Your data belongs to you."
+            />
           </div>
         </div>
       </section>
@@ -485,15 +785,16 @@ const LandingPage: React.FC = () => {
               Ready to get organized?
             </h2>
             <p className="text-slate-400 text-xl mb-10 max-w-xl mx-auto">
-              Join thousands of users who have transformed their productivity
-              with Momentum.
+              Join thousands of users who have transformed their productivity with Momentum.
             </p>
-            <Link
+            <CTAButton
               href="/register"
-              className="px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-indigo-50 transition-all transform hover:scale-105 inline-block"
+              variant="primary"
+              location="bottom"
+              className="!bg-white !text-slate-900 hover:!bg-indigo-50 inline-flex"
             >
               Get Started for Free
-            </Link>
+            </CTAButton>
           </div>
 
           {/* Abstract Background Shapes */}
@@ -528,7 +829,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="text-center md:text-left text-sm text-slate-400 border-t border-slate-100 pt-8">
-            © 2024 Momentum Inc. All rights reserved.
+            © 2025 Momentum Inc. All rights reserved.
           </div>
         </div>
       </footer>

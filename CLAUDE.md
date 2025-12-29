@@ -226,6 +226,8 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - Service-to-service authentication (X-Service-Auth header pattern), in-memory rate limiting (010-settings-ui-api-keys)
 - TypeScript 5.x with React 19.2.1 and Next.js 16.0.9 + better-auth v1.4.6 (React client), lucide-react v0.560.0 (icons), date-fns v4.1.0 (date formatting) (011-reset-password-frontend)
 - N/A (frontend only; backend uses Neon PostgreSQL via better-auth server from spec 004) (011-reset-password-frontend)
+- TypeScript 5.x with React 19.2.1 and Next.js 16.0.9 + lucide-react 0.560.0 (icons), better-auth 1.4.6 (authentication/session detection), Next.js Link component (routing) (012-landing-page-update)
+- N/A (static content; authentication session managed by better-auth) (012-landing-page-update)
 
 ## Recent Changes
 - **Python Best Practice**: ALWAYS use `datetime.now(UTC)` instead of deprecated `datetime.utcnow()`. Import: `from datetime import datetime, UTC`. Updated constitution.md with this requirement.

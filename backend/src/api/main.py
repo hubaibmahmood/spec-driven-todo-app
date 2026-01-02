@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
 
 from src.config import settings
-from src.api.routers import health, tasks, api_keys
+from src.api.routers import health, tasks, api_keys, auth
 from src.database.connection import engine
 from src.api.schemas.error import ErrorResponse
 from src.api.middleware import SecurityHeadersMiddleware
@@ -221,6 +221,7 @@ async def internal_server_error_handler(
 
 # Register routers
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(tasks.router)
 app.include_router(api_keys.router)
 

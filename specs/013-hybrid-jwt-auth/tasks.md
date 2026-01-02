@@ -27,10 +27,10 @@
 
 **Purpose**: Project initialization and dependency installation
 
-- [ ] T001 Install PyJWT library in backend (add to pyproject.toml, run uv sync)
-- [ ] T002 [P] Install cryptography library in backend (add to pyproject.toml for token hashing)
-- [ ] T003 [P] Install jsonwebtoken library in auth-server (npm install jsonwebtoken @types/jsonwebtoken)
-- [ ] T004 Add JWT configuration to backend/src/config.py (JWT_SECRET, JWT_ALGORITHM, JWT_ACCESS_TOKEN_EXPIRE_MINUTES, JWT_REFRESH_TOKEN_EXPIRE_DAYS, JWT_AUTH_ENABLED, JWT_ROLLOUT_PERCENTAGE)
+- [X] T001 Install PyJWT library in backend (add to pyproject.toml, run uv sync)
+- [X] T002 [P] Install cryptography library in backend (add to pyproject.toml for token hashing)
+- [X] T003 [P] Install jsonwebtoken library in auth-server (npm install jsonwebtoken @types/jsonwebtoken)
+- [X] T004 Add JWT configuration to backend/src/config.py (JWT_SECRET, JWT_ALGORITHM, JWT_ACCESS_TOKEN_EXPIRE_MINUTES, JWT_REFRESH_TOKEN_EXPIRE_DAYS, JWT_AUTH_ENABLED, JWT_ROLLOUT_PERCENTAGE)
 
 ---
 
@@ -40,14 +40,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create JWT service module in backend/src/services/jwt_service.py with TokenExpiredError and InvalidTokenError exception classes
-- [ ] T006 Create refresh token service module in backend/src/services/refresh_token_service.py with RefreshTokenError exception class
-- [ ] T007 Create auth router module in backend/src/api/routers/auth.py with /api/auth prefix
-- [ ] T008 [P] Create Pydantic schemas in backend/src/api/schemas/auth.py (TokenRefreshResponse, TokenPairResponse)
-- [ ] T009 [P] Update UserSession SQLAlchemy model in backend/src/models/database.py to map to user_sessions table with camelCase column names
-- [ ] T010 Create JWT utility module in auth-server/src/lib/jwt.ts with TypeScript interfaces
-- [ ] T011 Verify user_sessions table exists in Neon PostgreSQL with required schema (userId, token, expiresAt, ipAddress, userAgent columns) via database query
-- [ ] T012 [P] Create error response schemas in backend/src/api/schemas/auth.py (ErrorResponse with error_code field, TokenExpiredError, RefreshTokenExpiredError, InvalidRefreshTokenError)
+- [X] T005 Create JWT service module in backend/src/services/jwt_service.py with TokenExpiredError and InvalidTokenError exception classes
+- [X] T006 Create refresh token service module in backend/src/services/refresh_token_service.py with RefreshTokenError exception class
+- [X] T007 Create auth router module in backend/src/api/routers/auth.py with /api/auth prefix
+- [X] T008 [P] Create Pydantic schemas in backend/src/api/schemas/auth.py (TokenRefreshResponse, TokenPairResponse)
+- [X] T009 [P] Update UserSession SQLAlchemy model in backend/src/models/database.py to map to user_sessions table with camelCase column names
+- [X] T010 Create JWT utility module in auth-server/src/lib/jwt.ts with TypeScript interfaces
+- [X] T011 Verify user_sessions table exists in Neon PostgreSQL with required schema (userId, token, expiresAt, ipAddress, userAgent columns) via database query
+- [X] T012 [P] Create error response schemas in backend/src/api/schemas/auth.py (ErrorResponse with error_code field, TokenExpiredError, RefreshTokenExpiredError, InvalidRefreshTokenError)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -61,23 +61,23 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Implement generate_access_token() method in backend/src/services/jwt_service.py (creates JWT with sub, iat, exp, type claims, 30-minute expiration)
-- [ ] T014 [P] [US1] Implement validate_access_token() method in backend/src/services/jwt_service.py (decodes JWT, validates signature and type claim, returns user_id)
-- [ ] T015 [US1] Implement generate_refresh_token() function in backend/src/services/refresh_token_service.py (32 bytes random via secrets.token_urlsafe)
-- [ ] T016 [US1] Implement hash_refresh_token() function in backend/src/services/refresh_token_service.py (SHA-256 hash with hashlib)
-- [ ] T017 [US1] Implement store_refresh_token() method in backend/src/services/refresh_token_service.py (saves hashed token to user_sessions table with 7-day expiration)
-- [ ] T018 [P] [US1] Add generateAccessToken() function to auth-server/src/lib/jwt.ts (signs JWT with HMAC-SHA256, 30-minute expiration)
-- [ ] T019 [P] [US1] Add generateRefreshToken() function to auth-server/src/lib/jwt.ts (32 bytes crypto.randomBytes base64url)
-- [ ] T020 [P] [US1] Add hashRefreshToken() function to auth-server/src/lib/jwt.ts (SHA-256 with crypto.createHash)
+- [X] T013 [P] [US1] Implement generate_access_token() method in backend/src/services/jwt_service.py (creates JWT with sub, iat, exp, type claims, 30-minute expiration)
+- [X] T014 [P] [US1] Implement validate_access_token() method in backend/src/services/jwt_service.py (decodes JWT, validates signature and type claim, returns user_id)
+- [X] T015 [US1] Implement generate_refresh_token() function in backend/src/services/refresh_token_service.py (32 bytes random via secrets.token_urlsafe)
+- [X] T016 [US1] Implement hash_refresh_token() function in backend/src/services/refresh_token_service.py (SHA-256 hash with hashlib)
+- [X] T017 [US1] Implement store_refresh_token() method in backend/src/services/refresh_token_service.py (saves hashed token to user_sessions table with 7-day expiration)
+- [X] T018 [P] [US1] Add generateAccessToken() function to auth-server/src/lib/jwt.ts (signs JWT with HMAC-SHA256, 30-minute expiration)
+- [X] T019 [P] [US1] Add generateRefreshToken() function to auth-server/src/lib/jwt.ts (32 bytes crypto.randomBytes base64url)
+- [X] T020 [P] [US1] Add hashRefreshToken() function to auth-server/src/lib/jwt.ts (SHA-256 with crypto.createHash)
 - [ ] T021 [US1] Modify auth-server login handler to issue JWT access token on successful login (generate and return in response body)
 - [ ] T022 [US1] Generate and hash refresh token in auth-server login handler (call generateRefreshToken and hashRefreshToken)
 - [ ] T023 [US1] Store refresh token hash in user_sessions database from auth-server login handler (insert record with userId, token hash, expiresAt, ipAddress, userAgent)
 - [ ] T024 [US1] Set httpOnly cookie with refresh token in auth-server login response (HttpOnly=true, Secure=true, SameSite=Strict, Max-Age=7 days)
 - [ ] T025 [P] [US1] Update frontend/src/lib/auth-client.ts to store access token in localStorage on login response
 - [ ] T026 [P] [US1] Update frontend/src/lib/auth-client.ts to include access token in Authorization header for all API requests
-- [ ] T027 [US1] Implement get_current_user_jwt() dependency in backend/src/api/dependencies.py (validates JWT access token, returns user_id)
-- [ ] T028 [US1] Add JWT validation attempt in get_current_user() dependency with feature flag check (try JWT first if JWT_AUTH_ENABLED=true)
-- [ ] T029 [US1] Add fallback to session validation in get_current_user() when JWT validation fails or is disabled (catch InvalidTokenError, try session auth)
+- [X] T027 [US1] Implement get_current_user_jwt() dependency in backend/src/api/dependencies.py (validates JWT access token, returns user_id)
+- [X] T028 [US1] Add JWT validation attempt in get_current_user() dependency with feature flag check (try JWT first if JWT_AUTH_ENABLED=true)
+- [X] T029 [US1] Add fallback to session validation in get_current_user() when JWT validation fails or is disabled (catch InvalidTokenError, try session auth)
 - [ ] T030 [US1] Update auth-server signup handler to issue JWT tokens (same flow as login: generate access token, refresh token, hash, store, set cookie)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can login and stay logged in for 7 days with access tokens validated via signature

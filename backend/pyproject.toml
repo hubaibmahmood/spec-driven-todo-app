@@ -20,6 +20,7 @@ dependencies = [
     "redis>=5.0.0",
     "greenlet>=3.0.0",
     "cryptography>=46.0.3",
+    "pyjwt>=2.8.0",
     "google-genai>=1.56.0",
     "google-api-core>=2.28.1",
 ]

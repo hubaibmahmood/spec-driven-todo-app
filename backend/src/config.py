@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     SESSION_HASH_SECRET: str = "dev-secret-key-change-in-production"
     SERVICE_AUTH_TOKEN: str = ""  # Service-to-service authentication token
 
+    # JWT Configuration
+    JWT_SECRET: str = "dev-jwt-secret-min-32-chars-change-in-production-please"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    JWT_AUTH_ENABLED: bool = False  # Feature flag for gradual rollout
+    JWT_ROLLOUT_PERCENTAGE: int = 0  # Percentage of users using JWT (0-100)
+
     # API Key Encryption Configuration
     ENCRYPTION_KEY: str = ""  # Fernet encryption key for API keys (REQUIRED in production)
 

@@ -69,16 +69,16 @@
 - [X] T018 [P] [US1] Add generateAccessToken() function to auth-server/src/lib/jwt.ts (signs JWT with HMAC-SHA256, 30-minute expiration)
 - [X] T019 [P] [US1] Add generateRefreshToken() function to auth-server/src/lib/jwt.ts (32 bytes crypto.randomBytes base64url)
 - [X] T020 [P] [US1] Add hashRefreshToken() function to auth-server/src/lib/jwt.ts (SHA-256 with crypto.createHash)
-- [ ] T021 [US1] Modify auth-server login handler to issue JWT access token on successful login (generate and return in response body)
-- [ ] T022 [US1] Generate and hash refresh token in auth-server login handler (call generateRefreshToken and hashRefreshToken)
-- [ ] T023 [US1] Store refresh token hash in user_sessions database from auth-server login handler (insert record with userId, token hash, expiresAt, ipAddress, userAgent)
-- [ ] T024 [US1] Set httpOnly cookie with refresh token in auth-server login response (HttpOnly=true, Secure=true, SameSite=Strict, Max-Age=7 days)
-- [ ] T025 [P] [US1] Update frontend/src/lib/auth-client.ts to store access token in localStorage on login response
-- [ ] T026 [P] [US1] Update frontend/src/lib/auth-client.ts to include access token in Authorization header for all API requests
+- [X] T021 [US1] Modify auth-server login handler to issue JWT access token on successful login (generate and return in response body)
+- [X] T022 [US1] Generate and hash refresh token in auth-server login handler (call generateRefreshToken and hashRefreshToken)
+- [X] T023 [US1] Store refresh token hash in user_sessions database from auth-server login handler (insert record with userId, token hash, expiresAt, ipAddress, userAgent)
+- [X] T024 [US1] Set httpOnly cookie with refresh token in auth-server login response (HttpOnly=true, Secure=true, SameSite=Strict, Max-Age=7 days)
+- [X] T025 [P] [US1] Update frontend/src/lib/auth-client.ts to store access token in localStorage on login response
+- [X] T026 [P] [US1] Update frontend/src/lib/auth-client.ts to include access token in Authorization header for all API requests
 - [X] T027 [US1] Implement get_current_user_jwt() dependency in backend/src/api/dependencies.py (validates JWT access token, returns user_id)
 - [X] T028 [US1] Add JWT validation attempt in get_current_user() dependency with feature flag check (try JWT first if JWT_AUTH_ENABLED=true)
 - [X] T029 [US1] Add fallback to session validation in get_current_user() when JWT validation fails or is disabled (catch InvalidTokenError, try session auth)
-- [ ] T030 [US1] Update auth-server signup handler to issue JWT tokens (same flow as login: generate access token, refresh token, hash, store, set cookie)
+- [X] T030 [US1] Update auth-server signup handler to issue JWT tokens (same flow as login: generate access token, refresh token, hash, store, set cookie)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can login and stay logged in for 7 days with access tokens validated via signature
 

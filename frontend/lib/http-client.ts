@@ -1,3 +1,5 @@
+import { getAccessToken } from './jwt-auth-client';
+
 export class ApiError extends Error {
   constructor(public status: number, public message: string) {
     super(message);
@@ -18,12 +20,16 @@ interface RequestOptions extends RequestInit {
 
 async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
   const { params, headers, ...rest } = options;
-  
+
   const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
   const fullUrl = `${url}${queryString}`;
 
+  // Get JWT access token from localStorage
+  const accessToken = getAccessToken();
+
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
+    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
     ...headers,
   };
 

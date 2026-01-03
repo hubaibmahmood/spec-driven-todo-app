@@ -12,6 +12,7 @@ const helmet = (helmetModule as any).default || helmetModule;
 
 // Import custom routes
 import { getCurrentUser, getUserSessions, revokeSession } from './auth/routes.js';
+import { jwtSignIn, jwtSignUp } from './auth/jwt-auth.routes.js';
 
 // Lazy initialization for serverless environments
 let _app: express.Express | null = null;
@@ -73,6 +74,10 @@ function createApp() {
   app.get('/api/auth/me', getCurrentUser);
   app.get('/api/auth/sessions', getUserSessions);
   app.delete('/api/auth/sessions/:sessionId', revokeSession);
+
+  // JWT authentication endpoints (enhanced login/signup with JWT tokens)
+  app.post('/api/auth/jwt/sign-in', express.json(), jwtSignIn);
+  app.post('/api/auth/jwt/sign-up', express.json(), jwtSignUp);
 
   // Add better-auth middleware - this must come after custom routes if they handle /api/auth paths
   app.all('/api/auth/*', (req, res) => {

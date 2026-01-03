@@ -177,7 +177,7 @@ echo "Access Token: $ACCESS_TOKEN"
 #### 3. Make an authenticated request:
 
 ```bash
-curl -X POST http://localhost:8000/api/tasks \
+curl -X POST http://localhost:8000/tasks \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
@@ -225,7 +225,7 @@ echo $PAYLOAD | base64 -d 2>/dev/null | jq
 #### 5. Test with invalid token:
 
 ```bash
-curl -X GET http://localhost:8000/api/tasks \
+curl -X GET http://localhost:8000/tasks \
   -H "Authorization: Bearer invalid-token-here" \
   -v
 ```
@@ -318,7 +318,7 @@ To verify JWT is faster than session validation:
 
 ```bash
 # With JWT (should be <1ms)
-time curl -s -X GET http://localhost:8000/api/tasks \
+time curl -s -X GET http://localhost:8000/tasks \
   -H "Authorization: Bearer $ACCESS_TOKEN" > /dev/null
 
 # The authentication part should be nearly instant (signature verification only)

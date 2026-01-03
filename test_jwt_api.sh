@@ -111,7 +111,7 @@ fi
 print_section "TEST 2: Authenticated API Request (with JWT)"
 
 # Create a task using the JWT access token
-TASK_RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/tasks" \
+TASK_RESPONSE=$(curl -s -X POST "$BACKEND_URL/tasks" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
     -d '{
@@ -140,7 +140,7 @@ fi
 # =============================================================================
 print_section "TEST 3: Get Tasks (verify user_id extraction)"
 
-TASKS_RESPONSE=$(curl -s -X GET "$BACKEND_URL/api/tasks" \
+TASKS_RESPONSE=$(curl -s -X GET "$BACKEND_URL/tasks" \
     -H "Authorization: Bearer $ACCESS_TOKEN")
 
 if echo "$TASKS_RESPONSE" | jq -e '.tasks' > /dev/null 2>&1; then
@@ -200,7 +200,7 @@ print_section "TEST 5: Invalid Token Handling"
 
 INVALID_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 
-INVALID_RESPONSE=$(curl -s -X GET "$BACKEND_URL/api/tasks" \
+INVALID_RESPONSE=$(curl -s -X GET "$BACKEND_URL/tasks" \
     -H "Authorization: Bearer $INVALID_TOKEN" \
     -w "\n%{http_code}")
 

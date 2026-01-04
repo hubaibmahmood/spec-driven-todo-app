@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail, Lock, User, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
-import { signUp } from "@/lib/auth-client";
+import { jwtSignUp } from "@/lib/jwt-auth-client";
 import { useRouter } from "next/navigation";
 import { validatePassword, type PasswordValidation } from "@/lib/validation/password";
 
@@ -31,21 +31,15 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
 
-    await signUp.email({
-      email,
-      password,
-      name,
-      fetchOptions: {
-        onSuccess: () => {
-             // Redirect to verification pending page (no email in URL for security)
-             router.push('/verify-email');
-        },
-        onError: (ctx) => {
-             setError(ctx.error.message);
-             setIsLoading(false);
-        }
-      }
-    });
+    try {
+      // Use JWT authentication
+      await jwtSignUp({ email, password, name });
+      // Sign-up successful, redirect to verification page
+      router.push('/verify-email');
+    } catch (err: any) {
+      setError(err.message || "Failed to create account");
+      setIsLoading(false);
+    }
   };
 
   return (

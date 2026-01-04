@@ -116,7 +116,30 @@
 
 ---
 
-## Phase 5: User Story 3 - Explicit Logout (Priority: P2)
+## Phase 5: Full JWT Migration (Priority: P1) 🎯 CURRENT
+
+**Goal**: Replace all session-based authentication with JWT across backend, AI Agent, and frontend
+
+**Status**: Phase 1-3 complete (T001-T030 DONE). Token refresh infrastructure needed before full migration.
+
+### Implementation for Full JWT Migration
+
+- [ ] T086 [MIGRATION] Update get_current_user_or_service() dependency in backend/src/api/dependencies.py to support JWT validation (add JWT validation attempt before session fallback, same pattern as get_current_user)
+- [ ] T087 [P] [MIGRATION] Create JWT validation utilities in ai-agent/src/ai_agent/services/jwt_validation.py (copy validate_access_token logic from backend, shared JWT_SECRET)
+- [ ] T088 [MIGRATION] Update AuthService in ai-agent/src/ai_agent/services/auth.py to add validate_jwt() method (validates JWT signature, expiration, returns user_id)
+- [ ] T089 [MIGRATION] Update get_current_user() in ai-agent/src/ai_agent/api/deps.py to use JWT validation instead of session validation (replace validate_session call with validate_jwt)
+- [ ] T090 [P] [MIGRATION] Add JWT_SECRET configuration to ai-agent environment variables (add to .env, config.py)
+- [ ] T091 [P] [MIGRATION] Verify frontend auth-client.ts stores and sends JWT access tokens in Authorization header (should already be done from T025-T026)
+- [ ] T092 [MIGRATION] End-to-end test: Test JWT flow from frontend → AI Agent → MCP → Backend (signup, get JWT, call /chat endpoint, verify task creation)
+- [ ] T093 [MIGRATION] End-to-end test: Test JWT flow with direct backend API calls (signup, get JWT, call /tasks/ endpoint with test_jwt_api.sh script)
+- [ ] T094 [P] [MIGRATION] Remove session validation fallback from backend get_current_user_or_service() (make JWT-only after migration validated)
+- [ ] T095 [P] [MIGRATION] Remove session validation from AI Agent get_current_user() (make JWT-only after migration validated)
+
+**Checkpoint**: All services now use JWT exclusively. Session-based auth removed.
+
+---
+
+## Phase 6: User Story 3 - Explicit Logout (Priority: P2)
 
 **Goal**: Users can explicitly log out to secure account on shared/public computers
 
@@ -133,7 +156,7 @@
 
 ---
 
-## Phase 6: User Story 4 - Performance and Scalability (Priority: P3)
+## Phase 7: User Story 4 - Performance and Scalability (Priority: P3)
 
 **Goal**: Authentication imposes minimal database load to support 1000+ concurrent users
 
@@ -155,7 +178,7 @@
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple user stories
 
@@ -403,18 +426,21 @@ With multiple developers:
 
 ## Summary
 
-- **Total Tasks**: 85 (revised from 72)
+- **Total Tasks**: 95 (revised from 85)
 - **Setup**: 4 tasks (T001-T004)
 - **Foundational**: 8 tasks (T005-T012) - added schema verification and error schemas
-- **User Story 1** (7-day sessions): 18 tasks (T013-T030) - split login handler and hybrid auth logic
+- **User Story 1** (7-day sessions): 18 tasks (T013-T030) - split login handler and hybrid auth logic - ✅ DONE
 - **User Story 2** (Auto-refresh): 19 tasks (T031-T049) - split interceptor setup, added CORS, app init, session expired UI
+- **Full JWT Migration**: 10 tasks (T086-T095) - migrate backend, AI Agent, frontend to JWT-only - 🎯 CURRENT PHASE
 - **User Story 3** (Logout): 4 tasks (T050-T053) - combined frontend logout flow
 - **User Story 4** (Performance): 9 tasks (T054-T062) - added load testing script
 - **Polish**: 23 tasks (T063-T085) - split E2E test, added cleanup script and alert rules
 
-**MVP Scope** (Phase 1+2+US1+US2): 4 + 8 + 18 + 19 = **49 tasks** (~14-15 hours)
+**Current MVP Scope** (Phase 1+2+3+5 migration): 4 + 8 + 18 + 10 = **40 tasks** (~12-13 hours to full JWT migration)
 
-**Full Feature**: All phases = 85 tasks (~24-25 hours)
+**Full Feature with Auto-Refresh**: Phase 1+2+3+4+5 = 4 + 8 + 18 + 19 + 10 = **59 tasks** (~18-19 hours)
+
+**Complete Feature**: All phases = 95 tasks (~27-28 hours)
 
 **Key Improvements**:
 - Split oversized tasks (T020, T024, T029, T034, T061) into 15-30 minute units

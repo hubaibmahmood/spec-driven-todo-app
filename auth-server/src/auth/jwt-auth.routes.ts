@@ -41,7 +41,8 @@ export const jwtSignIn = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    if (!signInResult || !signInResult.session || !signInResult.user) {
+    // For JWT auth, we only need the user - we create our own session/tokens
+    if (!signInResult || !signInResult.user) {
       res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid email or password',
@@ -49,7 +50,7 @@ export const jwtSignIn = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { session, user } = signInResult;
+    const { user } = signInResult;
 
     // Generate JWT access token (30 minutes)
     const accessToken = generateAccessToken(user.id);

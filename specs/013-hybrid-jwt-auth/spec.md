@@ -2,9 +2,12 @@
 
 **Feature Branch**: `013-hybrid-jwt-auth`
 **Created**: 2026-01-01
-**Status**: Draft
-**Input**: User description: "Hybrid JWT Authentication for Scalable Session Management"
+**Updated**: 2026-01-03 (Full JWT Migration)
+**Status**: In Progress
+**Input**: User description: "Hybrid JWT Authentication for Scalable Session Management - Full Migration"
 **Related ADR**: [ADR-0004: Hybrid JWT Authentication Architecture](../../history/adr/0004-hybrid-jwt-authentication-architecture.md)
+
+**Migration Strategy**: Full JWT migration - replacing session-based authentication with JWT (access + refresh tokens) across all services
 
 ## Clarifications
 
@@ -173,15 +176,10 @@ As a system operator monitoring application performance, I want authentication t
 - **FR-021**: System MUST validate JWT signatures using constant-time comparison to prevent timing attacks
 - **FR-022**: System MUST generate refresh tokens using cryptographically secure random number generation (32 bytes minimum)
 
-#### Backward Compatibility & Migration Strategy
+#### Migration Strategy
 
-- **FR-023**: System MUST support both new JWT-based authentication and existing session-based authentication during migration period
-- **FR-024**: System MUST implement feature flag-based gradual rollout with the following controls:
-  - All new user registrations receive JWT-based authentication by default
-  - Existing users remain on session-based authentication until migrated
-  - Configurable percentage-based rollout (e.g., 10% → 25% → 50% → 100% of existing users)
-  - Ability to enable/disable JWT auth per user or user cohort for A/B testing
-  - Easy rollback mechanism to revert users to session-based auth if issues arise
+- **FR-023**: System MUST fully migrate from session-based to JWT-based authentication across all services (backend, AI agent, frontend)
+- **FR-024**: System MUST use JWT exclusively for user authentication - all authenticated requests use JWT access tokens in Authorization header
 
 #### Monitoring & Observability
 
@@ -209,7 +207,7 @@ As a system operator monitoring application performance, I want authentication t
 - **SC-006**: Session revocation takes effect within 30 minutes for all access token requests, measurable by testing revoked session access attempt failures after revocation delay window
 - **SC-007**: Application supports 1000+ concurrent users without authentication becoming a bottleneck, measurable by load testing showing consistent <50ms total API response time (including auth) at 1000+ concurrent users
 - **SC-008**: Zero production incidents related to token validation failures or session inconsistencies in first 30 days post-deployment, measurable by incident tracking system
-- **SC-009**: System maintains backward compatibility with existing auth during migration, measurable by zero user authentication failures during gradual rollout period
+- **SC-009**: All services (backend API, AI agent, frontend) successfully migrate to JWT authentication with zero authentication failures, measurable by 100% JWT usage in production logs
 
 ## Assumptions
 
@@ -229,11 +227,13 @@ The following assumptions were made where the feature description did not provid
 
 7. **Secret Management**: The existing `BETTER_AUTH_SECRET` environment variable (32+ characters) can be reused as the JWT signing secret, avoiding additional secret management infrastructure.
 
-8. **Migration Strategy**: A gradual rollout with feature flag is preferred over big-bang migration to minimize risk and allow for easy rollback if issues arise.
+8. **Migration Strategy**: Full migration to JWT authentication is required across all services. Session-based authentication will be completely replaced with JWT (access + refresh tokens).
 
-9. **Monitoring Infrastructure**: Application performance monitoring (APM) tools are available for tracking latency metrics and query rates.
+9. **Service-to-Service Authentication**: MCP server continues using service-to-service authentication (X-User-ID header + SERVICE_AUTH_TOKEN) for internal service communication. Only user-facing authentication migrates to JWT.
 
-10. **Browser Support**: Target browsers support httpOnly cookies and localStorage (all modern browsers).
+10. **Monitoring Infrastructure**: Application performance monitoring (APM) tools are available for tracking latency metrics and query rates.
+
+11. **Browser Support**: Target browsers support httpOnly cookies and localStorage (all modern browsers).
 
 ## Out of Scope
 

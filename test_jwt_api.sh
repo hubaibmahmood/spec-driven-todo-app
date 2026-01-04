@@ -106,12 +106,25 @@ else
 fi
 
 # =============================================================================
+# MANUAL EMAIL VERIFICATION PAUSE
+# =============================================================================
+echo ""
+print_section "⏸️  MANUAL EMAIL VERIFICATION REQUIRED"
+echo -e "${YELLOW}The new user's email needs to be verified before accessing /tasks${NC}"
+echo ""
+echo -e "${YELLOW}Run this SQL command to verify the email:${NC}"
+echo -e "${GREEN}UPDATE \"user\" SET \"emailVerified\" = true WHERE email = '$TEST_EMAIL';${NC}"
+echo ""
+echo -e "${YELLOW}Press ENTER when you've updated the database...${NC}"
+read -r
+
+# =============================================================================
 # TEST 2: Make authenticated API request with JWT
 # =============================================================================
 print_section "TEST 2: Authenticated API Request (with JWT)"
 
 # Create a task using the JWT access token
-TASK_RESPONSE=$(curl -s -X POST "$BACKEND_URL/tasks" \
+TASK_RESPONSE=$(curl -s -X POST "$BACKEND_URL/tasks/" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
     -d '{
@@ -140,17 +153,17 @@ fi
 # =============================================================================
 print_section "TEST 3: Get Tasks (verify user_id extraction)"
 
-TASKS_RESPONSE=$(curl -s -X GET "$BACKEND_URL/tasks" \
+TASKS_RESPONSE=$(curl -s -X GET "$BACKEND_URL/tasks/" \
     -H "Authorization: Bearer $ACCESS_TOKEN")
 
-if echo "$TASKS_RESPONSE" | jq -e '.tasks' > /dev/null 2>&1; then
+if echo "$TASKS_RESPONSE" | jq -e 'type == "array"' > /dev/null 2>&1; then
     print_success "Tasks retrieved successfully"
 
-    TASK_COUNT=$(echo "$TASKS_RESPONSE" | jq '.tasks | length')
+    TASK_COUNT=$(echo "$TASKS_RESPONSE" | jq 'length')
     print_info "Found $TASK_COUNT task(s)"
 
     # Verify the task we created is returned (confirms user_id extraction works)
-    if echo "$TASKS_RESPONSE" | jq -e ".tasks[] | select(.id == $TASK_ID)" > /dev/null 2>&1; then
+    if echo "$TASKS_RESPONSE" | jq -e ".[] | select(.id == $TASK_ID)" > /dev/null 2>&1; then
         print_success "Confirmed: JWT user_id extraction works correctly"
         print_info "The task we created is returned, proving the backend extracted the correct user_id from JWT"
     else
@@ -200,12 +213,12 @@ print_section "TEST 5: Invalid Token Handling"
 
 INVALID_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 
-INVALID_RESPONSE=$(curl -s -X GET "$BACKEND_URL/tasks" \
+INVALID_RESPONSE=$(curl -s -X GET "$BACKEND_URL/tasks/" \
     -H "Authorization: Bearer $INVALID_TOKEN" \
     -w "\n%{http_code}")
 
 HTTP_CODE=$(echo "$INVALID_RESPONSE" | tail -n1)
-RESPONSE_BODY=$(echo "$INVALID_RESPONSE" | head -n-1)
+RESPONSE_BODY=$(echo "$INVALID_RESPONSE" | sed '$d')
 
 if [ "$HTTP_CODE" = "401" ]; then
     print_success "Invalid token correctly rejected with 401"

@@ -177,11 +177,13 @@ async def get_current_user_or_service(
     db: AsyncSession = Depends(get_db),
 ) -> str:
     """
-    Authenticate user via either service token or user session.
+    Authenticate user via service token, JWT, or session token.
 
-    This dependency supports dual authentication:
-    - If X-User-ID header is present: use service authentication flow
-    - Otherwise: use standard user session authentication flow
+    This dependency supports triple authentication:
+    - If X-User-ID header is present: use service authentication flow (MCP server)
+    - Otherwise: use hybrid JWT/session authentication flow
+      - If JWT_AUTH_ENABLED=true: Try JWT validation first (fast, no DB query)
+      - If JWT validation fails or disabled: Fall back to session validation (DB query)
 
     Args:
         credentials: HTTP Authorization credentials (Bearer token)
@@ -222,7 +224,7 @@ async def get_current_user_or_service(
 
         return x_user_id
 
-    # Standard user session authentication flow
+    # Hybrid JWT/session authentication flow
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -231,6 +233,17 @@ async def get_current_user_or_service(
         )
 
     token = credentials.credentials
+
+    # Try JWT authentication first if enabled (feature flag)
+    if settings.JWT_AUTH_ENABLED:
+        try:
+            user_id = jwt_service.validate_access_token(token)
+            return user_id
+        except (TokenExpiredError, InvalidTokenError):
+            # JWT validation failed, fall back to session validation
+            pass
+
+    # Fall back to session validation (original behavior)
     user_id = await validate_session(token, db)
 
     if user_id is None:

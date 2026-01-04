@@ -1,13 +1,13 @@
 # Implementation Plan: Hybrid JWT Authentication
 
-**Branch**: `013-hybrid-jwt-auth` | **Date**: 2026-01-02 | **Spec**: [spec.md](./spec.md)
+**Branch**: `013-hybrid-jwt-auth` | **Date**: 2026-01-02 | **Updated**: 2026-01-03 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/013-hybrid-jwt-auth/spec.md`
 
 **Note**: This template is filled in by the `/sp.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-Implement hybrid JWT authentication system combining short-lived access tokens (30 minutes, validated via signature without database queries) with long-lived refresh tokens (7 days, stored hashed in database). This architecture reduces authentication database queries by 90%+ while maintaining 7-day seamless sessions with automatic token refresh. The implementation must support gradual migration from existing better-auth session system using feature flags, ensuring backward compatibility during rollout.
+Implement JWT authentication system combining short-lived access tokens (30 minutes, validated via signature without database queries) with long-lived refresh tokens (7 days, stored hashed in database). This architecture reduces authentication database queries by 90%+ while maintaining 7-day seamless sessions with automatic token refresh. **Full migration**: Replace all session-based authentication with JWT across backend API, AI Agent, and frontend. Service-to-service authentication (MCP server) remains unchanged.
 
 ## Technical Context
 
@@ -119,12 +119,22 @@ frontend/ (Next.js React - token storage & refresh interceptor)
 └── tests/
     └── integration/
         └── token-refresh.spec.ts          # [NEW] Playwright test for auto-refresh
+
+ai-agent/ (AI Agent service - migrate from session to JWT validation)
+├── src/
+│   └── ai_agent/
+│       ├── services/
+│       │   └── auth.py                    # [MODIFY] Replace session validation with JWT validation
+│       └── api/
+│           └── deps.py                    # [MODIFY] Update get_current_user to validate JWT
 ```
 
-**Structure Decision**: Web application with 3 microservices (FastAPI backend, Node.js auth-server, Next.js frontend). This is the established architecture from spec 004 (auth-server) and spec 003 (FastAPI). JWT implementation extends all three services:
+**Structure Decision**: Web application with 4 microservices (FastAPI backend, Node.js auth-server, Next.js frontend, AI Agent). JWT implementation affects all services:
 - **Backend**: Validates JWTs, provides refresh endpoint
 - **Auth-server**: Issues JWT pairs on login/signup
 - **Frontend**: Stores tokens, handles automatic refresh
+- **AI Agent**: Validates JWT access tokens instead of session tokens
+- **MCP Server**: Continues using service-to-service auth (unchanged)
 
 ## Complexity Tracking
 

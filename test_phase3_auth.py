@@ -300,7 +300,15 @@ def main():
         return
 
     print("\n" + "="*50)
-    
+    print("⏸️  PAUSED FOR MANUAL EMAIL VERIFICATION")
+    print(f"Please update the database to verify email for: {TEST_EMAIL}")
+    print("Run this SQL command:")
+    print(f'UPDATE "user" SET "emailVerified" = true WHERE email = \'{TEST_EMAIL}\';')
+    print("Press ENTER when done...")
+    input()
+
+    print("\n" + "="*50)
+
     # Test verify email
     if not test_verify_email():
         print("❌ Email verification failed, cannot proceed")

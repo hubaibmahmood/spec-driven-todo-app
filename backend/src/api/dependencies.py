@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.database.connection import get_db
 from src.database.repository import TaskRepository
-from src.services.auth_service import validate_session
 from src.services.jwt_service import jwt_service, TokenExpiredError, InvalidTokenError
 
 
@@ -66,26 +65,21 @@ async def get_current_user_jwt(
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
 ) -> str:
     """
-    Authenticate user via hybrid JWT or session token and return user ID.
+    Authenticate user via JWT access token and return user ID.
 
-    This is the new hybrid authentication flow:
-    1. If JWT_AUTH_ENABLED=true: Try JWT validation first (fast, no DB query)
-    2. If JWT validation fails or disabled: Fall back to session validation (DB query)
-
-    This allows gradual migration from session-based to JWT-based authentication.
+    This dependency validates JWT access tokens issued by the auth-server.
+    Session-based authentication has been fully migrated to JWT.
 
     Args:
         credentials: HTTP Authorization credentials (Bearer token)
-        db: Database session
 
     Returns:
-        User ID string if authentication succeeds
+        User ID string if JWT is valid
 
     Raises:
-        HTTPException: 401 if both JWT and session validation fail
+        HTTPException: 401 if token is missing, invalid, or expired
     """
     if credentials is None:
         raise HTTPException(
@@ -96,26 +90,21 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    # Try JWT authentication first if enabled (feature flag)
-    if settings.JWT_AUTH_ENABLED:
-        try:
-            user_id = jwt_service.validate_access_token(token)
-            return user_id
-        except (TokenExpiredError, InvalidTokenError):
-            # JWT validation failed, fall back to session validation
-            pass
-
-    # Fall back to session validation (original behavior)
-    user_id = await validate_session(token, db)
-
-    if user_id is None:
+    try:
+        user_id = jwt_service.validate_access_token(token)
+        return user_id
+    except TokenExpiredError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired session token",
+            detail={"error_code": "token_expired", "message": "Access token has expired"},
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    return user_id
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error_code": "invalid_token", "message": str(e)},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 async def get_service_auth(
@@ -174,21 +163,17 @@ async def get_service_auth(
 async def get_current_user_or_service(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    db: AsyncSession = Depends(get_db),
 ) -> str:
     """
-    Authenticate user via service token, JWT, or session token.
+    Authenticate user via service token or JWT access token.
 
-    This dependency supports triple authentication:
+    This dependency supports dual authentication:
     - If X-User-ID header is present: use service authentication flow (MCP server)
-    - Otherwise: use hybrid JWT/session authentication flow
-      - If JWT_AUTH_ENABLED=true: Try JWT validation first (fast, no DB query)
-      - If JWT validation fails or disabled: Fall back to session validation (DB query)
+    - Otherwise: use JWT authentication flow
 
     Args:
         credentials: HTTP Authorization credentials (Bearer token)
         x_user_id: Optional X-User-ID header for service authentication
-        db: Database session
 
     Returns:
         User ID string
@@ -224,7 +209,7 @@ async def get_current_user_or_service(
 
         return x_user_id
 
-    # Hybrid JWT/session authentication flow
+    # JWT authentication flow
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -234,26 +219,21 @@ async def get_current_user_or_service(
 
     token = credentials.credentials
 
-    # Try JWT authentication first if enabled (feature flag)
-    if settings.JWT_AUTH_ENABLED:
-        try:
-            user_id = jwt_service.validate_access_token(token)
-            return user_id
-        except (TokenExpiredError, InvalidTokenError):
-            # JWT validation failed, fall back to session validation
-            pass
-
-    # Fall back to session validation (original behavior)
-    user_id = await validate_session(token, db)
-
-    if user_id is None:
+    try:
+        user_id = jwt_service.validate_access_token(token)
+        return user_id
+    except TokenExpiredError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired session token",
+            detail={"error_code": "token_expired", "message": "Access token has expired"},
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    return user_id
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error_code": "invalid_token", "message": str(e)},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 async def get_task_repository(

@@ -14,6 +14,8 @@ lib/
 lib64/
 # Allow frontend lib directory
 !frontend/lib/
+# Allow auth-server lib directory
+!auth-server/src/lib/
 parts/
 sdist/
 var/

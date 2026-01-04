@@ -8,6 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from ai_agent.database.models import UserSession
+from ai_agent.services.jwt_validation import (
+    jwt_validation_service,
+    TokenExpiredError,
+    InvalidTokenError,
+)
 
 
 class AuthService:
@@ -86,3 +91,39 @@ class AuthService:
             )
 
         return session.user_id
+
+    @staticmethod
+    def validate_jwt(token: str) -> str:
+        """
+        Validate JWT access token and return user_id.
+
+        This method validates JWT tokens issued by the auth-server using
+        the shared JWT secret. It checks signature, expiration, and token type.
+
+        Args:
+            token: JWT access token to validate
+
+        Returns:
+            user_id if JWT is valid
+
+        Raises:
+            HTTPException: If JWT is invalid or expired
+        """
+        try:
+            user_id = jwt_validation_service.validate_access_token(token)
+            return user_id
+        except TokenExpiredError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "error_code": "token_expired",
+                    "message": "Access token has expired",
+                },
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except InvalidTokenError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error_code": "invalid_token", "message": str(e)},
+                headers={"WWW-Authenticate": "Bearer"},
+            )

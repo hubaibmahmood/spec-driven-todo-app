@@ -4,7 +4,7 @@
 'use client';
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { useSession } from '@/lib/auth-client';
+import { getAccessToken, isAuthenticated } from '@/lib/jwt-auth-client';
 import { getUserTimezone } from '@/lib/utils/timezone';
 import { validateChatInput } from '@/lib/chat/input-validation';
 import { fetchWithRetry } from '@/lib/chat/retry-logic';
@@ -20,10 +20,9 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
-  const { data: session } = useSession();
-  const sessionToken = session?.session?.token;
-  const userId = session?.user?.id;
-  const isAuthenticated = !!sessionToken;
+  // JWT authentication: get access token from localStorage
+  const accessToken = getAccessToken();
+  const userAuthenticated = isAuthenticated();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState<number | null>(null);
@@ -65,7 +64,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   // Handle session restoration after re-authentication
   useEffect(() => {
-    if (isAuthenticated && sessionExpired) {
+    if (userAuthenticated && sessionExpired) {
       // Session restored - clear expired flag
       setSessionExpired(false);
 
@@ -76,19 +75,19 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         handleSendMessage(message);
       }
     }
-  }, [isAuthenticated, sessionExpired, pendingMessage]);
+  }, [userAuthenticated, sessionExpired, pendingMessage]);
 
   // Load conversation history when panel opens
   useEffect(() => {
     const loadConversationHistory = async () => {
-      if (!isOpen || !sessionToken || hasLoadedHistory.current) return;
+      if (!isOpen || !accessToken || hasLoadedHistory.current) return;
 
       setIsLoadingHistory(true);
       try {
         const AI_AGENT_URL = process.env.NEXT_PUBLIC_AI_AGENT_URL || 'http://localhost:8002';
         const response = await fetch(`${AI_AGENT_URL}/api/conversations`, {
           headers: {
-            'Authorization': `Bearer ${sessionToken}`,
+            'Authorization': `Bearer ${accessToken}`,
           },
         });
 
@@ -109,7 +108,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             `${AI_AGENT_URL}/api/conversations/${latestConversation.id}?limit=5&offset=0`,
             {
               headers: {
-                'Authorization': `Bearer ${sessionToken}`,
+                'Authorization': `Bearer ${accessToken}`,
               },
             }
           );
@@ -140,11 +139,11 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     };
 
     loadConversationHistory();
-  }, [isOpen, sessionToken]);
+  }, [isOpen, accessToken]);
 
   // Load more messages (pagination)
   const loadMoreMessages = useCallback(async () => {
-    if (!conversationId || !sessionToken || isLoadingMore || !hasMore) return;
+    if (!conversationId || !accessToken || isLoadingMore || !hasMore) return;
 
     setIsLoadingMore(true);
 
@@ -160,7 +159,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         `${AI_AGENT_URL}/api/conversations/${conversationId}?limit=5&offset=${offset}`,
         {
           headers: {
-            'Authorization': `Bearer ${sessionToken}`,
+            'Authorization': `Bearer ${accessToken}`,
           },
         }
       );
@@ -198,7 +197,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [conversationId, sessionToken, offset, hasMore, isLoadingMore]);
+  }, [conversationId, accessToken, offset, hasMore, isLoadingMore]);
 
   // Handle ESC key to close panel
   useEffect(() => {
@@ -223,7 +222,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   // Execute message send (internal function, bypasses confirmation)
   const executeSendMessage = useCallback(async (messageText: string) => {
-    if (!sessionToken) return;
+    if (!accessToken) return;
 
     const timezone = getUserTimezone();
     const tempUserMsgId = `temp-user-${Date.now()}`;
@@ -266,7 +265,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionToken}`,
+              'Authorization': `Bearer ${accessToken}`,
               'X-Timezone': timezone,
             },
             body: JSON.stringify({
@@ -376,12 +375,12 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       setIsLoading(false);
       setIsRetrying(false);
     }
-  }, [sessionToken, conversationId, refreshTodos]);
+  }, [accessToken, conversationId, refreshTodos]);
 
   // Handle message send with validation and confirmation
   const handleSendMessage = useCallback(
     async (messageText: string) => {
-      if (!sessionToken) return;
+      if (!accessToken) return;
 
       // Validate input and provide guidance for ambiguous inputs
       const validation = validateChatInput(messageText);
@@ -420,7 +419,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       // Not destructive - execute immediately
       await executeSendMessage(messageText);
     },
-    [sessionToken, conversationId, executeSendMessage]
+    [accessToken, conversationId, executeSendMessage]
   );
 
   // Handle confirmation of destructive operation
@@ -495,7 +494,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   }
 
   // Show authentication error if not authenticated
-  if (!isAuthenticated) {
+  if (!userAuthenticated) {
     return (
       <div
         className="fixed bottom-6 right-6 z-40 flex h-[650px] w-[400px] flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"

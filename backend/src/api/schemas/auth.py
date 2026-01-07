@@ -43,3 +43,10 @@ class InvalidRefreshTokenError(ErrorResponse):
 
     error_code: str = "invalid_refresh_token"
     message: str = "Invalid refresh token. Please log in again."
+
+
+class LogoutResponse(BaseModel):
+    """Response schema for logout endpoint."""
+
+    success: bool = Field(..., description="Whether logout was successful")
+    message: str = Field(..., description="Logout confirmation message")

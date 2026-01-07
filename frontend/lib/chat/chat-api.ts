@@ -3,6 +3,7 @@
 
 'use client';
 
+import { httpClient } from '@/lib/http-client';
 import type {
   ChatApiRequest,
   ChatApiResponse,
@@ -15,93 +16,53 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 /**
  * Send a chat message to the AI agent
  * @param request - Chat message request with user input and timezone
- * @param sessionToken - Better-auth session token for authentication
  * @returns AI assistant's response with any task operations performed
- * @throws Error if session is expired (401) or request fails
+ * @throws Error if authentication fails or request fails
  */
 export async function sendChatMessage(
-  request: ChatApiRequest,
-  sessionToken: string
+  request: ChatApiRequest
 ): Promise<ChatApiResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`,
-        'X-Timezone': request.timezone,
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (response.status === 401) {
-      throw new Error('Session expired. Please log in again.');
-    }
-
-    if (!response.ok) {
-      // Try to parse error response body for better error messages
-      let errorMessage = `Failed to send chat message: ${response.statusText}`;
-
-      try {
-        const errorData = await response.json();
-        if (errorData.detail) {
-          // Use the backend's error detail message (e.g., "Please configure your Gemini API key...")
-          errorMessage = errorData.detail;
-        }
-      } catch {
-        // If JSON parsing fails, stick with statusText
+    return await httpClient.post<ChatApiResponse>(
+      `${API_BASE_URL}/api/chat`,
+      request,
+      {
+        headers: {
+          'X-Timezone': request.timezone,
+        },
       }
-
-      throw new Error(errorMessage);
-    }
-
-    const data: ChatApiResponse = await response.json();
-
-    // No need to parse dates - response contains simple strings
-    return data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Network error: Failed to send chat message');
+    );
+  } catch (error: any) {
+    // httpClient already handles 401 errors with token refresh
+    // Just re-throw with user-friendly message
+    const errorMessage = error.message || 'Failed to send chat message';
+    throw new Error(errorMessage);
   }
 }
 
 /**
  * Fetch conversation history with pagination
  * @param conversationId - Conversation UUID
- * @param sessionToken - Better-auth session token for authentication
  * @param limit - Number of messages to fetch (default: 50)
  * @param offset - Pagination offset (default: 0)
  * @returns Paginated list of messages
- * @throws Error if session is expired (401) or request fails
+ * @throws Error if authentication fails or request fails
  */
 export async function fetchConversationHistory(
   conversationId: string,
-  sessionToken: string,
   limit: number = 50,
   offset: number = 0
 ): Promise<ConversationHistoryResponse> {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/conversations/${conversationId}/messages?limit=${limit}&offset=${offset}`,
+    const data = await httpClient.get<ConversationHistoryResponse>(
+      `${API_BASE_URL}/api/conversations/${conversationId}/messages`,
       {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${sessionToken}`,
+        params: {
+          limit: limit.toString(),
+          offset: offset.toString(),
         },
       }
     );
-
-    if (response.status === 401) {
-      throw new Error('Session expired. Please log in again.');
-    }
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch conversation history: ${response.statusText}`);
-    }
-
-    const data: ConversationHistoryResponse = await response.json();
 
     // Parse ISO date strings to Date objects for all messages
     data.messages = data.messages.map((message) => ({
@@ -110,50 +71,29 @@ export async function fetchConversationHistory(
     }));
 
     return data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Network error: Failed to fetch conversation history');
+  } catch (error: any) {
+    const errorMessage = error.message || 'Failed to fetch conversation history';
+    throw new Error(errorMessage);
   }
 }
 
 /**
  * Get existing conversation or create a new one for the user
- * @param userId - User UUID from better-auth session
- * @param sessionToken - Better-auth session token for authentication
+ * @param userId - User UUID
  * @returns Conversation object with ID
- * @throws Error if session is expired (401) or request fails
+ * @throws Error if authentication fails or request fails
  */
 export async function getOrCreateConversation(
-  userId: string,
-  sessionToken: string
+  userId: string
 ): Promise<{ id: string; userId: string; createdAt: string; updatedAt: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/conversations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`,
-      },
-      body: JSON.stringify({ userId }),
-    });
-
-    if (response.status === 401) {
-      throw new Error('Session expired. Please log in again.');
-    }
-
-    if (!response.ok) {
-      throw new Error(`Failed to get or create conversation: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Network error: Failed to get or create conversation');
+    return await httpClient.post<{ id: string; userId: string; createdAt: string; updatedAt: string }>(
+      `${API_BASE_URL}/api/conversations`,
+      { userId }
+    );
+  } catch (error: any) {
+    const errorMessage = error.message || 'Failed to get or create conversation';
+    throw new Error(errorMessage);
   }
 }
 

@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
 import ChatPanel from "@/components/chat/ChatPanel";
 import ChatToggleButton from "@/components/chat/ChatToggleButton";
-import { useSession, signOut } from "@/lib/auth-client";
+import { getCurrentUserFromToken, jwtSignOut } from "@/lib/jwt-auth-client";
 import { useRouter } from "next/navigation";
 import { usePanelState } from "@/lib/chat/panel-state";
 
@@ -15,25 +15,26 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { data: session } = useSession();
   const [user, setUser] = useState<{ name: string; email: string; image?: string | null } | null>(null);
   const router = useRouter();
 
   // Chat panel state with localStorage persistence
   const [panelState, setPanelState] = usePanelState();
 
+  // Check for JWT authentication on mount
   useEffect(() => {
-    if (session?.user) {
+    const currentUser = getCurrentUserFromToken();
+    if (currentUser) {
       setUser({
-        name: session.user.name,
-        email: session.user.email,
-        image: session.user.image
+        name: currentUser.name || currentUser.email,
+        email: currentUser.email,
+        image: currentUser.image
       });
     }
-  }, [session]);
+  }, []);
 
   const handleLogout = async () => {
-    await signOut();
+    await jwtSignOut();
     router.push("/login");
   };
 

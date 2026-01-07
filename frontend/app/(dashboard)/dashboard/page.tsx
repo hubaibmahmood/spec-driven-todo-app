@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, Suspense } from "react";
+import { useMemo, Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { Priority, Status, Todo } from "@/types";
-import { useSession } from "@/lib/auth-client";
+import { getUserInfo } from "@/lib/jwt-auth-client";
 import { useTasks } from "@/hooks/useTasks";
 import {
   CheckCircle2,
@@ -313,7 +313,7 @@ function UpcomingTaskItem({ todo }: { todo: Todo }) {
 
 // Main Dashboard Content
 function DashboardContent() {
-  const { data: session } = useSession();
+  const [userName, setUserName] = useState<string>("User");
   const {
     todos,
     isLoading,
@@ -321,6 +321,16 @@ function DashboardContent() {
     handleDelete,
     handleAddSubtask,
   } = useTasks();
+
+  // Get user info from JWT on mount
+  useEffect(() => {
+    const userInfo = getUserInfo();
+    if (userInfo?.name) {
+      setUserName(userInfo.name);
+    } else if (userInfo?.email) {
+      setUserName(userInfo.email.split('@')[0]); // Use email prefix as fallback
+    }
+  }, []);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -388,7 +398,7 @@ function DashboardContent() {
         {/* Header */}
         <div className="animate-fade-in">
           <h1 className="text-3xl font-bold text-stone-900 mb-1">
-            Good morning, {session?.user?.name || "User"}! 👋
+            Good morning, {userName}! 👋
           </h1>
           <p className="text-md text-stone-500">
             You have {todaysTasks.length} task

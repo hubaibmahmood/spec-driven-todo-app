@@ -226,6 +226,19 @@ app.include_router(tasks.router)
 app.include_router(api_keys.router)
 
 
+# Prometheus metrics endpoint
+@app.get("/metrics")
+async def metrics():
+    """Expose Prometheus metrics for monitoring."""
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    from starlette.responses import Response
+
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
+
+
 def main():
     """Entry point for running the application."""
     import uvicorn

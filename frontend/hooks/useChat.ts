@@ -1,10 +1,10 @@
-// Custom hook for chat functionality with better-auth integration
+// Custom hook for chat functionality with JWT authentication
 // Spec: 009-frontend-chat-integration - User Story 1 (T029)
 
 'use client';
 
 import { useCallback } from 'react';
-import { useSession } from '@/lib/auth-client';
+import { isAuthenticated } from '@/lib/jwt-auth-client';
 import {
   sendChatMessage as apiSendChatMessage,
   fetchConversationHistory as apiFetchConversationHistory,
@@ -22,33 +22,26 @@ interface UseChatReturn {
   loadHistory: (conversationId: string, limit?: number, offset?: number) => Promise<ConversationHistoryResponse>;
   getOrCreateConversation: (userId: string) => Promise<{ id: string; userId: string; createdAt: string; updatedAt: string }>;
   isAuthenticated: boolean;
-  sessionError: string | null;
 }
 
 /**
- * Custom hook for chat functionality with automatic session management
- * Integrates better-auth session with chat API functions
+ * Custom hook for chat functionality with automatic JWT authentication
+ * Integrates JWT authentication with chat API functions
  *
  * @returns Chat functions that automatically handle authentication
- * @throws Error if session is expired or user is not authenticated
+ * @throws Error if user is not authenticated
  */
 export function useChat(): UseChatReturn {
-  const { data: session, error: sessionError } = useSession();
-
-  // Get session token from better-auth
-  const getSessionToken = useCallback((): string => {
-    if (!session?.session?.token) {
-      throw new Error('Not authenticated. Please log in to use chat.');
-    }
-    return session.session.token;
-  }, [session]);
-
   /**
-   * Send a chat message with automatic timezone detection and session token
+   * Send a chat message with automatic timezone detection
+   * JWT token is automatically included by httpClient
    */
   const sendMessage = useCallback(
     async (message: string, conversationId?: string): Promise<ChatApiResponse> => {
-      const sessionToken = getSessionToken();
+      if (!isAuthenticated()) {
+        throw new Error('Not authenticated. Please log in to use chat.');
+      }
+
       const timezone = getUserTimezone();
 
       const request: ChatApiRequest = {
@@ -57,13 +50,14 @@ export function useChat(): UseChatReturn {
         conversationId,
       };
 
-      return apiSendChatMessage(request, sessionToken);
+      return apiSendChatMessage(request);
     },
-    [getSessionToken]
+    []
   );
 
   /**
    * Load conversation history with pagination
+   * JWT token is automatically included by httpClient
    */
   const loadHistory = useCallback(
     async (
@@ -71,28 +65,34 @@ export function useChat(): UseChatReturn {
       limit: number = 50,
       offset: number = 0
     ): Promise<ConversationHistoryResponse> => {
-      const sessionToken = getSessionToken();
-      return apiFetchConversationHistory(conversationId, sessionToken, limit, offset);
+      if (!isAuthenticated()) {
+        throw new Error('Not authenticated. Please log in to view history.');
+      }
+
+      return apiFetchConversationHistory(conversationId, limit, offset);
     },
-    [getSessionToken]
+    []
   );
 
   /**
    * Get existing conversation or create a new one
+   * JWT token is automatically included by httpClient
    */
   const getOrCreateConversation = useCallback(
     async (userId: string) => {
-      const sessionToken = getSessionToken();
-      return apiGetOrCreateConversation(userId, sessionToken);
+      if (!isAuthenticated()) {
+        throw new Error('Not authenticated. Please log in to use chat.');
+      }
+
+      return apiGetOrCreateConversation(userId);
     },
-    [getSessionToken]
+    []
   );
 
   return {
     sendMessage,
     loadHistory,
     getOrCreateConversation,
-    isAuthenticated: !!session?.session?.token,
-    sessionError: sessionError?.message || null,
+    isAuthenticated: isAuthenticated(),
   };
 }

@@ -55,7 +55,7 @@ async def get_current_api_key(
     Get current user's API key status.
 
     Supports two authentication modes:
-    1. Regular user auth: Uses Bearer token
+    1. Regular user auth: Uses JWT Bearer token
     2. Service-to-service auth: Uses X-User-ID + X-Service-Auth headers
 
     For service-to-service requests (e.g., from ai-agent), returns plaintext_key.
@@ -86,7 +86,7 @@ async def get_current_api_key(
         target_user_id = x_user_id
         logger.info(f"Service-to-service request for user {target_user_id[:8]}...")
     else:
-        # Regular user authentication via Bearer token
+        # Regular user authentication via JWT Bearer token
         if not credentials:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -94,14 +94,20 @@ async def get_current_api_key(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Validate session token
-        from src.services.auth_service import validate_session
-        target_user_id = await validate_session(credentials.credentials, db)
-
-        if target_user_id is None:
+        # Validate JWT access token
+        from src.services.jwt_service import jwt_service, TokenExpiredError, InvalidTokenError
+        try:
+            target_user_id = jwt_service.validate_access_token(credentials.credentials)
+        except TokenExpiredError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired session token",
+                detail={"error_code": "token_expired", "message": "Access token has expired"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except InvalidTokenError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error_code": "invalid_token", "message": str(e)},
                 headers={"WWW-Authenticate": "Bearer"},
             )
 

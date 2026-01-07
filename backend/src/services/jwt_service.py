@@ -3,7 +3,15 @@
 from datetime import UTC, datetime, timedelta
 from typing import Dict, Any
 import jwt
+from prometheus_client import Histogram
 from ..config import settings
+
+# Prometheus metrics
+auth_validation_duration = Histogram(
+    'auth_validation_seconds',
+    'Time spent validating authentication tokens',
+    ['method']
+)
 
 
 class TokenExpiredError(Exception):
@@ -68,29 +76,30 @@ class JWTService:
             TokenExpiredError: If the token has expired
             InvalidTokenError: If the token is invalid (bad signature, malformed, wrong type)
         """
-        try:
-            payload = jwt.decode(
-                token,
-                self.secret,
-                algorithms=[self.algorithm]
-            )
+        with auth_validation_duration.labels(method='jwt').time():
+            try:
+                payload = jwt.decode(
+                    token,
+                    self.secret,
+                    algorithms=[self.algorithm]
+                )
 
-            # Verify token type
-            if payload.get("type") != "access":
-                raise InvalidTokenError("Invalid token type")
+                # Verify token type
+                if payload.get("type") != "access":
+                    raise InvalidTokenError("Invalid token type")
 
-            user_id = payload.get("sub")
-            if not user_id:
-                raise InvalidTokenError("Missing subject claim")
+                user_id = payload.get("sub")
+                if not user_id:
+                    raise InvalidTokenError("Missing subject claim")
 
-            return user_id
+                return user_id
 
-        except jwt.ExpiredSignatureError as e:
-            raise TokenExpiredError("Access token has expired") from e
-        except jwt.InvalidTokenError as e:
-            raise InvalidTokenError(f"Invalid access token: {e}") from e
-        except Exception as e:
-            raise InvalidTokenError(f"Token validation failed: {e}") from e
+            except jwt.ExpiredSignatureError as e:
+                raise TokenExpiredError("Access token has expired") from e
+            except jwt.InvalidTokenError as e:
+                raise InvalidTokenError(f"Invalid access token: {e}") from e
+            except Exception as e:
+                raise InvalidTokenError(f"Token validation failed: {e}") from e
 
 
 # Global service instance

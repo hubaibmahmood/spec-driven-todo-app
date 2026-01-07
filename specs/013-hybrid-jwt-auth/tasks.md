@@ -84,97 +84,103 @@
 
 ---
 
-## Phase 4: User Story 2 - Transparent Token Refresh (Priority: P1)
+## Phase 4: User Story 2 - Transparent Token Refresh (Priority: P1) ✅ COMPLETE
 
 **Goal**: Authentication renews automatically in background without user interruption
 
 **Independent Test**: Use application continuously for 60+ minutes (spanning multiple 30-minute expirations), confirm automatic refresh without interruptions
 
+**Status**: ✅ COMPLETE - Automatic token refresh implemented with cross-tab synchronization
+
 ### Implementation for User Story 2
 
-- [ ] T031 [P] [US2] Implement validate_refresh_token() method in backend/src/services/refresh_token_service.py (hashes incoming token, queries user_sessions, validates expiration, returns user_id)
-- [ ] T032 [P] [US2] Implement delete_refresh_token() method in backend/src/services/refresh_token_service.py (deletes session by hashed token)
-- [ ] T033 [US2] Create POST /api/auth/refresh endpoint in backend/src/api/routers/auth.py (reads refresh token from httpOnly cookie, validates, issues new access token)
-- [ ] T034 [US2] Add error handling to /api/auth/refresh endpoint (401 for expired/invalid/revoked tokens with specific error codes: refresh_token_expired, invalid_refresh_token, session_revoked)
-- [ ] T035 [US2] Add HTTP response interceptor infrastructure to frontend/src/lib/api-client.ts (setup axios/fetch interceptor for all API calls)
-- [ ] T036 [US2] Implement 401 detection and token_expired error code checking in response interceptor (check response.status === 401 && error_code === "token_expired")
-- [ ] T037 [US2] Implement automatic token refresh call in frontend/src/lib/api-client.ts (POST to /api/auth/refresh with credentials: 'include')
-- [ ] T038 [US2] Implement request retry logic in frontend/src/lib/api-client.ts (retries original failed request with new access token after successful refresh)
-- [ ] T039 [US2] Implement exponential backoff retry in frontend/src/lib/api-client.ts (3 attempts with 1s, 2s, 4s delays for network errors)
-- [ ] T040 [US2] Add error type detection in frontend/src/lib/api-client.ts (distinguish auth errors 401/403 that skip retries vs network errors 500/503 that retry)
-- [ ] T041 [US2] Create useTokenRefresh hook skeleton in frontend/src/hooks/useTokenRefresh.ts with BroadcastChannel initialization
-- [ ] T042 [US2] Implement refreshToken() function in useTokenRefresh hook (fetch call to /api/auth/refresh with credentials, return new access token)
-- [ ] T043 [US2] Implement cross-tab lock acquisition in useTokenRefresh hook (timestamp-based lock in localStorage with 5-second expiry, unique tabId)
-- [ ] T044 [US2] Implement token refresh broadcast in useTokenRefresh hook (BroadcastChannel.postMessage with new access token on successful refresh)
-- [ ] T045 [US2] Implement cross-tab token listener in useTokenRefresh hook (BroadcastChannel.onmessage updates localStorage access token when other tab refreshes)
-- [ ] T046 [US2] Add localStorage fallback for cross-tab sync in useTokenRefresh hook (storage event listener for browsers without BroadcastChannel support)
-- [ ] T047 [US2] Configure CORS middleware in backend/src/api/main.py to allow credentials (allow_credentials=True, allow_origins from config for refresh endpoint)
-- [ ] T048 [US2] Implement token validation on app initialization in frontend (check if access token exists and valid on app load, trigger refresh if expired but refresh token cookie present)
-- [ ] T049 [US2] Create SessionExpired component in frontend/src/components/SessionExpired.tsx to show user-friendly message when all refresh retries fail (with login button)
+- [X] T031 [P] [US2] Implement validate_refresh_token() method in backend/src/services/refresh_token_service.py (hashes incoming token, queries user_sessions, validates expiration, returns user_id)
+- [X] T032 [P] [US2] Implement delete_refresh_token() method in backend/src/services/refresh_token_service.py (deletes session by hashed token)
+- [X] T033 [US2] Create POST /api/auth/refresh endpoint in backend/src/api/routers/auth.py (reads refresh token from httpOnly cookie, validates, issues new access token)
+- [X] T034 [US2] Add error handling to /api/auth/refresh endpoint (401 for expired/invalid/revoked tokens with specific error codes: refresh_token_expired, invalid_refresh_token, session_revoked, missing_refresh_token)
+- [X] T035 [US2] Add HTTP response interceptor infrastructure to frontend/lib/http-client.ts (setup fetch interceptor for all API calls)
+- [X] T036 [US2] Implement 401 detection and token_expired error code checking in response interceptor (check response.status === 401 && error_code === "token_expired")
+- [X] T037 [US2] Implement automatic token refresh call in frontend/lib/http-client.ts (POST to /api/auth/refresh with credentials: 'include')
+- [X] T038 [US2] Implement request retry logic in frontend/lib/http-client.ts (retries original failed request with new access token after successful refresh)
+- [X] T039 [US2] Implement exponential backoff retry in frontend/lib/http-client.ts (3 attempts with 1s, 2s, 4s delays for network errors)
+- [X] T040 [US2] Add error type detection in frontend/lib/http-client.ts (distinguish auth errors 401/403 that skip retries vs network errors 500/503 that retry)
+- [X] T041 [US2] Create useTokenRefresh hook skeleton in frontend/lib/hooks/useTokenRefresh.ts with BroadcastChannel initialization
+- [X] T042 [US2] Implement refreshToken() function in useTokenRefresh hook (fetch call to /api/auth/refresh with credentials, return new access token)
+- [X] T043 [US2] Implement cross-tab lock acquisition in useTokenRefresh hook (timestamp-based lock in localStorage with 5-second expiry, unique tabId)
+- [X] T044 [US2] Implement token refresh broadcast in useTokenRefresh hook (BroadcastChannel.postMessage with new access token on successful refresh)
+- [X] T045 [US2] Implement cross-tab token listener in useTokenRefresh hook (BroadcastChannel.onmessage updates localStorage access token when other tab refreshes)
+- [X] T046 [US2] Add localStorage fallback for cross-tab sync in useTokenRefresh hook (storage event listener for browsers without BroadcastChannel support)
+- [X] T047 [US2] Configure CORS middleware in backend/src/api/main.py to allow credentials (allow_credentials=True already configured)
+- [X] T048 [US2] Implement token validation on app initialization in frontend (TokenInitializer component checks token validity on app load, triggers refresh if expired)
+- [X] T049 [US2] Create SessionExpired component in frontend/components/SessionExpired.tsx to show user-friendly message when all refresh retries fail (with login button)
 
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work - users stay logged in for 7 days with automatic seamless token refresh every 30 minutes
+**Checkpoint**: ✅ User Stories 1 AND 2 are both complete - users stay logged in for 7 days with automatic seamless token refresh every 30 minutes
 
 ---
 
-## Phase 5: Full JWT Migration (Priority: P1) 🎯 CURRENT
+## Phase 5: Full JWT Migration (Priority: P1) ✅ COMPLETE
 
 **Goal**: Replace all session-based authentication with JWT across backend, AI Agent, and frontend
 
-**Status**: Phase 1-3 complete (T001-T030 DONE). Token refresh infrastructure needed before full migration.
+**Status**: ✅ COMPLETE - All services migrated to JWT authentication
 
 ### Implementation for Full JWT Migration
 
-- [ ] T086 [MIGRATION] Update get_current_user_or_service() dependency in backend/src/api/dependencies.py to support JWT validation (add JWT validation attempt before session fallback, same pattern as get_current_user)
-- [ ] T087 [P] [MIGRATION] Create JWT validation utilities in ai-agent/src/ai_agent/services/jwt_validation.py (copy validate_access_token logic from backend, shared JWT_SECRET)
-- [ ] T088 [MIGRATION] Update AuthService in ai-agent/src/ai_agent/services/auth.py to add validate_jwt() method (validates JWT signature, expiration, returns user_id)
-- [ ] T089 [MIGRATION] Update get_current_user() in ai-agent/src/ai_agent/api/deps.py to use JWT validation instead of session validation (replace validate_session call with validate_jwt)
-- [ ] T090 [P] [MIGRATION] Add JWT_SECRET configuration to ai-agent environment variables (add to .env, config.py)
-- [ ] T091 [P] [MIGRATION] Verify frontend auth-client.ts stores and sends JWT access tokens in Authorization header (should already be done from T025-T026)
-- [ ] T092 [MIGRATION] End-to-end test: Test JWT flow from frontend → AI Agent → MCP → Backend (signup, get JWT, call /chat endpoint, verify task creation)
-- [ ] T093 [MIGRATION] End-to-end test: Test JWT flow with direct backend API calls (signup, get JWT, call /tasks/ endpoint with test_jwt_api.sh script)
-- [ ] T094 [P] [MIGRATION] Remove session validation fallback from backend get_current_user_or_service() (make JWT-only after migration validated)
-- [ ] T095 [P] [MIGRATION] Remove session validation from AI Agent get_current_user() (make JWT-only after migration validated)
+- [X] T086 [MIGRATION] Update get_current_user_or_service() dependency in backend/src/api/dependencies.py to support JWT validation (add JWT validation attempt before session fallback, same pattern as get_current_user)
+- [X] T087 [P] [MIGRATION] Create JWT validation utilities in ai-agent/src/ai_agent/services/jwt_validation.py (copy validate_access_token logic from backend, shared JWT_SECRET)
+- [X] T088 [MIGRATION] Update AuthService in ai-agent/src/ai_agent/services/auth.py to add validate_jwt() method (validates JWT signature, expiration, returns user_id)
+- [X] T089 [MIGRATION] Update get_current_user() in ai-agent/src/ai_agent/api/deps.py to use JWT validation instead of session validation (replace validate_session call with validate_jwt)
+- [X] T090 [P] [MIGRATION] Add JWT_SECRET configuration to ai-agent environment variables (add to .env, config.py)
+- [X] T091 [P] [MIGRATION] Verify frontend auth-client.ts stores and sends JWT access tokens in Authorization header (should already be done from T025-T026)
+- [X] T092 [MIGRATION] End-to-end test: Test JWT flow from frontend → AI Agent → MCP → Backend (signup, get JWT, call /chat endpoint, verify task creation)
+- [X] T093 [MIGRATION] End-to-end test: Test JWT flow with direct backend API calls (signup, get JWT, call /tasks/ endpoint with test_jwt_api.sh script)
+- [X] T094 [P] [MIGRATION] Remove session validation fallback from backend get_current_user_or_service() (make JWT-only after migration validated)
+- [X] T095 [P] [MIGRATION] Remove session validation from AI Agent get_current_user() (make JWT-only after migration validated)
 
-**Checkpoint**: All services now use JWT exclusively. Session-based auth removed.
+**Checkpoint**: ✅ All services now use JWT exclusively. Frontend ChatPanel migrated to JWT authentication.
 
 ---
 
-## Phase 6: User Story 3 - Explicit Logout (Priority: P2)
+## Phase 6: User Story 3 - Explicit Logout (Priority: P2) ✅ COMPLETE
 
 **Goal**: Users can explicitly log out to secure account on shared/public computers
 
 **Independent Test**: Log in, click logout, confirm all subsequent requests require re-authentication
 
+**Status**: ✅ COMPLETE - Explicit logout functionality implemented
+
 ### Implementation for User Story 3
 
-- [ ] T050 [P] [US3] Create POST /api/auth/logout endpoint in backend/src/api/routers/auth.py (requires valid JWT access token in Authorization header)
-- [ ] T051 [US3] Implement logout logic in backend to delete refresh token from user_sessions table by user_id (call delete_refresh_token service method)
-- [ ] T052 [US3] Add response to clear refresh token httpOnly cookie in logout endpoint (Set-Cookie with Max-Age=0, same path and domain)
-- [ ] T053 [US3] Implement frontend logout flow in frontend/src/lib/auth-client.ts (call backend /api/auth/logout endpoint, clear localStorage access token on success, redirect to login page)
+- [X] T050 [P] [US3] Create POST /api/auth/logout endpoint in backend/src/api/routers/auth.py (requires valid JWT access token in Authorization header)
+- [X] T051 [US3] Implement logout logic in backend to delete refresh token from user_sessions table by user_id (call delete_refresh_token service method)
+- [X] T052 [US3] Add response to clear refresh token httpOnly cookie in logout endpoint (Set-Cookie with Max-Age=0, same path and domain)
+- [X] T053 [US3] Implement frontend logout flow in frontend/src/lib/auth-client.ts (call backend /api/auth/logout endpoint, clear localStorage access token on success, redirect to login page)
 
-**Checkpoint**: All core user stories (US1, US2, US3) should now be independently functional - login, auto-refresh, and logout all work
+**Checkpoint**: ✅ All core user stories (US1, US2, US3) are complete - login, auto-refresh, and logout all work
 
 ---
 
-## Phase 7: User Story 4 - Performance and Scalability (Priority: P3)
+## Phase 7: User Story 4 - Performance and Scalability (Priority: P3) ✅ COMPLETE
 
 **Goal**: Authentication imposes minimal database load to support 1000+ concurrent users
 
 **Independent Test**: Load test with 1000+ concurrent users, confirm auth queries <5/sec (vs 167/sec baseline)
 
+**Status**: ✅ COMPLETE - Performance monitoring, metrics, and load testing implemented
+
 ### Implementation for User Story 4
 
-- [ ] T054 [P] [US4] Add Prometheus metrics histogram in backend/src/services/jwt_service.py (auth_validation_seconds with method='jwt' label)
-- [ ] T055 [P] [US4] Add Prometheus metrics histogram in backend/src/services/auth_service.py (auth_validation_seconds with method='session' label for comparison)
-- [ ] T056 [P] [US4] Add Prometheus counter in backend/src/api/routers/auth.py for token refresh calls (token_refresh_total)
-- [ ] T057 [P] [US4] Add Prometheus counter in backend/src/api/routers/auth.py for failed refreshes (token_refresh_errors_total with reason label: expired/invalid/revoked)
-- [ ] T058 [US4] Implement feature flag check method should_use_jwt(user_id) in backend/src/config.py (hash-based cohort assignment using MD5 for stable rollout based on JWT_ROLLOUT_PERCENTAGE)
-- [ ] T059 [US4] Update hybrid auth dependency to use should_use_jwt() for rollout percentage logic in backend/src/api/dependencies.py
-- [ ] T060 [P] [US4] Add structured logging for token refresh events in backend/src/api/routers/auth.py (user_id, timestamp, ip_address, success/failure status)
-- [ ] T061 [P] [US4] Add structured logging for logout events in backend/src/api/routers/auth.py (user_id, timestamp, session_identifier)
-- [ ] T062 [US4] Create load testing script in tests/load/jwt_auth_load_test.py using locust or k6 (simulates 1000 concurrent users making API requests, measures auth queries/sec and latency)
+- [X] T054 [P] [US4] Add Prometheus metrics histogram in backend/src/services/jwt_service.py (auth_validation_seconds with method='jwt' label)
+- [X] T055 [P] [US4] Add Prometheus metrics histogram in backend/src/services/auth_service.py (auth_validation_seconds with method='session' label for comparison)
+- [X] T056 [P] [US4] Add Prometheus counter in backend/src/api/routers/auth.py for token refresh calls (token_refresh_total)
+- [X] T057 [P] [US4] Add Prometheus counter in backend/src/api/routers/auth.py for failed refreshes (token_refresh_errors_total with reason label: expired/invalid/revoked)
+- [X] T058 [US4] Implement feature flag check method should_use_jwt(user_id) in backend/src/config.py (hash-based cohort assignment using MD5 for stable rollout based on JWT_ROLLOUT_PERCENTAGE)
+- [X] T059 [US4] Update hybrid auth dependency to use should_use_jwt() for rollout percentage logic in backend/src/api/dependencies.py
+- [X] T060 [P] [US4] Add structured logging for token refresh events in backend/src/api/routers/auth.py (user_id, timestamp, ip_address, success/failure status)
+- [X] T061 [P] [US4] Add structured logging for logout events in backend/src/api/routers/auth.py (user_id, timestamp, session_identifier)
+- [X] T062 [US4] Create load testing script in tests/load/jwt_auth_load_test.py using locust or k6 (simulates 1000 concurrent users making API requests, measures auth queries/sec and latency)
 
-**Checkpoint**: All user stories complete with performance monitoring and gradual rollout capability
+**Checkpoint**: ✅ All user stories complete with performance monitoring and gradual rollout capability
 
 ---
 
@@ -427,20 +433,22 @@ With multiple developers:
 ## Summary
 
 - **Total Tasks**: 95 (revised from 85)
-- **Setup**: 4 tasks (T001-T004)
-- **Foundational**: 8 tasks (T005-T012) - added schema verification and error schemas
-- **User Story 1** (7-day sessions): 18 tasks (T013-T030) - split login handler and hybrid auth logic - ✅ DONE
-- **User Story 2** (Auto-refresh): 19 tasks (T031-T049) - split interceptor setup, added CORS, app init, session expired UI
-- **Full JWT Migration**: 10 tasks (T086-T095) - migrate backend, AI Agent, frontend to JWT-only - 🎯 CURRENT PHASE
-- **User Story 3** (Logout): 4 tasks (T050-T053) - combined frontend logout flow
-- **User Story 4** (Performance): 9 tasks (T054-T062) - added load testing script
-- **Polish**: 23 tasks (T063-T085) - split E2E test, added cleanup script and alert rules
+- **Setup**: 4 tasks (T001-T004) - ✅ COMPLETE
+- **Foundational**: 8 tasks (T005-T012) - ✅ COMPLETE
+- **User Story 1** (7-day sessions): 18 tasks (T013-T030) - ✅ COMPLETE
+- **User Story 2** (Auto-refresh): 19 tasks (T031-T049) - ✅ COMPLETE
+- **Full JWT Migration**: 10 tasks (T086-T095) - ✅ COMPLETE
+- **User Story 3** (Logout): 4 tasks (T050-T053) - ✅ COMPLETE
+- **User Story 4** (Performance): 9 tasks (T054-T062) - ✅ COMPLETE
+- **Polish**: 23 tasks (T063-T085) - NOT STARTED
 
-**Current MVP Scope** (Phase 1+2+3+5 migration): 4 + 8 + 18 + 10 = **40 tasks** (~12-13 hours to full JWT migration)
+**Core Implementation Complete** (Phase 1+2+3+4+5+6+7): 4 + 8 + 18 + 19 + 10 + 4 + 9 = **72 tasks** ✅ COMPLETE
 
-**Full Feature with Auto-Refresh**: Phase 1+2+3+4+5 = 4 + 8 + 18 + 19 + 10 = **59 tasks** (~18-19 hours)
+**Complete Feature with All User Stories**: Phase 1-7 = **72 tasks** ✅ COMPLETE
 
-**Complete Feature**: All phases = 95 tasks (~27-28 hours)
+**Full Feature**: All phases including Polish = 95 tasks (~27-28 hours)
+
+**Remaining**: Polish (tests, documentation, quality checks) = **23 tasks**
 
 **Key Improvements**:
 - Split oversized tasks (T020, T024, T029, T034, T061) into 15-30 minute units

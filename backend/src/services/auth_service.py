@@ -6,9 +6,23 @@ from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from prometheus_client import Histogram
 
 from src.models.database import UserSession
 from src.config import settings
+
+# Prometheus metrics - shared with jwt_service.py
+from prometheus_client import REGISTRY
+
+# Get or create the histogram metric (shared with jwt_service)
+try:
+    auth_validation_duration = REGISTRY._names_to_collectors['auth_validation_seconds']
+except KeyError:
+    auth_validation_duration = Histogram(
+        'auth_validation_seconds',
+        'Time spent validating authentication tokens',
+        ['method']
+    )
 
 
 class SessionTokenHasher:
@@ -77,24 +91,25 @@ async def validate_session(token: str, db: AsyncSession) -> Optional[str]:
     Returns:
         User ID string if session is valid, None otherwise
     """
-    # Extract token ID from the full token (before the first dot)
-    # better-auth format: {tokenId}.{signature}
-    token_id = token.split('.')[0] if '.' in token else token
+    with auth_validation_duration.labels(method='session').time():
+        # Extract token ID from the full token (before the first dot)
+        # better-auth format: {tokenId}.{signature}
+        token_id = token.split('.')[0] if '.' in token else token
 
-    # Query for valid session - better-auth stores only the token ID
-    # Note: Database stores timestamps without timezone, but they are in UTC
-    # So we use datetime.now(timezone.utc).replace(tzinfo=None) to get naive UTC time
-    current_time_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        # Query for valid session - better-auth stores only the token ID
+        # Note: Database stores timestamps without timezone, but they are in UTC
+        # So we use datetime.now(timezone.utc).replace(tzinfo=None) to get naive UTC time
+        current_time_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    stmt = select(UserSession).where(
-        UserSession.token == token_id,
-        UserSession.expires_at > current_time_utc
-    )
+        stmt = select(UserSession).where(
+            UserSession.token == token_id,
+            UserSession.expires_at > current_time_utc
+        )
 
-    result = await db.execute(stmt)
-    session = result.scalar_one_or_none()
+        result = await db.execute(stmt)
+        session = result.scalar_one_or_none()
 
-    if session is None:
-        return None
+        if session is None:
+            return None
 
-    return session.user_id
+        return session.user_id

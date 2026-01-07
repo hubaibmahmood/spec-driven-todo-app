@@ -76,11 +76,14 @@ export const jwtSignIn = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Set httpOnly cookie for refresh token (secure, SameSite=Strict)
+    // Set httpOnly cookie for refresh token
+    // In development: use 'lax' and explicit domain to allow cross-port (localhost:3000 -> localhost:8080)
+    // In production: use 'strict' for maximum security
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
       path: '/',
     });
@@ -167,11 +170,14 @@ export const jwtSignUp = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Set httpOnly cookie for refresh token (secure, SameSite=Strict)
+    // Set httpOnly cookie for refresh token
+    // In development: use 'lax' and explicit domain to allow cross-port (localhost:3000 -> localhost:8080)
+    // In production: use 'strict' for maximum security
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
       path: '/',
     });
@@ -193,6 +199,118 @@ export const jwtSignUp = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({
       error: 'Internal server error',
       message: 'An error occurred during registration',
+    });
+  }
+};
+
+/**
+ * POST /api/auth/refresh
+ * Refresh the access token using the refresh token from httpOnly cookie
+ */
+export const jwtRefresh = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Extract refresh token from httpOnly cookie
+    const refreshToken = req.cookies?.refresh_token;
+
+    console.log('[jwtRefresh] Cookies received:', Object.keys(req.cookies || {}));
+    console.log('[jwtRefresh] Has refresh_token:', !!refreshToken);
+
+    if (!refreshToken) {
+      console.log('[jwtRefresh] No refresh token in cookies');
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'No refresh token provided',
+      });
+      return;
+    }
+
+    // Hash the refresh token to match database storage
+    const hashedRefreshToken = hashRefreshToken(refreshToken);
+
+    console.log('[jwtRefresh] Looking up session with hashed token');
+
+    // Look up the session in the database
+    const session = await prisma.session.findFirst({
+      where: {
+        token: hashedRefreshToken,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (!session) {
+      console.log('[jwtRefresh] No session found in database for this token');
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid refresh token',
+      });
+      return;
+    }
+
+    console.log('[jwtRefresh] Session found for user:', session.userId);
+
+    // Check if the session has expired
+    if (session.expiresAt < new Date()) {
+      // Delete the expired session
+      await prisma.session.delete({
+        where: { id: session.id },
+      });
+
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Refresh token has expired',
+      });
+      return;
+    }
+
+    // Generate a new access token
+    const accessToken = generateAccessToken(session.userId);
+
+    // Return the new access token
+    res.json({
+      accessToken: accessToken,
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name || null,
+        image: session.user.image || null,
+        emailVerified: session.user.emailVerified || false,
+      },
+    });
+  } catch (error) {
+    console.error('Error in JWT refresh:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'An error occurred during token refresh',
+    });
+  }
+};
+
+/**
+ * POST /api/auth/logout
+ * Logout endpoint that clears the refresh token cookie
+ */
+export const jwtLogout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Clear the refresh_token cookie by setting it to expire immediately
+    res.cookie('refresh_token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
+      maxAge: 0, // Expire immediately
+      path: '/',
+    });
+
+    res.json({
+      message: 'Logged out successfully',
+    });
+  } catch (error) {
+    console.error('Error in JWT logout:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'An error occurred during logout',
     });
   }
 };

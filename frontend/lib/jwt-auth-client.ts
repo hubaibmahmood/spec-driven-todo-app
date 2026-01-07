@@ -8,6 +8,7 @@
  */
 
 const JWT_STORAGE_KEY = 'jwt_access_token';
+const USER_INFO_KEY = 'jwt_user_info';
 
 interface User {
   id: string;
@@ -35,13 +36,17 @@ interface SignUpData {
 }
 
 function getAuthBaseURL(): string {
-  // Development: connect directly to local auth server
-  if (process.env.NODE_ENV === 'development') {
-    return "http://localhost:8080";
+  // Always use same-origin requests to avoid cross-origin cookie issues
+  // In development: Next.js proxies /api/auth-proxy/* to localhost:8080
+  // In production: Frontend proxies auth requests to auth server
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
   }
 
-  // Production: use frontend URL (proxied by Netlify to auth server)
-  return process.env.NEXT_PUBLIC_AUTH_URL || "https://momentum.intevia.cc";
+  // Server-side fallback
+  return process.env.NODE_ENV === 'development'
+    ? "http://localhost:3000"
+    : (process.env.NEXT_PUBLIC_AUTH_URL || "https://momentum.intevia.cc");
 }
 
 const BASE_URL = getAuthBaseURL();
@@ -75,10 +80,45 @@ export function clearAccessToken(): void {
 }
 
 /**
+ * Store user info in localStorage
+ */
+export function storeUserInfo(user: User): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(USER_INFO_KEY, JSON.stringify(user));
+  }
+}
+
+/**
+ * Retrieve user info from localStorage
+ */
+export function getUserInfo(): User | null {
+  if (typeof window !== 'undefined') {
+    const userJson = localStorage.getItem(USER_INFO_KEY);
+    if (userJson) {
+      try {
+        return JSON.parse(userJson);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Remove user info from localStorage
+ */
+export function clearUserInfo(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(USER_INFO_KEY);
+  }
+}
+
+/**
  * Sign in with email and password, receive JWT tokens
  */
 export async function jwtSignIn(data: SignInData): Promise<JWTAuthResponse> {
-  const response = await fetch(`${BASE_URL}/api/auth/jwt/sign-in`, {
+  const response = await fetch(`${BASE_URL}/api/auth-proxy/auth/jwt/sign-in`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -94,8 +134,9 @@ export async function jwtSignIn(data: SignInData): Promise<JWTAuthResponse> {
 
   const result: JWTAuthResponse = await response.json();
 
-  // Store access token in localStorage
+  // Store access token and user info in localStorage
   storeAccessToken(result.accessToken);
+  storeUserInfo(result.user);
 
   return result;
 }
@@ -104,7 +145,7 @@ export async function jwtSignIn(data: SignInData): Promise<JWTAuthResponse> {
  * Sign up with email, password, and optional name, receive JWT tokens
  */
 export async function jwtSignUp(data: SignUpData): Promise<JWTAuthResponse> {
-  const response = await fetch(`${BASE_URL}/api/auth/jwt/sign-up`, {
+  const response = await fetch(`${BASE_URL}/api/auth-proxy/auth/jwt/sign-up`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -120,10 +161,34 @@ export async function jwtSignUp(data: SignUpData): Promise<JWTAuthResponse> {
 
   const result: JWTAuthResponse = await response.json();
 
-  // Store access token in localStorage
+  // Store access token and user info in localStorage
   storeAccessToken(result.accessToken);
+  storeUserInfo(result.user);
 
   return result;
+}
+
+/**
+ * Refresh the access token using the refresh token cookie
+ */
+export async function refreshAccessToken(): Promise<string> {
+  const response = await fetch(`${BASE_URL}/api/auth-proxy/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include', // Include httpOnly refresh token cookie
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Token refresh failed');
+  }
+
+  const result = await response.json();
+  const newAccessToken = result.access_token || result.accessToken;
+
+  // Store new access token
+  storeAccessToken(newAccessToken);
+
+  return newAccessToken;
 }
 
 /**
@@ -134,8 +199,8 @@ export async function jwtSignOut(): Promise<void> {
 
   if (accessToken) {
     try {
-      // Call backend logout endpoint (will be implemented in Phase 5)
-      await fetch(`${BASE_URL}/api/auth/logout`, {
+      // Call backend logout endpoint to clear refresh token cookie
+      await fetch(`${BASE_URL}/api/auth-proxy/auth/logout`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -148,23 +213,26 @@ export async function jwtSignOut(): Promise<void> {
     }
   }
 
-  // Clear access token from localStorage
+  // Clear access token and user info from localStorage
   clearAccessToken();
+  clearUserInfo();
 }
 
 /**
- * Get current user from access token (client-side only, no verification)
+ * Get current user from stored user info (client-side only, no verification)
+ * User info is stored in localStorage during sign-in/sign-up
  * For actual verification, make API request to backend
  */
 export function getCurrentUserFromToken(): User | null {
   const token = getAccessToken();
+  const userInfo = getUserInfo();
 
-  if (!token) {
+  if (!token || !userInfo) {
     return null;
   }
 
   try {
-    // Decode JWT payload (not verifying signature - that's backend's job)
+    // Decode JWT payload to check expiration
     const parts = token.split('.');
     if (parts.length !== 3) {
       return null;
@@ -175,20 +243,14 @@ export function getCurrentUserFromToken(): User | null {
     // Check if token is expired
     if (payload.exp && payload.exp * 1000 < Date.now()) {
       clearAccessToken();
+      clearUserInfo();
       return null;
     }
 
-    // Note: We only have user_id in the token
-    // Full user info should be fetched from backend if needed
-    return {
-      id: payload.sub,
-      email: '', // Not stored in token for security
-      name: null,
-      image: null,
-      emailVerified: false,
-    };
+    // Return stored user info
+    return userInfo;
   } catch (error) {
-    console.error('Failed to decode token:', error);
+    console.error('Failed to get user from token:', error);
     return null;
   }
 }

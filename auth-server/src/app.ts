@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import * as helmetModule from 'helmet';
 import { betterAuth } from 'better-auth';
 import { toNodeHandler } from 'better-auth/node';
@@ -12,7 +13,7 @@ const helmet = (helmetModule as any).default || helmetModule;
 
 // Import custom routes
 import { getCurrentUser, getUserSessions, revokeSession } from './auth/routes.js';
-import { jwtSignIn, jwtSignUp } from './auth/jwt-auth.routes.js';
+import { jwtSignIn, jwtSignUp, jwtLogout, jwtRefresh } from './auth/jwt-auth.routes.js';
 
 // Lazy initialization for serverless environments
 let _app: express.Express | null = null;
@@ -66,6 +67,9 @@ function createApp() {
     crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin requests
   }));
 
+  // Cookie parser middleware - MUST be before routes that use req.cookies
+  app.use(cookieParser());
+
   // Mount express json middleware - NOT GLOBAL
   // app.use(express.json());
   // app.use(express.urlencoded({ extended: true }));
@@ -78,6 +82,8 @@ function createApp() {
   // JWT authentication endpoints (enhanced login/signup with JWT tokens)
   app.post('/api/auth/jwt/sign-in', express.json(), jwtSignIn);
   app.post('/api/auth/jwt/sign-up', express.json(), jwtSignUp);
+  app.post('/api/auth/refresh', jwtRefresh); // No express.json() needed - reads from cookies
+  app.post('/api/auth/logout', express.json(), jwtLogout);
 
   // Add better-auth middleware - this must come after custom routes if they handle /api/auth paths
   app.all('/api/auth/*', (req, res) => {

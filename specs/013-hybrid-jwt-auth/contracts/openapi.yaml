@@ -1,0 +1,301 @@
+openapi: 3.1.0
+info:
+  title: Hybrid JWT Authentication API
+  version: 1.0.0
+  description: |
+    FastAPI endpoints for JWT-based authentication with token refresh.
+
+    This API extends the existing better-auth session system with hybrid JWT authentication:
+    - Short-lived access tokens (30 minutes) for API requests
+    - Long-lived refresh tokens (7 days) stored in httpOnly cookies
+    - Backward compatibility with session-based authentication during migration
+
+    **Feature**: 013-hybrid-jwt-auth
+    **Date**: 2026-01-02
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.production.com
+    description: Production server
+
+paths:
+  /api/auth/refresh:
+    post:
+      summary: Refresh Access Token
+      description: |
+        Obtains a new access token using a valid refresh token.
+
+        The refresh token is sent via httpOnly cookie (automatically included by browser).
+        If the refresh token is valid and not expired, a new access token is returned.
+
+        **Authentication**: Refresh token (httpOnly cookie)
+        **Rate Limit**: 10 requests per minute per IP
+      operationId: refreshAccessToken
+      tags:
+        - Authentication
+      security:
+        - refreshTokenCookie: []
+      responses:
+        '200':
+          description: Access token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefreshResponse'
+              example:
+                accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX2FiYzEyMyIsImlhdCI6MTczNTg2MjQwMCwiZXhwIjoxNzM1ODY0MjAwLCJ0eXBlIjoiYWNjZXNzIn0.S2lkbmV5X1N0b25lc19BcmVfUGFpbmZ1bA"
+                expiresIn: 1800
+        '401':
+          description: Unauthorized - Invalid, expired, or revoked refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                expired:
+                  summary: Refresh token expired
+                  value:
+                    error: "refresh_token_expired"
+                    message: "Your session has expired. Please log in again."
+                invalid:
+                  summary: Invalid refresh token
+                  value:
+                    error: "invalid_refresh_token"
+                    message: "Invalid refresh token."
+                revoked:
+                  summary: Session revoked
+                  value:
+                    error: "session_revoked"
+                    message: "Your session has been terminated. Please log in again."
+        '429':
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "rate_limit_exceeded"
+                message: "Too many refresh attempts. Please try again later."
+        '500':
+          description: Internal Server Error - Database or service error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "internal_error"
+                message: "Unable to refresh token. Please try again."
+
+  /api/auth/logout:
+    post:
+      summary: Logout (Revoke Refresh Token)
+      description: |
+        Logs out the user by revoking their refresh token.
+
+        The refresh token is deleted from the database, preventing future token refreshes.
+        The access token remains valid until expiration (up to 30 minutes) as it is stateless.
+
+        **Authentication**: JWT access token (Bearer)
+        **Side Effect**: Deletes refresh token from database
+      operationId: logout
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+              example:
+                message: "Logged out successfully"
+        '401':
+          description: Unauthorized - Invalid or expired access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "unauthorized"
+                message: "Invalid or expired token"
+        '500':
+          description: Internal Server Error - Database error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "internal_error"
+                message: "Unable to logout. Please try again."
+
+  /api/auth/me:
+    get:
+      summary: Get Current User (JWT Validation Example)
+      description: |
+        Returns the current authenticated user's ID.
+
+        This endpoint demonstrates JWT-based authentication using the get_current_user_jwt dependency.
+        It validates the access token without database lookup.
+
+        **Authentication**: JWT access token (Bearer)
+        **Database Queries**: 0 (JWT signature validation only)
+      operationId: getCurrentUser
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User authenticated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+              example:
+                userId: "user_abc123"
+                authMethod: "jwt"
+        '401':
+          description: Unauthorized - Invalid, expired, or missing access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                expired:
+                  summary: Token expired
+                  value:
+                    error: "token_expired"
+                    message: "Access token expired. Please refresh."
+                invalid:
+                  summary: Invalid token
+                  value:
+                    error: "invalid_token"
+                    message: "Invalid access token."
+                missing:
+                  summary: Missing token
+                  value:
+                    error: "missing_token"
+                    message: "Missing or invalid authentication credentials"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT access token in Authorization header.
+        Format: `Authorization: Bearer <access_token>`
+
+        The access token is a signed JWT containing user ID and expiration.
+        It expires after 30 minutes and can be refreshed using /api/auth/refresh.
+
+    refreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: |
+        HttpOnly cookie containing the refresh token.
+
+        Security attributes:
+        - HttpOnly: true (prevents XSS theft)
+        - Secure: true (HTTPS only in production)
+        - SameSite: Strict (prevents CSRF)
+        - Max-Age: 604800 (7 days)
+
+        The refresh token is automatically sent by the browser with requests to /api/auth/refresh.
+
+  schemas:
+    TokenRefreshResponse:
+      type: object
+      required:
+        - accessToken
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          format: jwt
+          description: |
+            New JWT access token valid for 30 minutes.
+            Format: header.payload.signature (base64url encoded)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX2FiYzEyMyIsImlhdCI6MTczNTg2MjQwMCwiZXhwIjoxNzM1ODY0MjAwLCJ0eXBlIjoiYWNjZXNzIn0.S2lkbmV5X1N0b25lc19BcmVfUGFpbmZ1bA"
+        expiresIn:
+          type: integer
+          format: int32
+          description: Access token lifetime in seconds
+          example: 1800
+          const: 1800
+
+    LogoutResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Confirmation message
+          example: "Logged out successfully"
+
+    UserInfoResponse:
+      type: object
+      required:
+        - userId
+        - authMethod
+      properties:
+        userId:
+          type: string
+          description: Authenticated user ID from JWT claims
+          example: "user_abc123"
+        authMethod:
+          type: string
+          description: Authentication method used (jwt or session)
+          enum:
+            - jwt
+            - session
+          example: "jwt"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - token_expired
+            - refresh_token_expired
+            - invalid_token
+            - invalid_refresh_token
+            - session_revoked
+            - unauthorized
+            - missing_token
+            - rate_limit_exceeded
+            - internal_error
+          example: "token_expired"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Access token expired. Please refresh."
+        details:
+          type: object
+          description: Optional additional error details
+          additionalProperties: true
+
+tags:
+  - name: Authentication
+    description: |
+      JWT-based authentication endpoints for token refresh and logout.
+
+      **Authentication Flow**:
+      1. User logs in via better-auth → Receives access token (JWT) + refresh token (httpOnly cookie)
+      2. Frontend stores access token in memory/localStorage
+      3. API requests include access token in Authorization header
+      4. When access token expires (30 min), frontend calls /api/auth/refresh
+      5. Backend validates refresh token (from cookie), returns new access token
+      6. Frontend retries original request with new access token
+      7. On logout, frontend calls /api/auth/logout to revoke refresh token

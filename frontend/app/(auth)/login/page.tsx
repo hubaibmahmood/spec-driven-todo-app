@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
-import { signIn } from "@/lib/auth-client";
+import { jwtSignIn } from "@/lib/jwt-auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Loading fallback component
@@ -41,19 +41,15 @@ function LoginForm() {
     setIsLoading(true);
     setError(null);
 
-    await signIn.email({
-      email,
-      password,
-      fetchOptions: {
-        onSuccess: () => {
-             router.push("/dashboard");
-        },
-        onError: (ctx) => {
-             setError(ctx.error.message);
-             setIsLoading(false);
-        }
-      }
-    });
+    try {
+      // Use JWT authentication
+      await jwtSignIn({ email, password });
+      // Sign-in successful, redirect to dashboard
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in");
+      setIsLoading(false);
+    }
   };
 
   return (

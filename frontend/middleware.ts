@@ -2,11 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // In production (HTTPS), browsers add __Secure- prefix to cookies with secure flag
-  // In development (HTTP), the cookie name has no prefix
-  const sessionToken =
-    request.cookies.get("__Secure-better-auth.session_token") ||
-    request.cookies.get("better-auth.session_token");
+  // JWT authentication: Check for refresh_token cookie (httpOnly cookie set by auth-server)
+  // This is more secure than checking localStorage (which middleware cannot access)
+  const refreshToken = request.cookies.get("refresh_token");
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/register");
   const isVerificationRoute = request.nextUrl.pathname.startsWith("/verify-email") || request.nextUrl.pathname.startsWith("/email-verified");
@@ -18,11 +16,11 @@ export async function middleware(request: NextRequest) {
   // Password reset routes are public since users may not have a session
   const isPublicRoute = isAuthRoute || isVerificationRoute || isPasswordResetRoute || request.nextUrl.pathname === '/';
 
-  if (!sessionToken && !isPublicRoute) {
+  if (!refreshToken && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (sessionToken && isAuthRoute) {
+  if (refreshToken && isAuthRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

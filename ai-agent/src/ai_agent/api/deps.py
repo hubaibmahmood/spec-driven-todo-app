@@ -27,10 +27,11 @@ async def get_current_user(
     Authentication dependency.
 
     Validates the Bearer token from Authorization header and returns user_id.
+    This now uses JWT validation instead of session-based authentication.
 
     Args:
         authorization: Authorization header (Bearer <token>)
-        db: Database session
+        db: Database session (kept for backward compatibility, not used for JWT)
 
     Returns:
         user_id of the authenticated user
@@ -40,7 +41,7 @@ async def get_current_user(
     """
     auth_service = AuthService()
     token = auth_service.parse_bearer_token(authorization)
-    user_id = await auth_service.validate_session(db, token)
+    user_id = auth_service.validate_jwt(token)
     return user_id
 
 

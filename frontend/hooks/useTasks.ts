@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { Todo, Status, Priority } from "@/types";
 import { todoApi } from "@/lib/api-v2";
 import { ApiRedirectError } from "@/lib/http-client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface UseTasksReturn {
   todos: Todo[];
@@ -19,6 +20,7 @@ export function useTasks(): UseTasksReturn {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { isInitialized } = useAuth();
 
   // Fetch todos
   const loadTodos = useCallback(async () => {
@@ -36,8 +38,12 @@ export function useTasks(): UseTasksReturn {
   }, [router]);
 
   useEffect(() => {
+    // Wait for auth initialization before loading tasks
+    if (!isInitialized) {
+      return;
+    }
     loadTodos();
-  }, [loadTodos]);
+  }, [loadTodos, isInitialized]);
 
   // Listen for tasks-updated events from chat panel
   useEffect(() => {

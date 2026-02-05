@@ -5,11 +5,10 @@ import { Settings as SettingsIcon, Save, Trash2 } from 'lucide-react';
 import { ApiKeyInput } from '@/components/settings/ApiKeyInput';
 import { ApiKeyStatus } from '@/components/settings/ApiKeyStatus';
 import { useApiKey } from '@/lib/hooks/useApiKey';
-import { useSession } from '@/lib/auth-client';
+import { isAuthenticated } from '@/lib/jwt-auth-client';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 function SettingsPageContent() {
-  const { data: session } = useSession();
   const {
     status,
     loading,
@@ -26,12 +25,12 @@ function SettingsPageContent() {
     message: string;
   } | null>(null);
 
-  // Fetch API key status on mount
+  // Fetch API key status on mount if user is authenticated
   useEffect(() => {
-    if (session?.session?.token) {
+    if (isAuthenticated()) {
       fetchStatus();
     }
-  }, [session?.session?.token, fetchStatus]);
+  }, [fetchStatus]);
 
   const handleSave = async () => {
     if (!apiKey.trim()) {

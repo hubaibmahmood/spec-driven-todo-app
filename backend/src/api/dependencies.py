@@ -10,32 +10,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.database.connection import get_db
 from src.database.repository import TaskRepository
-from src.services.auth_service import validate_session
+from src.services.jwt_service import jwt_service, TokenExpiredError, InvalidTokenError
 
 
 # HTTPBearer security scheme for extracting Bearer tokens
 security = HTTPBearer()
 
 
-async def get_current_user(
+async def get_current_user_jwt(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
 ) -> str:
     """
-    Authenticate user via session token and return user ID.
+    Authenticate user via JWT access token and return user ID.
 
-    Extracts Bearer token from Authorization header, validates it against
-    the user_sessions table, and returns the authenticated user's ID.
+    Extracts Bearer token from Authorization header, validates the JWT
+    signature and expiration, and returns the authenticated user's ID.
+
+    This validation is stateless (no database query) - only signature verification.
 
     Args:
         credentials: HTTP Authorization credentials (Bearer token)
-        db: Database session
 
     Returns:
-        User ID string if session is valid
+        User ID string if JWT is valid
 
     Raises:
-        HTTPException: 401 if token is missing, invalid, expired, or revoked
+        HTTPException: 401 if token is missing, invalid, expired, or wrong type
     """
     if credentials is None:
         raise HTTPException(
@@ -45,16 +45,66 @@ async def get_current_user(
         )
 
     token = credentials.credentials
-    user_id = await validate_session(token, db)
 
-    if user_id is None:
+    try:
+        user_id = jwt_service.validate_access_token(token)
+        return user_id
+    except TokenExpiredError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired session token",
+            detail={"error_code": "token_expired", "message": "Access token has expired"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error_code": "invalid_token", "message": str(e)},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return user_id
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> str:
+    """
+    Authenticate user via JWT access token and return user ID.
+
+    This dependency validates JWT access tokens issued by the auth-server.
+    Session-based authentication has been fully migrated to JWT.
+
+    Args:
+        credentials: HTTP Authorization credentials (Bearer token)
+
+    Returns:
+        User ID string if JWT is valid
+
+    Raises:
+        HTTPException: 401 if token is missing, invalid, or expired
+    """
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials
+
+    try:
+        user_id = jwt_service.validate_access_token(token)
+        return user_id
+    except TokenExpiredError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error_code": "token_expired", "message": "Access token has expired"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error_code": "invalid_token", "message": str(e)},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 async def get_service_auth(
@@ -113,19 +163,17 @@ async def get_service_auth(
 async def get_current_user_or_service(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     x_user_id: Optional[str] = Header(None, alias="X-User-ID"),
-    db: AsyncSession = Depends(get_db),
 ) -> str:
     """
-    Authenticate user via either service token or user session.
+    Authenticate user via service token or JWT access token.
 
     This dependency supports dual authentication:
-    - If X-User-ID header is present: use service authentication flow
-    - Otherwise: use standard user session authentication flow
+    - If X-User-ID header is present: use service authentication flow (MCP server)
+    - Otherwise: use JWT authentication flow
 
     Args:
         credentials: HTTP Authorization credentials (Bearer token)
         x_user_id: Optional X-User-ID header for service authentication
-        db: Database session
 
     Returns:
         User ID string
@@ -161,7 +209,7 @@ async def get_current_user_or_service(
 
         return x_user_id
 
-    # Standard user session authentication flow
+    # JWT authentication flow
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -170,16 +218,22 @@ async def get_current_user_or_service(
         )
 
     token = credentials.credentials
-    user_id = await validate_session(token, db)
 
-    if user_id is None:
+    try:
+        user_id = jwt_service.validate_access_token(token)
+        return user_id
+    except TokenExpiredError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired session token",
+            detail={"error_code": "token_expired", "message": "Access token has expired"},
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    return user_id
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error_code": "invalid_token", "message": str(e)},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 async def get_task_repository(

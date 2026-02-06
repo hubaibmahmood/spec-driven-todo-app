@@ -35,7 +35,7 @@ export default function AuthLayout({
         </div>
         {children}
         <div className="bg-slate-50 p-4 border-t border-slate-100 text-center text-xs text-slate-400">
-          © 2024 Momentum. Secure & Encrypted.
+          © 2026 Momentum. Secure & Encrypted.
         </div>
       </div>
     </div>

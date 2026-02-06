@@ -11,6 +11,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { getUserTimezone } from '@/lib/utils/timezone';
+import { Badge } from "@/components/ui/badge";
 
 interface TodoItemProps {
   todo: Todo;
@@ -24,11 +25,11 @@ export function TodoItem({ todo, onToggleStatus, onDelete, onEdit }: TodoItemPro
   const [isExpanded, setIsExpanded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
-  const priorityColor = {
-    [Priority.LOW]: 'bg-slate-100 text-slate-600',
-    [Priority.MEDIUM]: 'bg-blue-50 text-blue-600',
-    [Priority.HIGH]: 'bg-orange-50 text-orange-600',
-    [Priority.URGENT]: 'bg-red-50 text-red-600',
+  const priorityVariant = {
+    [Priority.LOW]: "secondary" as const,
+    [Priority.MEDIUM]: "outline" as const,
+    [Priority.HIGH]: "warning" as const,
+    [Priority.URGENT]: "destructive" as const,
   };
 
   // Format due date with time if it has a time component (not midnight UTC)
@@ -116,9 +117,9 @@ export function TodoItem({ todo, onToggleStatus, onDelete, onEdit }: TodoItemPro
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColor[todo.priority]}`}>
+              <Badge variant={priorityVariant[todo.priority]}>
                 {todo.priority}
-              </span>
+              </Badge>
 
               {todo.dueDate && (
                 <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">

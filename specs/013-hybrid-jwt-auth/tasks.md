@@ -215,9 +215,9 @@
 
 ### Security Reviews
 
-- [ ] T079 [P] Security review: Verify JWT_SECRET is minimum 32 characters in all environments (.env files, deployment configs)
-- [ ] T080 [P] Security review: Verify httpOnly cookie attributes in auth-server response (HttpOnly=true, Secure=true in production, SameSite=Strict)
-- [ ] T081 [P] Security review: Verify refresh token hashing uses constant-time comparison (hmac.compare_digest) in backend/src/services/refresh_token_service.py
+- [X] T079 [P] Security review: Verify JWT_SECRET is minimum 32 characters in all environments (.env files, deployment configs)
+- [X] T080 [P] Security review: Verify httpOnly cookie attributes in auth-server response (HttpOnly=true, Secure=true in production, SameSite=Strict)
+- [X] T081 [P] Security review: Verify refresh token hashing uses constant-time comparison (hmac.compare_digest) in backend/src/services/refresh_token_service.py
 
 ### Performance Reviews
 

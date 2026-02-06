@@ -24,10 +24,14 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
-import { useSession } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
 import type { Feature, CTAButtonProps } from "@/types/landing";
 import Image from "next/image";
+import { Sparkles } from "@/components/ui/sparkles";
+import { Meteors } from "@/components/ui/meteors";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { ShimmerText } from "@/components/ui/shimmer-text";
+import { AnimatedBorder } from "@/components/ui/animated-border";
+import { DotPattern } from "@/components/ui/dot-pattern";
 
 // Features Data - AI Assistant First
 const FEATURES: readonly Feature[] = [
@@ -103,7 +107,7 @@ const FeatureCard: React.FC<{ feature: Feature }> = ({ feature }) => {
   const Icon = feature.icon;
 
   return (
-    <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+    <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
       {/* Subtle gradient background on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 via-purple-50/0 to-pink-50/0 group-hover:from-indigo-50/50 group-hover:via-purple-50/30 group-hover:to-pink-50/50 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
 
@@ -153,16 +157,6 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, ans
 };
 
 const LandingPage: React.FC = () => {
-  const { data: session, isPending } = useSession();
-  const router = useRouter();
-
-  // Redirect authenticated users to dashboard
-  useEffect(() => {
-    if (session && !isPending) {
-      router.push("/dashboard");
-    }
-  }, [session, isPending, router]);
-
   // Scroll-triggered animations using Intersection Observer
   useEffect(() => {
     const observerOptions = {
@@ -201,10 +195,6 @@ const LandingPage: React.FC = () => {
 
     return () => observer.disconnect();
   }, []);
-
-  // Show loading or nothing while redirecting
-  if (isPending) return <div className="min-h-screen bg-white" />;
-  if (session) return null; // Redirecting...
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-700 overflow-x-hidden">
@@ -254,7 +244,7 @@ const LandingPage: React.FC = () => {
 
       {/* Hero Section - AI-Focused */}
       <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-4xl mx-auto relative z-10 mb-20">
+        <Sparkles className="text-center max-w-4xl mx-auto mb-20">
           {/* Badge with enhanced styling */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-8 shadow-sm animate-pulse-slow">
             <span className="flex h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></span>
@@ -298,7 +288,7 @@ const LandingPage: React.FC = () => {
               Sign in
             </CTAButton>
           </div>
-        </div>
+        </Sparkles>
 
         {/* Dashboard Preview - Clean and Professional */}
         <div className="relative mx-auto max-w-6xl perspective-2000 group">
@@ -576,24 +566,24 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div className="space-y-2">
-              <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                100+
-              </p>
+              <ShimmerText className="text-5xl font-extrabold">
+                <NumberTicker target={100} formatter={(n: number) => `${n}+`} />
+              </ShimmerText>
               <p className="text-slate-600 font-medium">Active Users</p>
               <p className="text-sm text-slate-500">Early adopters organizing daily</p>
             </div>
             <div className="space-y-2">
-              <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                1,000+
-              </p>
+              <ShimmerText className="text-5xl font-extrabold">
+                <NumberTicker target={1000} formatter={(n: number) => `${n.toLocaleString()}+`} />
+              </ShimmerText>
               <p className="text-slate-600 font-medium">Tasks Completed</p>
               <p className="text-sm text-slate-500">Through AI assistance</p>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
-                <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-indigo-600">
-                  4.9
-                </p>
+                <ShimmerText className="text-5xl font-extrabold">
+                  <NumberTicker target={4.9} decimals={1} />
+                </ShimmerText>
                 <div className="flex gap-1 mb-2">
                   {[...Array(5)].map((_, i) => (
                     <svg
@@ -616,6 +606,7 @@ const LandingPage: React.FC = () => {
 
       {/* Features Section - NEW: 4 Features with AI First */}
       <section className="py-24 bg-slate-50 relative overflow-hidden animate-on-scroll">
+        <DotPattern opacity={0.1} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16 max-w-2xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6">
@@ -630,7 +621,9 @@ const LandingPage: React.FC = () => {
           {/* Updated Grid: 4 columns on large screens */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
+              <AnimatedBorder key={feature.id}>
+                <FeatureCard feature={feature} />
+              </AnimatedBorder>
             ))}
           </div>
         </div>
@@ -650,7 +643,8 @@ const LandingPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Testimonial 1 */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+            <AnimatedBorder opacity={0.4} speed={6}>
+            <div className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
                   <svg
@@ -676,9 +670,11 @@ const LandingPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            </AnimatedBorder>
 
             {/* Testimonial 2 */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+            <AnimatedBorder opacity={0.4} speed={6}>
+            <div className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
                   <svg
@@ -704,9 +700,11 @@ const LandingPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            </AnimatedBorder>
 
             {/* Testimonial 3 */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-all duration-300">
+            <AnimatedBorder opacity={0.4} speed={6}>
+            <div className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300">
               <div className="flex gap-1 mb-4">
                 {[...Array(5)].map((_, i) => (
                   <svg
@@ -732,6 +730,7 @@ const LandingPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            </AnimatedBorder>
           </div>
         </div>
       </section>
@@ -780,6 +779,7 @@ const LandingPage: React.FC = () => {
       {/* Bottom CTA */}
       <section className="py-20 px-4">
         <div className="max-w-5xl mx-auto bg-slate-900 rounded-3xl p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl">
+          <Meteors count={20} />
           <div className="relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Ready to get organized?
@@ -829,7 +829,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="text-center md:text-left text-sm text-slate-400 border-t border-slate-100 pt-8">
-            © 2025 Momentum Inc. All rights reserved.
+            © 2026 Momentum Inc. All rights reserved.
           </div>
         </div>
       </footer>

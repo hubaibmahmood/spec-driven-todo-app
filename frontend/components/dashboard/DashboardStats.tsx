@@ -4,6 +4,7 @@ import React from 'react';
 import { TodoStats } from '@/types';
 import { PieChart, Pie, Cell } from 'recharts';
 import { CheckSquare, Clock, AlertCircle } from 'lucide-react';
+import { NumberTicker } from "@/components/ui/number-ticker";
 
 interface DashboardStatsProps {
   stats: TodoStats;
@@ -20,10 +21,10 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {/* Stat Card 1: Total */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-indigo-500 flex flex-col justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">Total Tasks</p>
-          <h3 className="text-3xl font-bold text-slate-900 mt-2">{stats.total}</h3>
+          <NumberTicker target={stats.total} className="text-3xl font-bold text-slate-900 mt-2 block" />
         </div>
         <div className="mt-4 flex items-center text-sm text-slate-600">
           <span className="bg-slate-100 p-1.5 rounded-md mr-2">
@@ -34,12 +35,13 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
       </div>
 
       {/* Stat Card 2: Completion Rate (Pie) */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500 flex items-center justify-between">
         <div className="flex flex-col justify-center h-full">
           <p className="text-sm font-medium text-slate-500">Progress</p>
-          <h3 className="text-3xl font-bold text-slate-900 mt-2">
-            {stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%
-          </h3>
+          <div className="flex items-baseline gap-0.5 mt-2">
+            <NumberTicker target={stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0} className="text-3xl font-bold text-slate-900" />
+            <span className="text-xl font-bold text-slate-900">%</span>
+          </div>
           <p className="text-xs text-slate-400 mt-1">Completion Rate</p>
         </div>
         <div className="h-24 w-24">
@@ -63,10 +65,10 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
       </div>
 
       {/* Stat Card 3: Pending High Priority */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-orange-500 flex flex-col justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">High Priority</p>
-          <h3 className="text-3xl font-bold text-orange-600 mt-2">{stats.highPriority}</h3>
+          <NumberTicker target={stats.highPriority} className="text-3xl font-bold text-orange-600 mt-2 block" />
         </div>
         <div className="mt-4 flex items-center text-sm text-orange-700/80">
           <span className="bg-orange-50 p-1.5 rounded-md mr-2">
@@ -77,10 +79,10 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
       </div>
 
       {/* Stat Card 4: Pending */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col justify-between">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-indigo-500 flex flex-col justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">Pending</p>
-          <h3 className="text-3xl font-bold text-indigo-600 mt-2">{stats.pending}</h3>
+          <NumberTicker target={stats.pending} className="text-3xl font-bold text-indigo-600 mt-2 block" />
         </div>
         <div className="mt-4 flex items-center text-sm text-indigo-700/80">
           <span className="bg-indigo-50 p-1.5 rounded-md mr-2">

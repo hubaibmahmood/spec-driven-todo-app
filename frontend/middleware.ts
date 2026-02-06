@@ -9,18 +9,21 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/register");
   const isVerificationRoute = request.nextUrl.pathname.startsWith("/verify-email") || request.nextUrl.pathname.startsWith("/email-verified");
   const isPasswordResetRoute = request.nextUrl.pathname.startsWith("/forgot-password") || request.nextUrl.pathname.startsWith("/reset-password");
+  const isLandingPage = request.nextUrl.pathname === '/';
 
   // Define protected routes explicitly or protect everything except auth/public
   // Here we assume everything except auth and static assets is protected
   // Verification routes are public since users don't have a session yet
   // Password reset routes are public since users may not have a session
-  const isPublicRoute = isAuthRoute || isVerificationRoute || isPasswordResetRoute || request.nextUrl.pathname === '/';
+  // Landing page is public but redirects authenticated users to dashboard
+  const isPublicRoute = isAuthRoute || isVerificationRoute || isPasswordResetRoute || isLandingPage;
 
   if (!refreshToken && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (refreshToken && isAuthRoute) {
+  // Redirect authenticated users from auth routes AND landing page to dashboard
+  if (refreshToken && (isAuthRoute || isLandingPage)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

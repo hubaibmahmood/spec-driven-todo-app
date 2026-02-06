@@ -7,6 +7,7 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  --radius: 0.5rem;
 }
 
 body {
@@ -103,4 +104,22 @@ body {
         /* Smooth scroll behavior */
         html {
           scroll-behavior: smooth;
+        }
+
+        /* Magic UI keyframes */
+        @keyframes meteor {
+          0% { opacity: 0; transform: rotate(35deg) translateY(-100px); }
+          5% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { opacity: 0; transform: rotate(35deg) translateY(900px); }
+        }
+
+        @keyframes shimmer-text {
+          0% { background-position: 0% center; }
+          100% { background-position: 200% center; }
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }

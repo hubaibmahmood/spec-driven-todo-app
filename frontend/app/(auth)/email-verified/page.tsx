@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle, XCircle, Loader2, CheckSquare } from "lucide-react";
+import { Sparkles } from "@/components/ui/sparkles";
 import Link from "next/link";
 
 type VerificationStatus = "verifying" | "success" | "error" | "already-verified";
@@ -114,9 +115,11 @@ function EmailVerifiedContent() {
           {/* Success State */}
           {status === "success" && (
             <>
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl shadow-2xl shadow-emerald-500/40 mb-10 mx-auto">
-                <CheckCircle className="w-10 h-10 text-white" />
-              </div>
+              <Sparkles className="inline-flex mx-auto mb-10">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl shadow-2xl shadow-emerald-500/40">
+                  <CheckCircle className="w-10 h-10 text-white" />
+                </div>
+              </Sparkles>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 leading-[1.1]">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-600">
                   Email Verified!

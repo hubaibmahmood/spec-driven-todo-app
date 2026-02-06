@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { Mail, CheckCircle, AlertCircle, CheckSquare } from "lucide-react";
+import { Sparkles } from "@/components/ui/sparkles";
 import { useSearchParams } from "next/navigation";
 
 function VerifyEmailContent() {
@@ -62,9 +63,11 @@ function VerifyEmailContent() {
       <section className="pt-28 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center max-w-3xl mx-auto relative z-10">
           {/* Icon */}
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/30 mb-6 mx-auto">
-            <Mail className="w-8 h-8 text-white" />
-          </div>
+          <Sparkles className="inline-flex mx-auto mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-xl shadow-indigo-500/30">
+              <Mail className="w-8 h-8 text-white" />
+            </div>
+          </Sparkles>
 
           {/* Title */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 mb-4 leading-tight">

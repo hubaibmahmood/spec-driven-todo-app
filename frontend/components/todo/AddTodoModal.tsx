@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Priority, Todo } from '@/types';
-import { X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface AddTodoModalProps {
   isOpen: boolean;
@@ -54,21 +54,12 @@ export function AddTodoModal({ isOpen, onClose, onSave, initialData }: AddTodoMo
 
 
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative bg-white rounded-2xl w-full max-w-lg shadow-2xl transform transition-all overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-800">
-            {initialData ? 'Edit Task' : 'New Task'}
-          </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{initialData ? 'Edit Task' : 'New Task'}</DialogTitle>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
@@ -137,7 +128,7 @@ export function AddTodoModal({ isOpen, onClose, onSave, initialData }: AddTodoMo
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -2,6 +2,7 @@
 
 import { TodoFilter } from "@/types";
 import { Search } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 export function FilterBar() {
@@ -34,17 +35,13 @@ export function FilterBar() {
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-      <div className="flex gap-2 p-1 bg-slate-100 rounded-lg w-full sm:w-auto">
-        {(['All', 'Active', 'Completed'] as TodoFilter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => handleFilterChange(f)}
-            className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filter === f ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
+      <Tabs value={filter} onValueChange={(value) => handleFilterChange(value as TodoFilter)} className="w-full sm:w-auto">
+        <TabsList>
+          <TabsTrigger value="All">All</TabsTrigger>
+          <TabsTrigger value="Active">Active</TabsTrigger>
+          <TabsTrigger value="Completed">Completed</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="relative w-full sm:w-64">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

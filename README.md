@@ -96,7 +96,128 @@ All services share a single PostgreSQL database (Neon serverless) for data consi
 > - [Frontend](./frontend/README.md) - Port 3000
 > - [MCP Server](./mcp-server/README.md) - Port 8001
 
-### Full Stack Setup
+---
+
+## Docker Deployment (Recommended)
+
+All 5 microservices are fully containerized. The root `docker-compose.yml` brings the entire stack up with a single command.
+
+### Docker Prerequisites
+
+- **Docker** 24+ and **Docker Compose** v2+
+- **Neon PostgreSQL** database URL (cloud-hosted — no local DB needed)
+- All other API keys (Gemini, Resend, etc.)
+
+### 1. Configure Environment
+
+```bash
+git clone https://github.com/hubaibmahmood/momentum.git
+cd momentum
+
+# Copy the root env template and fill in your credentials
+cp .env.example .env
+```
+
+**Required variables in `.env`:**
+
+```env
+# Database (Neon serverless — shared by all Python services)
+DATABASE_URL=postgresql+asyncpg://...          # FastAPI/SQLAlchemy format
+PRISMA_DATABASE_URL=postgresql://...           # Prisma format (auth-server)
+
+# Authentication (must match across services)
+BETTER_AUTH_SECRET=<random-secret>
+JWT_SECRET=<shared-jwt-secret>
+
+# Service-to-service auth
+SERVICE_AUTH_TOKEN=<random-token>
+
+# Encryption
+ENCRYPTION_KEY=<fernet-key>
+
+# Email (Resend)
+RESEND_API_KEY=<resend-key>
+EMAIL_FROM=noreply@yourdomain.com
+
+# AI
+AGENT_GEMINI_API_KEY=<gemini-key>
+
+# URLs (update for production)
+NEXT_PUBLIC_AUTH_URL=http://localhost:3002/api/auth
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_AI_AGENT_URL=http://localhost:8002
+FRONTEND_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3002
+```
+
+### 2. Build and Start All Services
+
+```bash
+# Build all images and start the full stack
+docker compose up --build
+
+# Or run in detached mode
+docker compose up --build -d
+```
+
+Docker Compose starts services in dependency order:
+
+```
+auth-server  ──┐
+backend      ──┤──> mcp-server ──> ai-agent ──> frontend
+```
+
+Each service waits for its dependencies to pass health checks before starting.
+
+### 3. Verify All Services Are Running
+
+```bash
+docker compose ps
+
+# Check logs for a specific service
+docker compose logs backend
+docker compose logs ai-agent
+```
+
+All 5 containers should show `healthy` or `running`:
+
+| Container | Port | Health Endpoint |
+|---|---|---|
+| `momentum-auth-server` | 3002 | `/health` |
+| `momentum-backend-api` | 8000 | `/health` |
+| `momentum-mcp-server` | 8001 | process check |
+| `momentum-ai-agent` | 8002 | `/health` |
+| `momentum-frontend` | 3000 | HTTP 200 |
+
+### 4. Stop the Stack
+
+```bash
+# Stop all containers (preserves images)
+docker compose down
+
+# Stop and remove volumes
+docker compose down -v
+```
+
+### Per-Service Docker Compose (Development)
+
+Each service also has its own `docker-compose.yml` for isolated development:
+
+```bash
+# Run only the backend in isolation
+cd backend && docker compose up --build
+
+# Run only the auth server
+cd auth-server && docker compose up --build
+```
+
+### Container Architecture
+
+All containers share a `momentum-network` Docker bridge network, allowing services to address each other by name (e.g., `http://backend:8000`, `http://mcp-server:8001`). The database remains cloud-hosted (Neon) — no local PostgreSQL container required.
+
+---
+
+### Manual Setup (Without Docker)
 
 #### 1. Clone and Setup Database
 
@@ -305,6 +426,7 @@ npm run lint
 
 - **Database**: Neon Serverless PostgreSQL (shared)
 - **Cache**: Redis (rate limiting)
+- **Containerization**: Docker + Docker Compose (all 5 services)
 - **Package Managers**: uv (Python), npm (Node.js)
 - **Development**: SpecKit Plus (Spec-Driven Development)
 - **AI Tools**: Claude Code, Google AI Studio (Gemini)
@@ -366,7 +488,17 @@ All endpoints require authentication via `Authorization: Bearer <token>` header.
 
 ## Deployment
 
-The application is designed for cloud deployment:
+### Docker (Self-Hosted / VPS)
+
+Run the entire stack on any Docker-capable host:
+
+```bash
+docker compose up --build -d
+```
+
+All 5 services are containerized with health checks and automatic restart policies (`restart: unless-stopped`).
+
+### Cloud Deployment
 
 - **Backend**: Render.com (see `backend/DEPLOYMENT_RENDER.md`)
 - **Auth Server**: Vercel serverless (see `auth-server/DEPLOYMENT.md`)
@@ -396,9 +528,19 @@ This project is a demonstration of Spec-Driven Development methodology.
 
 ## Project Status
 
-**Current Version**: 2.0.0 (AI-Powered Production Release)
+**Current Version**: 2.1.0 (Docker Containerization Release)
 
-### Latest Updates (2025)
+### Latest Updates (2026)
+
+**🐳 Docker Containerization (Spec 015)**
+- ✅ All 5 microservices fully containerized with production-grade Dockerfiles
+- ✅ Root `docker-compose.yml` orchestrates the complete stack with one command
+- ✅ Per-service `docker-compose.yml` files for isolated development
+- ✅ Health checks with dependency ordering (backend → mcp-server → ai-agent → frontend)
+- ✅ Shared `momentum-network` Docker bridge for inter-service communication
+- ✅ Automatic restart policies (`unless-stopped`) for production resilience
+
+### Previous Updates (2025)
 
 **🤖 AI Integration (Specs 007-010)**
 - ✅ Natural language task management with Gemini 2.5 Flash
@@ -425,6 +567,7 @@ This project is a demonstration of Spec-Driven Development methodology.
 - ✅ **MCP Server** - Tool integration layer with service-to-service auth
 - ✅ **Auth Server** - Email/password auth with email verification (no OAuth currently)
 - ✅ **Frontend** - Next.js 16 with real-time updates and AI chat interface
+- ✅ **Docker Deployment** - Full stack containerized with Docker Compose
 - ✅ **Cloud Deployment** - Production-ready on Render, Vercel, and Netlify
 
 ### Development Methodology

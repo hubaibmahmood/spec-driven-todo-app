@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Use internal Docker service URLs when available (server-side in Docker)
+// Otherwise fall back to public URLs (for browser/development)
 const AUTH_SERVICE_URL = (
-  process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:8080"
+  process.env.INTERNAL_AUTH_URL || process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:8080"
 ).replace(/\/$/, "");
 const BACKEND_SERVICE_URL = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 ).replace(/\/$/, "");
 
 async function proxyRequest(request: NextRequest) {

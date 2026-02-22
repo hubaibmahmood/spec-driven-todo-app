@@ -21,17 +21,17 @@ logger = logging.getLogger(__name__)
 
 class MCPServerAdapter:
     """Adapter to make mcp.ClientSession compatible with openai-agents SDK."""
-    
+
     def __init__(self, session, name: str):
         self.session = session
         self.name = name
         self.use_structured_content = False
-        
+
     async def list_tools(self, run_context=None, agent=None):
         """Adapt list_tools call."""
         # openai-agents passes run_context and agent, but mcp session doesn't need them
         result = await self.session.list_tools()
-        # Convert ListToolsResult to what might be expected if necessary, 
+        # Convert ListToolsResult to what might be expected if necessary,
         # but usually it expects a list of tool schemas.
         # mcp list_tools returns a result object with a tools attribute.
         if hasattr(result, 'tools'):
@@ -42,6 +42,38 @@ class MCPServerAdapter:
         """Adapt call_tool call."""
         # openai-agents might pass extra args
         return await self.session.call_tool(name, arguments)
+
+    def _get_failure_error_function(self, tool_name: str = None):
+        """Return error function for tool call failures.
+
+        This method is required by the OpenAI Agents SDK for error handling.
+        Returns a function that formats tool call errors.
+
+        Args:
+            tool_name: Optional tool name for contextualized error messages
+        """
+        def format_error(error: Exception) -> str:
+            """Format tool call error for agent context."""
+            if tool_name:
+                return f"MCP tool '{tool_name}' failed: {str(error)}"
+            return f"MCP tool call failed: {str(error)}"
+        return format_error
+
+    def _get_needs_approval_for_tool(self, tool, agent=None):
+        """Determine if a tool requires approval before execution.
+
+        This method is required by the OpenAI Agents SDK v0.8.0+ for HITL workflows.
+        Returns False for all tools as MCP server doesn't implement approval workflows.
+
+        Args:
+            tool: The tool to check for approval requirements
+            agent: Optional agent context (unused in MCP adapter)
+
+        Returns:
+            bool: Always False (no approval needed for MCP tools)
+        """
+        # MCP tools don't require approval - return False for all
+        return False
 
 
 @asynccontextmanager

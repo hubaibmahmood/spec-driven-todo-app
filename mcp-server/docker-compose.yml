@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todo-mcp-server
+    ports:
+      - "8001:8001"
+    environment:
+      # Service authentication (must match backend/.env)
+      - SERVICE_AUTH_TOKEN=${SERVICE_AUTH_TOKEN}
+
+      # Backend API URL (use service name for Docker network)
+      - FASTAPI_BASE_URL=${FASTAPI_BASE_URL:-http://backend:8000}
+
+      # MCP server configuration
+      - MCP_LOG_LEVEL=${MCP_LOG_LEVEL:-INFO}
+      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+      - BACKEND_TIMEOUT=${BACKEND_TIMEOUT:-30.0}
+      - BACKEND_MAX_RETRIES=${BACKEND_MAX_RETRIES:-2}
+    depends_on:
+      - backend
+    networks:
+      - todo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "python.*server"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Backend service (assumes backend is in ../backend)
+  backend:
+    image: todo-backend:latest
+    container_name: todo-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SERVICE_AUTH_TOKEN=${SERVICE_AUTH_TOKEN}
+    networks:
+      - todo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  todo-network:
+    driver: bridge

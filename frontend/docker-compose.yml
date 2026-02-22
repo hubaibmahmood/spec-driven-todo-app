@@ -1,0 +1,75 @@
+# ============================================================================
+# Docker Compose Configuration for Frontend Development
+# ============================================================================
+# This file provides local development environment with hot reload support
+# ============================================================================
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Public environment variables (embedded at build time)
+        NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL:-http://auth-server:8080}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8000}
+        NEXT_PUBLIC_DOMAIN_KEY: ${NEXT_PUBLIC_DOMAIN_KEY:-local-dev}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+
+    container_name: momentum-frontend
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      # Runtime environment variables
+      - NODE_ENV=production
+      - PORT=3000
+
+    # Connect to shared network for microservices communication
+    networks:
+      - todo-network
+
+    # Depend on backend and auth services
+    depends_on:
+      - backend
+      - auth-server
+
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => { process.exit(1); });"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Backend API service (reference - managed by docker-backend)
+  backend:
+    image: momentum-backend:latest
+    container_name: momentum-backend
+    ports:
+      - "8000:8000"
+    networks:
+      - todo-network
+    # Note: This assumes backend is already built
+    # Run: cd ../backend && docker-compose up -d
+
+  # Auth server service (reference - managed by docker-backend)
+  auth-server:
+    image: momentum-auth-server:latest
+    container_name: momentum-auth-server
+    ports:
+      - "8080:8080"
+    networks:
+      - todo-network
+    # Note: This assumes auth-server is already built
+    # Run: cd ../auth-server && docker-compose up -d
+
+# Shared network for microservices communication
+networks:
+  todo-network:
+    external: true
+    # Create network if it doesn't exist:
+    # docker network create todo-network

@@ -16,15 +16,29 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is not set")
 
+# Clean URL for asyncpg (remove unsupported parameters)
+# asyncpg doesn't support 'sslmode' or 'channel_binding' URL parameters
+# SSL is configured via connect_args instead
+clean_url = DATABASE_URL.replace("?sslmode=require&channel_binding=require", "")
+clean_url = clean_url.replace("?sslmode=require", "")
+clean_url = clean_url.replace("&channel_binding=require", "")
+
+# SSL configuration for asyncpg
+connect_args = {}
+if "sslmode=require" in DATABASE_URL or DATABASE_URL.startswith("postgresql+asyncpg://"):
+    # For Neon and other cloud databases that require SSL
+    connect_args["ssl"] = "require"
+
 # Create async engine with connection pooling for production readiness
 engine = create_async_engine(
-    DATABASE_URL,
+    clean_url,
     echo=False,  # Set to True for SQL query logging
     future=True,
     pool_size=5,  # Number of persistent connections
     max_overflow=10,  # Additional connections that can be created when pool is exhausted
     pool_timeout=30,  # Timeout for getting connection from pool
     pool_recycle=3600,  # Recycle connections after 1 hour
+    connect_args=connect_args,
 )
 
 # Session factory

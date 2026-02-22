@@ -10,11 +10,15 @@ function getAuthBaseURL() {
         return "http://localhost:8080/api/auth";
     }
 
-    // Production: use frontend URL (proxied by Netlify to auth server)
+    // Docker/Production: use frontend's auth proxy for same-origin cookies
+    // The proxy endpoint is /api/auth-proxy which forwards to auth server
+    if (process.env.NEXT_PUBLIC_AUTH_URL && process.env.NEXT_PUBLIC_AUTH_URL.includes('localhost')) {
+        return "http://localhost:3000/api/auth-proxy";
+    }
+
+    // Production (Netlify): use frontend URL (proxied by Netlify to auth server)
     // better-auth requires absolute URL, not relative
-    return process.env.NEXT_PUBLIC_AUTH_URL
-        ? `${process.env.NEXT_PUBLIC_AUTH_URL}/api/auth`
-        : "https://momentum.intevia.cc/api/auth";
+    return "https://momentum.intevia.cc/api/auth";
 }
 
 export const authClient = createAuthClient({

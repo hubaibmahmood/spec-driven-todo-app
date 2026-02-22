@@ -7,7 +7,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const AUTH_SERVER_URL = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:8080';
+// Use internal Docker service URL when available (server-side in Docker)
+// Otherwise fall back to public URL (for browser/development)
+const AUTH_SERVER_URL = process.env.INTERNAL_AUTH_URL || process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:8080';
 
 export async function GET(
   request: NextRequest,

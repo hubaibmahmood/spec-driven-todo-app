@@ -1,0 +1,99 @@
+# ============================================================================
+# AI Agent - Docker Ignore Configuration
+# ============================================================================
+# Excludes unnecessary files from Docker build context for faster builds
+# and smaller image sizes
+# ============================================================================
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Development and IDE
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+.editorconfig
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+pytest.ini
+.pytest.ini
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Deployment configs (exclude Railway-specific)
+DEPLOYMENT_*.md
+railway.json
+Procfile
+
+# Specs and planning
+specs/
+.specify/
+
+# Build artifacts
+dist/
+build/
+*.egg
+
+# Editor-specific
+.vscode/
+.idea/
+*.sublime-*
+
+# OS-specific
+Thumbs.db

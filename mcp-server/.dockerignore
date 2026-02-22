@@ -1,0 +1,84 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+.tox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Logs
+*.log
+
+# Deployment platform files
+railway.json
+render.yaml
+fly.toml
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Development documentation
+CLAUDE_DESKTOP_SETUP.md
+DEPLOYMENT_RAILWAY.md
+E2E_SMOKE_TEST.md
+IMPLEMENTATION_SUMMARY.md
+PHASE8_IMPLEMENTATION_SUMMARY.md
+SECURITY_REVIEW.md
+SUCCESS_CRITERIA_VERIFICATION.md
+TESTING.md

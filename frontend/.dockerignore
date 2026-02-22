@@ -1,0 +1,71 @@
+# ============================================================================
+# Docker Build Context Exclusions for Next.js
+# ============================================================================
+
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output
+.next/
+out/
+
+# Testing
+coverage
+.nyc_output
+*.lcov
+
+# IDE and Editor
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files (exclude to prevent secret leaks)
+.env
+.env*.local
+.env.development
+.env.production
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation
+README.md
+CHANGELOG.md
+LICENSE
+docs/
+*.md
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Vercel and Netlify
+.vercel
+.netlify
+
+# TypeScript
+*.tsbuildinfo
+
+# Playwright
+playwright-report/
+test-results/
+
+# Misc
+*.log
+.cache
+temp/
+tmp/

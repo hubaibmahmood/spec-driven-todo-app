@@ -1,0 +1,15 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todo-backend-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Hot reload for development
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+    restart: unless-stopped

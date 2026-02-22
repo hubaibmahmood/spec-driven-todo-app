@@ -1,0 +1,72 @@
+# ============================================================================
+# AI Agent Microservice - Docker Compose Configuration
+# ============================================================================
+# Development setup for local testing
+# Uses external managed database (Neon PostgreSQL)
+# ============================================================================
+
+services:
+  ai-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-agent-service
+    ports:
+      - "8002:8002"
+    environment:
+      # Application settings
+      - ENV=development
+      - LOG_LEVEL=INFO
+
+      # Database (use your Neon PostgreSQL URL)
+      - DATABASE_URL=${DATABASE_URL}
+
+      # Service authentication
+      - SERVICE_AUTH_TOKEN=${SERVICE_AUTH_TOKEN}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=HS256
+
+      # Backend service URL
+      - BACKEND_URL=${BACKEND_URL:-http://backend:8000}
+
+      # CORS origins
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+
+      # Agent configuration
+      - AGENT_GEMINI_API_KEY=${AGENT_GEMINI_API_KEY}
+      - AGENT_MCP_SERVER_URL=${AGENT_MCP_SERVER_URL:-http://mcp-server:8001/mcp}
+      - AGENT_MCP_TIMEOUT=10
+      - AGENT_MCP_RETRY_ATTEMPTS=3
+      - AGENT_TEMPERATURE=0.7
+      - AGENT_TOKEN_BUDGET=800000
+      - AGENT_ENCODING_NAME=cl100k_base
+
+      # Optional OpenAI tracing
+      - AGENT_OPENAI_API_KEY=${AGENT_OPENAI_API_KEY:-}
+
+    volumes:
+      # Hot reload for development (optional - comment out for production)
+      - ./src:/app/src:ro
+      - ./alembic:/app/alembic:ro
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    restart: unless-stopped
+
+    networks:
+      - todo-network
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  todo-network:
+    name: todo-network
+    external: true
+    # Create network with: docker network create todo-network
+    # This allows ai-agent to communicate with other microservices

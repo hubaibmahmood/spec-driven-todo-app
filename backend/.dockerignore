@@ -1,0 +1,89 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+DEPLOYMENT_RENDER.md
+AUTHENTICATION_DEMO.md
+PHASE10_IMPLEMENTATION.md
+
+# Environment files (use docker-compose env or build args)
+.env
+.env.*
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+logs/
+
+# Database files (use external database)
+*.db
+*.sqlite
+*.sqlite3
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Render-specific files
+.renderignore
+build.sh
+render.yaml
+
+# Development tools
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# Test files
+tests/
+test_*.py
+
+# Scripts (unless needed for production)
+scripts/
+*.sh
+!entrypoint.sh

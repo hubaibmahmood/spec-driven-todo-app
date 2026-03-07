@@ -7,7 +7,7 @@ class MemoryStore:
 
     def __init__(self) -> None:
         """Initialize empty storage."""
-        self._tasks: Dict[int, Any] = {}
+        self._tasks: Dict[int, Dict[str, Any]] = {}
         self._next_id: int = 1
 
     def add_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:

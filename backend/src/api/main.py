@@ -9,10 +9,11 @@ from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError, OperationalError, IntegrityError
 
 from src.config import settings
-from src.api.routers import health, tasks, api_keys, auth
-from src.database.connection import engine
+from src.api.routers import health, tasks, api_keys, auth, notifications
+from src.database.connection import engine, async_session_maker
 from src.api.schemas.error import ErrorResponse
 from src.api.middleware import SecurityHeadersMiddleware
+from src.services.notification_service import get_notification_service
 
 
 @asynccontextmanager
@@ -31,10 +32,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"WARNING: Database connection failed: {e}")
         print("API will start but database operations will fail")
-    
+
+    # Start notification scheduler
+    notif_service = get_notification_service(async_session_maker)
+    notif_service.start()
+
     yield
-    
-    # Shutdown: Close database connections
+
+    # Shutdown: Stop scheduler and close database connections
+    notif_service.stop()
     await engine.dispose()
     print("Database connections closed")
 
@@ -224,6 +230,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(tasks.router)
 app.include_router(api_keys.router)
+app.include_router(notifications.router)
 
 
 # Prometheus metrics endpoint

@@ -28,6 +28,7 @@ class Task(Base):
     completed = Column(Boolean, default=False, nullable=False)
     priority = Column(Enum(PriorityLevel, values_callable=lambda x: [e.value for e in x]), default=PriorityLevel.MEDIUM, nullable=False)
     due_date = Column(DateTime(timezone=True), nullable=True)
+    reminder_sent = Column(Boolean, default=False, nullable=False, server_default="false")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

@@ -1,35 +1,64 @@
 """Task endpoints for CRUD operations."""
 
-from fastapi import APIRouter, Depends, status
+import math
+from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query, status
 
 from src.api.dependencies import get_task_repository, get_current_user_or_service
 from src.api.schemas.task import (
     TaskCreate,
+    TaskListResponse,
     TaskResponse,
     CompletionUpdate,
     TaskUpdate,
     BulkDeleteRequest,
-    BulkDeleteResponse
+    BulkDeleteResponse,
 )
 from src.database.repository import TaskRepository
+from src.models.database import PriorityLevel
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
-@router.get("/", response_model=list[TaskResponse], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=TaskListResponse, status_code=status.HTTP_200_OK)
 async def get_all_tasks(
+    search: Optional[str] = Query(None, description="Search in title and description"),
+    priority: Optional[PriorityLevel] = Query(None, description="Filter by priority"),
+    completed: Optional[bool] = Query(None, description="Filter by completion status"),
+    due_before: Optional[date] = Query(None, description="Tasks due on or before this date"),
+    due_after: Optional[date] = Query(None, description="Tasks due on or after this date"),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(1000, ge=1, le=1000, description="Items per page (max 1000)"),
     repository: TaskRepository = Depends(get_task_repository),
-    current_user: str = Depends(get_current_user_or_service)
-) -> list[TaskResponse]:
+    current_user: str = Depends(get_current_user_or_service),
+) -> TaskListResponse:
     """
-    Get all tasks for the authenticated user.
+    Get tasks for the authenticated user with optional filtering and pagination.
 
     Returns:
-        List of tasks owned by the user
+        Paginated task list with total count
     """
-    tasks = await repository.get_all_by_user(current_user)
-    return [TaskResponse.model_validate(task) for task in tasks]
+    tasks, total = await repository.get_all_by_user_filtered(
+        user_id=current_user,
+        search=search,
+        priority=priority,
+        completed=completed,
+        due_before=due_before,
+        due_after=due_after,
+        page=page,
+        limit=limit,
+    )
+    pages = math.ceil(total / limit) if total > 0 else 1
+    return TaskListResponse(
+        tasks=[TaskResponse.model_validate(t) for t in tasks],
+        total=total,
+        page=page,
+        limit=limit,
+        pages=pages,
+    )
 
 
 @router.post("/", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)

@@ -38,11 +38,16 @@ python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
-explicit_package_bases = true
-mypy_path = "backend:mcp-server:ai-agent"
 exclude = [
-    "^backend/alembic/",
-    "^ai-agent/alembic/"
+    "^backend/",
+    "^ai-agent/",
+    "^mcp-server/",
+    "^frontend/",
+    "^auth-server/",
+    "^scripts/",
+    "^tests/",
+    "^test_",
+    "^specs/"
 ]
 
 [tool.pytest.ini_options]

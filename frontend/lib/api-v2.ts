@@ -15,6 +15,22 @@ interface BackendTask {
   updated_at: string;
 }
 
+interface BackendTaskListResponse {
+  tasks: BackendTask[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+export interface TaskSearchParams {
+  search?: string;
+  priority?: Priority;
+  completed?: boolean;
+  page?: number;
+  limit?: number;
+}
+
 // Mapper functions
 const mapBackendToTodo = (task: BackendTask): Todo => ({
   id: task.id.toString(),
@@ -24,16 +40,28 @@ const mapBackendToTodo = (task: BackendTask): Todo => ({
   status: task.completed ? Status.COMPLETED : Status.TODO,
   dueDate: task.due_date ? new Date(task.due_date) : null,
   createdAt: new Date(task.created_at),
-  subtasks: [], // Default
-  tags: [], // Default
+  subtasks: [],
+  tags: [],
 });
 
 export const todoApi = {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getAll: async (_filter?: TodoFilter, _search?: string) => {
-    // Backend doesn't support filter/search params in the generic getAll yet.
-    const tasks = await httpClient.get<BackendTask[]>(`${API_URL}/tasks`);
-    return tasks.map(mapBackendToTodo);
+  getAll: async (params?: TaskSearchParams) => {
+    const query: Record<string, string> = {};
+    if (params?.search) query.search = params.search;
+    if (params?.priority) query.priority = params.priority;
+    if (params?.completed !== undefined) query.completed = String(params.completed);
+    if (params?.page) query.page = String(params.page);
+    if (params?.limit) query.limit = String(params.limit);
+
+    const data = await httpClient.get<BackendTaskListResponse>(
+      `${API_URL}/tasks`,
+      Object.keys(query).length > 0 ? { params: query } : undefined
+    );
+    return {
+      tasks: data.tasks.map(mapBackendToTodo),
+      total: data.total,
+      pages: data.pages,
+    };
   },
 
   create: async (todo: Partial<Todo>) => {

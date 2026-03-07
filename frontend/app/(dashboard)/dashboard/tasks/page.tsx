@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { Plus } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useTasks } from "@/hooks/useTasks";
@@ -9,7 +9,7 @@ import { FilterBar } from "@/components/dashboard/FilterBar";
 import { AddTodoModal } from "@/components/todo/AddTodoModal";
 import { Pagination } from "@/components/dashboard/Pagination";
 import { EmptyTasksState, NoResultsState } from "@/components/dashboard/EmptyStates";
-import { Todo, TodoFilter, Status } from "@/types";
+import { Priority, Todo, TodoFilter } from "@/types";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -20,48 +20,38 @@ function TasksContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
 
-  // Get tasks data from hook
+  // Read filter params from URL
+  const filter = (searchParams.get('filter') as TodoFilter) || 'All';
+  const search = searchParams.get('search') || '';
+  const priority = searchParams.get('priority') as Priority | null;
+  const currentPage = Number(searchParams.get('page')) || 1;
+
+  // Map URL filter to completed boolean for backend
+  const completedParam =
+    filter === 'Completed' ? true :
+    filter === 'Active' ? false :
+    undefined;
+
+  // Fetch with server-side filtering
   const {
-    todos,
+    todos: paginatedTodos,
+    total,
+    totalPages,
     isLoading,
     handleToggleStatus,
     handleDelete,
     handleSaveTodo,
     handleEdit,
     handleAddSubtask,
-  } = useTasks();
+  } = useTasks({
+    search: search || undefined,
+    priority: priority || undefined,
+    completed: completedParam,
+    page: currentPage,
+    limit: ITEMS_PER_PAGE,
+  });
 
-  // Get URL params
-  const filter = (searchParams.get('filter') as TodoFilter) || 'All';
-  const search = searchParams.get('search') || '';
-  const currentPage = Number(searchParams.get('page')) || 1;
-
-  // Filter todos based on search and filter params
-  const filteredTodos = useMemo(() => {
-    return todos.filter(todo => {
-      const matchesSearch = todo.title.toLowerCase().includes(search.toLowerCase()) ||
-                          todo.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
-
-      const matchesFilter =
-        filter === 'All' ? true :
-        filter === 'Completed' ? todo.status === Status.COMPLETED :
-        todo.status !== Status.COMPLETED;
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [todos, filter, search]);
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredTodos.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedTodos = filteredTodos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  // Check if current page is out of bounds (can happen after filtering)
-  if (currentPage > totalPages && totalPages > 0) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', '1');
-    router.push(`${pathname}?${params.toString()}`);
-  }
+  const hasActiveFilters = filter !== 'All' || search !== '' || priority !== null;
 
   // Handle modal open for new task
   const handleOpenModal = () => {
@@ -91,8 +81,8 @@ function TasksContent() {
     return <div className="flex items-center justify-center h-full">Loading tasks...</div>;
   }
 
-  // Empty state - no tasks at all
-  if (todos.length === 0) {
+  // Empty state - no tasks and no active filters
+  if (paginatedTodos.length === 0 && !hasActiveFilters) {
     return (
       <>
         <EmptyTasksState onCreateTask={handleOpenModal} />
@@ -107,8 +97,7 @@ function TasksContent() {
   }
 
   // No results state - filters applied but no matches
-  const hasActiveFilters = filter !== 'All' || search !== '';
-  if (filteredTodos.length === 0 && hasActiveFilters) {
+  if (paginatedTodos.length === 0 && hasActiveFilters) {
     return (
       <>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -147,7 +136,7 @@ function TasksContent() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">All Tasks</h1>
           <p className="text-slate-500">
-            {filteredTodos.length} {filteredTodos.length === 1 ? 'task' : 'tasks'}
+            {total} {total === 1 ? 'task' : 'tasks'}
             {hasActiveFilters && ' matching your filters'}
           </p>
         </div>

@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Todo, Status, Priority } from "@/types";
-import { todoApi } from "@/lib/api-v2";
+import { todoApi, TaskSearchParams } from "@/lib/api-v2";
 import { ApiRedirectError } from "@/lib/http-client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface UseTasksReturn {
   todos: Todo[];
+  total: number;
+  totalPages: number;
   isLoading: boolean;
   handleToggleStatus: (id: string) => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
@@ -16,17 +18,24 @@ export interface UseTasksReturn {
   refreshTodos: () => Promise<void>;
 }
 
-export function useTasks(): UseTasksReturn {
+export function useTasks(searchParams?: TaskSearchParams): UseTasksReturn {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { isInitialized } = useAuth();
 
-  // Fetch todos
+  // Serialize params for stable dependency comparison
+  const paramsKey = JSON.stringify(searchParams ?? {});
+
+  // Fetch todos — paramsKey in deps ensures fresh searchParams are captured
   const loadTodos = useCallback(async () => {
     try {
-      const data = await todoApi.getAll();
-      setTodos(data);
+      const data = await todoApi.getAll(searchParams);
+      setTodos(data.tasks);
+      setTotal(data.total);
+      setTotalPages(data.pages);
     } catch (err) {
       console.error("Failed to load todos", err);
       if (err instanceof ApiRedirectError) {
@@ -35,7 +44,8 @@ export function useTasks(): UseTasksReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, paramsKey]);
 
   useEffect(() => {
     // Wait for auth initialization before loading tasks
@@ -43,7 +53,8 @@ export function useTasks(): UseTasksReturn {
       return;
     }
     loadTodos();
-  }, [loadTodos, isInitialized]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized, paramsKey]);
 
   // Listen for tasks-updated events from chat panel
   useEffect(() => {
@@ -181,6 +192,8 @@ export function useTasks(): UseTasksReturn {
 
   return {
     todos,
+    total,
+    totalPages,
     isLoading,
     handleToggleStatus,
     handleDelete,

@@ -132,6 +132,16 @@ class TaskResponse(BaseModel):
     }
 
 
+class TaskListResponse(BaseModel):
+    """Schema for paginated task list response."""
+
+    tasks: list[TaskResponse]
+    total: int
+    page: int
+    limit: int
+    pages: int
+
+
 class BulkDeleteRequest(BaseModel):
     """Schema for bulk delete request."""
     

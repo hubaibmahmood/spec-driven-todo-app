@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # API Key Encryption Configuration
     ENCRYPTION_KEY: str = ""  # Fernet encryption key for API keys (REQUIRED in production)
 
+    # Resend API for email notifications
+    RESEND_API_KEY: str = ""  # Get from https://resend.com — leave empty to disable emails
+
     # Application Configuration
     ENVIRONMENT: str = "development"
 

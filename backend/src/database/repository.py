@@ -1,9 +1,10 @@
 """Task repository for database operations."""
 
-from sqlalchemy import select, update, delete
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import date, datetime, time, UTC
 from typing import Optional
-from datetime import datetime
+
+from sqlalchemy import and_, func, or_, select, update, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.database import Task, PriorityLevel
 
@@ -23,6 +24,70 @@ class TaskRepository:
         """
         self.session = session
     
+    async def get_all_by_user_filtered(
+        self,
+        user_id: str,
+        search: Optional[str] = None,
+        priority: Optional[PriorityLevel] = None,
+        completed: Optional[bool] = None,
+        due_before: Optional[date] = None,
+        due_after: Optional[date] = None,
+        page: int = 1,
+        limit: int = 1000,
+    ) -> tuple[list[Task], int]:
+        """
+        Get filtered and paginated tasks for a user.
+
+        Args:
+            user_id: Task owner ID
+            search: ILIKE search across title and description
+            priority: Filter by priority level
+            completed: Filter by completion status
+            due_before: Tasks due on or before this date
+            due_after: Tasks due on or after this date
+            page: Page number (1-indexed)
+            limit: Items per page
+
+        Returns:
+            Tuple of (tasks, total_count)
+        """
+        conditions = [Task.user_id == user_id]
+
+        if search:
+            term = f"%{search}%"
+            conditions.append(
+                or_(Task.title.ilike(term), Task.description.ilike(term))
+            )
+        if priority is not None:
+            conditions.append(Task.priority == priority)
+        if completed is not None:
+            conditions.append(Task.completed == completed)
+        if due_before is not None:
+            cutoff = datetime.combine(due_before, time.max).replace(tzinfo=UTC)
+            conditions.append(Task.due_date <= cutoff)
+        if due_after is not None:
+            start = datetime.combine(due_after, time.min).replace(tzinfo=UTC)
+            conditions.append(Task.due_date >= start)
+
+        where_clause = and_(*conditions)
+
+        # Count
+        count_stmt = select(func.count(Task.id)).where(where_clause)
+        total: int = (await self.session.execute(count_stmt)).scalar_one()
+
+        # Data
+        offset = (page - 1) * limit
+        data_stmt = (
+            select(Task)
+            .where(where_clause)
+            .order_by(Task.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        tasks = list((await self.session.execute(data_stmt)).scalars().all())
+
+        return tasks, total
+
     async def get_all_by_user(self, user_id: str) -> list[Task]:
         """
         Get all tasks for a specific user.

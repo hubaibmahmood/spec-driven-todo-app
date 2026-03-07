@@ -1,5 +1,6 @@
 "use client";
 import { Menu, CheckSquare } from "lucide-react";
+import { NotificationBell } from "./NotificationBell";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -19,8 +20,8 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Future: User menu, notifications, etc. */}
+      <div className="flex items-center gap-2">
+        <NotificationBell />
       </div>
     </header>
   );

@@ -89,7 +89,7 @@ mcp==1.26.0
     #   openai-agents
 openai==2.20.0
     # via openai-agents
-openai-agents==0.8.4
+openai-agents==0.10.5
     # via ai-agent (pyproject.toml)
 pyasn1==0.6.2
     # via

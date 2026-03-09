@@ -81,6 +81,27 @@ export interface ToolCallOperation {
 }
 
 /**
+ * Streaming SSE event types from POST /api/chat/stream
+ */
+export interface ChatStreamTextDelta {
+  type: 'text_delta';
+  content: string;
+}
+
+export interface ChatStreamDone {
+  type: 'done';
+  conversation_id: number;
+  operations: ToolCallOperation[];
+}
+
+export interface ChatStreamError {
+  type: 'error';
+  detail: string;
+}
+
+export type ChatStreamEvent = ChatStreamTextDelta | ChatStreamDone | ChatStreamError;
+
+/**
  * Response from POST /api/chat endpoint
  */
 export interface ChatApiResponse {

@@ -9,6 +9,7 @@ import { getUserTimezone } from '@/lib/utils/timezone';
 import { validateChatInput } from '@/lib/chat/input-validation';
 import { fetchWithRetry } from '@/lib/chat/retry-logic';
 import { detectDestructiveOperation } from '@/lib/chat/destructive-detection';
+import { sendChatMessageStreaming } from '@/lib/chat/chat-api';
 import type { Message } from '@/types/chat';
 import ChatMessage from './ChatMessage';
 import ConfirmationModal from './ConfirmationModal';
@@ -46,12 +47,13 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [isRateLimited, setIsRateLimited] = useState(false); // Show rate limit feedback
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const { refreshTodos } = useTasks();
+  useTasks(); // kept for side effects (event subscription)
   const hasLoadedHistory = useRef(false);
   const shouldAutoScroll = useRef(true); // Track whether to auto-scroll
   const lastSendTimeRef = useRef<number>(0); // Track last send time for rate limiting
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null); // Debounce timer
   const rateLimitFeedbackTimerRef = useRef<NodeJS.Timeout | null>(null); // Feedback timer
+  const abortControllerRef = useRef<AbortController | null>(null); // Cancel in-flight stream
 
   // Auto-scroll to bottom only when sending new messages (not when loading more)
   useEffect(() => {
@@ -226,10 +228,9 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
     const timezone = getUserTimezone();
     const tempUserMsgId = `temp-user-${Date.now()}`;
-    const tempAssistantMsgId = `temp-assistant-${Date.now()}`;
-    const tempProcessingMsgId = `temp-processing-${Date.now()}`;
+    const tempStreamMsgId = `temp-stream-${Date.now()}`;
 
-    // Optimistic UI update - add user message immediately
+    // Optimistic UI: add user message + empty streaming assistant message
     const userMessage: Message = {
       id: tempUserMsgId,
       conversationId: conversationId ? String(conversationId) : 'temp',
@@ -237,68 +238,82 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       role: 'user',
       timestamp: new Date(),
     };
-
-    // Add processing indicator
-    const processingMessage: Message = {
-      id: tempProcessingMsgId,
+    const streamingMessage: Message = {
+      id: tempStreamMsgId,
       conversationId: conversationId ? String(conversationId) : 'temp',
-      content: 'Processing your request...',
+      content: '',
       role: 'assistant',
       timestamp: new Date(),
-      metadata: {
-        status: 'pending',
-      },
+      metadata: { status: 'pending' },
     };
 
-    setMessages((prev) => [...prev, userMessage, processingMessage]);
+    setMessages((prev) => [...prev, userMessage, streamingMessage]);
     setInputValue('');
     setIsLoading(true);
     setError(null);
 
+    // Create abort controller for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      // Call AI agent chat endpoint with retry logic
-      const AI_AGENT_URL = process.env.NEXT_PUBLIC_AI_AGENT_URL || 'http://localhost:8002';
-
-      const data = await fetchWithRetry(
+      await fetchWithRetry(
         async () => {
-          const response = await fetch(`${AI_AGENT_URL}/api/chat`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-              'X-Timezone': timezone,
+          // Pre-flight connectivity check: if fetch itself throws (network error), retry
+          // The actual streaming is handled by sendChatMessageStreaming callbacks
+          await sendChatMessageStreaming(
+            messageText,
+            conversationId,
+            accessToken,
+            timezone,
+            // onDelta: accumulate text into the streaming message
+            (chunk: string) => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempStreamMsgId
+                    ? {
+                        ...msg,
+                        content: msg.content + chunk,
+                        metadata: undefined, // remove pending status once text arrives
+                      }
+                    : msg
+                )
+              );
             },
-            body: JSON.stringify({
-              message: messageText,
-              conversation_id: conversationId, // null for first message
-            }),
-          });
-
-          if (response.status === 401) {
-            // Session expired - preserve state for retry after re-auth
-            setSessionExpired(true);
-            setPendingMessage(messageText);
-            throw new Error('Session expired. Please log in again.');
-          }
-
-          if (!response.ok) {
-            // Try to parse error response body for user-friendly error messages
-            let errorMessage = `Failed to send message: ${response.statusText}`;
-
-            try {
-              const errorData = await response.json();
-              if (errorData.detail) {
-                // Use the backend's error detail message (e.g., "Please configure your Gemini API key...")
-                errorMessage = errorData.detail;
+            // onDone: finalise conversation ID and trigger task refresh
+            (newConversationId: number, operations) => {
+              if (!conversationId) {
+                setConversationId(newConversationId);
               }
-            } catch {
-              // If JSON parsing fails, stick with statusText
-            }
+              // Remove pending status on the final message
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempStreamMsgId ? { ...msg, metadata: undefined } : msg
+                )
+              );
+              setRetryCount(0);
 
-            throw new Error(errorMessage);
-          }
-
-          return response.json();
+              // Dispatch tasks-updated if any tool operations were performed
+              if (operations.length > 0) {
+                let attempts = 0;
+                const pollRefresh = () => {
+                  attempts++;
+                  window.dispatchEvent(new CustomEvent('tasks-updated'));
+                  if (attempts < 5) setTimeout(pollRefresh, 400);
+                };
+                pollRefresh();
+              }
+            },
+            // onError
+            (detail: string) => {
+              if (detail.includes('401') || detail.toLowerCase().includes('unauthorized')) {
+                setSessionExpired(true);
+                setPendingMessage(messageText);
+              }
+              throw new Error(detail);
+            },
+            controller.signal
+          );
         },
         {
           maxRetries: 3,
@@ -307,75 +322,34 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           backoffMultiplier: 2,
         }
       );
-
-      // Save conversation ID from first response
-      if (!conversationId && data.conversation_id) {
-        setConversationId(data.conversation_id);
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') {
+        // Panel closed — silently clean up
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempStreamMsgId));
+        return;
       }
 
-      // Add assistant response
-      const assistantMessage: Message = {
-        id: tempAssistantMsgId,
-        conversationId: String(data.conversation_id),
-        content: data.assistant_message,
-        role: 'assistant',
-        timestamp: new Date(),
-      };
-
-      // Replace processing message with actual response
-      setMessages((prev) =>
-        prev
-          .filter((msg) => msg.id !== tempProcessingMsgId)
-          .concat(assistantMessage)
-      );
-
-      // Dispatch custom event to notify dashboard to refresh tasks
-      // Use polling to ensure backend has completed the operation
-      let refreshAttempts = 0;
-      const maxAttempts = 5;
-      const pollInterval = 400;
-
-      const pollRefresh = async () => {
-        refreshAttempts++;
-
-        // Dispatch event to trigger refresh in all listening components
-        window.dispatchEvent(new CustomEvent('tasks-updated'));
-
-        // Continue polling if not at max attempts
-        if (refreshAttempts < maxAttempts) {
-          setTimeout(pollRefresh, pollInterval);
-        }
-      };
-
-      // Start polling
-      pollRefresh();
-
-      // Reset retry count on success
-      setRetryCount(0);
-    } catch (err) {
       console.error('Failed to send message:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
       setError(errorMessage);
 
       // Remove optimistic messages on error
       setMessages((prev) =>
-        prev.filter((msg) => msg.id !== tempUserMsgId && msg.id !== tempProcessingMsgId)
+        prev.filter((msg) => msg.id !== tempUserMsgId && msg.id !== tempStreamMsgId)
       );
 
-      // Store pending message for retry (if not session expired)
       if (!errorMessage.includes('Session expired') && !sessionExpired) {
         setPendingMessage(messageText);
       }
-
-      // Show retry count if it was a network error
       if (errorMessage.includes('retries')) {
-        setRetryCount(3); // Max retries exhausted
+        setRetryCount(3);
       }
     } finally {
       setIsLoading(false);
       setIsRetrying(false);
+      abortControllerRef.current = null;
     }
-  }, [accessToken, conversationId, refreshTodos]);
+  }, [accessToken, conversationId, sessionExpired]);
 
   // Handle message send with validation and confirmation
   const handleSendMessage = useCallback(
@@ -487,6 +461,14 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       handleSendWithRateLimit();
     }
   };
+
+  // Cancel in-flight stream when panel closes
+  useEffect(() => {
+    if (!isOpen && abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, [isOpen]);
 
   // Don't render if not open
   if (!isOpen) {

@@ -61,7 +61,9 @@ async def list_tasks(ctx: Context) -> list[dict[str, Any]] | dict[str, Any]:
 
         # Handle different HTTP status codes
         if response.status_code == 200:
-            tasks_data = response.json()
+            response_data = response.json()
+            # Backend returns TaskListResponse: {"tasks": [...], "total": N, ...}
+            tasks_data = response_data.get("tasks", response_data) if isinstance(response_data, dict) else response_data
             logger.info(
                 "Successfully retrieved tasks",
                 extra={

@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "@assistant-ui/react/dist/index.css";
 
 @theme {
   --font-sans: var(--font-inter);

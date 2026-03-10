@@ -30,10 +30,6 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
-        <Script
-          src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
-          async
-        />
       </body>
     </html>
   );

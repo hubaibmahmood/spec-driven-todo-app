@@ -37,8 +37,8 @@ class Conversation(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: str = Field(index=True)
     title: str = Field(max_length=200)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), index=True)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None), index=True)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
 
 
 class Message(SQLModel, table=True):

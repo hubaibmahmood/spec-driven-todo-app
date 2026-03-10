@@ -237,3 +237,103 @@ See `.specify/memory/constitution.md` for code quality, testing, performance, se
 - 006-mcp-server-integration: Replaced bulk_delete_tasks tool with mark_task_completed (dedicated tool for marking tasks complete); update_task now handles only title/description/priority/due_date
 - 002-crud-operations: Confirmed interactive CLI pattern (no argparse - uses input() for interactive menu)
 - 001-add-task: Added Python 3.12+ + dataclasses (models), pytest (testing), ruff (linting), mypy (type checking)
+
+## Oracle VM Deployment (VM.Standard.E2.1.Micro)
+
+**Architecture:** Oracle VM runs only `ai-agent` (port 8002) and `mcp-server` (port 8001) behind nginx + Cloudflare proxy. Database is Neon (cloud). Frontend is on Netlify. Auth-server is on Vercel.
+
+**Deployment file:** Use `docker-compose.vm.yml` (not the root `docker-compose.yml`) — contains only the two VM services.
+
+**Startup:**
+```bash
+cd ~/todo-app
+docker compose -f docker-compose.vm.yml up -d
+```
+
+---
+
+### 🔑 JWT_SECRET — Critical Rules
+
+1. **Vercel auth-server uses its OWN env var** — not local `.env`. Always check the JWT_SECRET in the Vercel dashboard, not the local auth-server `.env` file.
+2. **Vercel does NOT auto-redeploy on env var change.** After updating JWT_SECRET in Vercel dashboard, you must manually trigger a redeploy: Deployments tab → latest → ⋯ → Redeploy.
+3. **After any JWT_SECRET change:** log out and back into the frontend to get a fresh token signed with the new secret.
+4. **Debugging which secret is active:**
+```bash
+docker exec momentum-ai-agent python3 -c "
+import jwt, os
+token = 'PASTE_TOKEN_HERE'
+for name, secret in [('VM secret', os.getenv('JWT_SECRET')), ('Default', 'dev-jwt-secret-min-32-chars-change-in-production-please')]:
+    try:
+        print(f'SUCCESS with {name}:', jwt.decode(token, secret, algorithms=['HS256'])); break
+    except Exception as e:
+        print(f'FAIL with {name}:', e)
+"
+```
+
+---
+
+### 🌐 nginx CORS — Critical Rules
+
+**Problem:** nginx's `add_header` defined OUTSIDE an `if` block is NOT inherited by `return` statements inside the `if` block. This causes OPTIONS preflight to return 204 with no CORS headers.
+
+**Fix:** Put ALL CORS headers INSIDE the `if ($request_method = 'OPTIONS')` block.
+
+**Working nginx config** (`/etc/nginx/sites-available/ai-agent`):
+```nginx
+server {
+    listen 80;
+    server_name ai-agent.intevia.cc;
+
+    location / {
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' 'https://momentum.intevia.cc' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, X-Timezone' always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+            add_header 'Access-Control-Max-Age' 600;
+            return 204;
+        }
+
+        proxy_pass http://localhost:8002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Authorization $http_authorization;
+    }
+}
+```
+
+Non-OPTIONS requests: CORS headers are handled by FastAPI's CORSMiddleware (CORS_ORIGINS must include `https://momentum.intevia.cc`).
+
+After nginx changes: `sudo nginx -t && sudo systemctl reload nginx` (no container restart needed).
+
+---
+
+### 🔥 OCI Firewall — Two-Layer Rule
+
+Oracle Cloud has TWO firewalls. BOTH must allow the port:
+1. **OCI Security List** (in Networking → VCN → Subnets → public subnet → Security Lists) — add Ingress TCP rule
+2. **OS iptables** on the VM itself: `sudo iptables -I INPUT -p tcp --dport <port> -j ACCEPT && sudo netfilter-persistent save`
+
+Ports needed: 80 (nginx), 8001 (mcp-server), 8002 (ai-agent).
+
+---
+
+### 💾 Memory (1GB RAM limit)
+
+Always add swap before running Docker builds:
+```bash
+sudo fallocate -l 1G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+Stop containers before `apt-get install` to free RAM: `docker compose -f docker-compose.vm.yml down`.
+
+---
+
+### 🌩️ Cloudflare SSL — Configuration Rule for Mixed Mode
+
+Global SSL mode may be Full/Full Strict (for other services), but the ai-agent origin only supports HTTP.
+Fix: **Rules → Configuration Rules** → Hostname equals `ai-agent.intevia.cc` → SSL: Flexible.
+Use **Hostname** field (not URI Full) for the condition.

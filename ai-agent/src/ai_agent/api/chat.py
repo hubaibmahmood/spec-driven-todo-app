@@ -132,11 +132,11 @@ async def chat(
 
             conversation = conv
             # Update conversation timestamp
-            conversation.updated_at = datetime.now(UTC)
+            conversation.updated_at = datetime.now(UTC).replace(tzinfo=None)
 
         else:
             # Create new conversation
-            timestamp = datetime.now(UTC)
+            timestamp = datetime.now(UTC).replace(tzinfo=None)
             title = f"Chat - {timestamp.strftime('%Y-%m-%d %H:%M')}"
             conversation = Conversation(
                 user_id=user_id,
@@ -172,7 +172,7 @@ async def chat(
         )
 
         # Save user message
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
         user_message = Message(
             conversation_id=conversation.id,  # type: ignore
             role="user",
@@ -255,7 +255,7 @@ async def _stream_agent_response(
 
             # Stream complete — save messages and emit done
             tool_calls = agent_service._extract_tool_calls(result.new_items)
-            now = datetime.now(UTC)
+            now = datetime.now(UTC).replace(tzinfo=None)
             db.add(Message(
                 conversation_id=conversation_id,
                 role="user",
@@ -345,9 +345,9 @@ async def chat_stream(
                     detail="Conversation not found or you don't have access",
                 )
             conversation = conv
-            conversation.updated_at = datetime.now(UTC)
+            conversation.updated_at = datetime.now(UTC).replace(tzinfo=None)
         else:
-            timestamp = datetime.now(UTC)
+            timestamp = datetime.now(UTC).replace(tzinfo=None)
             conversation = Conversation(
                 user_id=user_id,
                 title=f"Chat - {timestamp.strftime('%Y-%m-%d %H:%M')}",

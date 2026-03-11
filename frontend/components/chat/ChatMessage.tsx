@@ -7,6 +7,7 @@ import React from 'react';
 import { formatInTimeZone } from 'date-fns-tz';
 import type { Message } from '@/types/chat';
 import { getUserTimezone } from '@/lib/utils/timezone';
+import MarkdownMessage from './MarkdownMessage';
 
 interface ChatMessageProps {
   message: Message;
@@ -56,9 +57,9 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         aria-busy={isPending}
       >
         {/* Message content */}
-        <div className="mb-1 whitespace-pre-wrap break-words text-sm">
+        <div className="mb-1 break-words">
           {isPending ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-sm">
               <svg
                 className="h-4 w-4 animate-spin text-yellow-600"
                 xmlns="http://www.w3.org/2000/svg"
@@ -81,8 +82,10 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               </svg>
               <span>{content}</span>
             </div>
+          ) : isAssistant && !hasError && !isGuidance ? (
+            <MarkdownMessage content={content} />
           ) : (
-            content
+            <span className="whitespace-pre-wrap text-sm">{content}</span>
           )}
         </div>
 

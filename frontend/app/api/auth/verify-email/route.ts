@@ -13,7 +13,9 @@ export async function GET(request: NextRequest) {
 
   try {
     // Forward the verification request to the auth server
-    const authServerUrl = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3001";
+    // INTERNAL_AUTH_URL is used for server-side (container-to-container) communication
+    // NEXT_PUBLIC_AUTH_URL is the public URL used by the browser
+    const authServerUrl = process.env.INTERNAL_AUTH_URL || process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3002";
     const verifyResponse = await fetch(
       `${authServerUrl}/api/auth/verify-email?token=${token}`,
       {

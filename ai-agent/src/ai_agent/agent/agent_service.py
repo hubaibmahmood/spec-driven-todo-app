@@ -304,41 +304,10 @@ class AgentService:
             # Fallback if token counting fails
             return 0
 
-    async def run_agent_with_context(
-        self,
-        user_id: str,
-        user_message: str,
-        conversation_history: List[Message],
-        user_timezone: str = "UTC",
-    ) -> AgentResult:
-        """
-        Orchestrate agent execution with full context management.
-
-        Args:
-            user_id: User ID for MCP authentication
-            user_message: Current user message
-            conversation_history: List of DB Message objects
-            user_timezone: IANA timezone string (e.g., "America/New_York")
-
-        Returns:
-            AgentResult with response and metadata
-
-        Raises:
-            Exception: On Gemini API or MCP connection errors
-        """
-        logger.info(f"Starting agent execution for user {user_id} with timezone {user_timezone}")
-
-        try:
-            # Create MCP connection with user authentication
-            async with create_mcp_connection(self.config, user_id) as mcp_server:
-                logger.debug(f"MCP connection established for user {user_id}")
-
-                # Initialize agent with MCP server
-                agent = await self.initialize_agent(mcp_server)
-
-                # Enhance system prompt with timezone context
-                current_time = get_current_time_in_timezone(user_timezone)
-                enhanced_instructions = f"""{agent.instructions}
+    def _enhance_agent_instructions(self, agent: Agent, user_timezone: str) -> None:
+        """Enhance agent instructions with timezone context (in-place)."""
+        current_time = get_current_time_in_timezone(user_timezone)
+        agent.instructions = f"""{agent.instructions}
 
 Current time in user's timezone: {current_time}
 
@@ -373,7 +342,41 @@ Priority mapping:
 - "normal", "medium" → Priority.MEDIUM
 - "low" → Priority.LOW
 """
-                agent.instructions = enhanced_instructions
+
+    async def run_agent_with_context(
+        self,
+        user_id: str,
+        user_message: str,
+        conversation_history: List[Message],
+        user_timezone: str = "UTC",
+    ) -> AgentResult:
+        """
+        Orchestrate agent execution with full context management.
+
+        Args:
+            user_id: User ID for MCP authentication
+            user_message: Current user message
+            conversation_history: List of DB Message objects
+            user_timezone: IANA timezone string (e.g., "America/New_York")
+
+        Returns:
+            AgentResult with response and metadata
+
+        Raises:
+            Exception: On Gemini API or MCP connection errors
+        """
+        logger.info(f"Starting agent execution for user {user_id} with timezone {user_timezone}")
+
+        try:
+            # Create MCP connection with user authentication
+            async with create_mcp_connection(self.config, user_id) as mcp_server:
+                logger.debug(f"MCP connection established for user {user_id}")
+
+                # Initialize agent with MCP server
+                agent = await self.initialize_agent(mcp_server)
+
+                # Enhance system prompt with timezone context
+                self._enhance_agent_instructions(agent, user_timezone)
 
                 # Convert DB messages to agent format if necessary
                 if conversation_history and isinstance(conversation_history[0], dict):

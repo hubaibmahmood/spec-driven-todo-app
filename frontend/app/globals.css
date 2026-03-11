@@ -60,6 +60,11 @@ body {
           animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+
         @keyframes gradient-x {
           0%, 100% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }

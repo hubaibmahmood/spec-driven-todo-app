@@ -38,20 +38,24 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   if (!userAuthenticated) {
     return (
       <div
-        className="fixed bottom-6 right-6 z-40 flex h-[650px] w-[400px] flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"
+        className="fixed bottom-6 right-6 z-40 flex h-[650px] w-[400px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"
         role="dialog"
         aria-label="Chat panel"
       >
-        <div className="flex items-center justify-between border-b border-gray-200 bg-blue-600 p-4 text-white">
-          <h2 className="text-lg font-semibold">AI Assistant</h2>
+        {/* Clean white header */}
+        <header className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-purple-500 to-blue-500" />
+            <h2 className="text-sm font-semibold text-gray-800">AI Assistant</h2>
+          </div>
           <button
             onClick={onClose}
-            className="rounded-full p-1 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white"
+            className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
             aria-label="Close chat panel"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
+              className="h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -60,9 +64,9 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-        </div>
+        </header>
 
-        <div className="mx-4 mt-4 rounded-lg bg-red-50 p-4 text-red-800" role="alert">
+        <div className="mx-4 mt-4 rounded-xl bg-red-50 p-4 text-red-800" role="alert">
           <div className="flex items-start">
             <svg
               className="mr-3 h-5 w-5 flex-shrink-0"
@@ -80,7 +84,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               <p className="mt-1 text-sm">Please log in to use the chat feature.</p>
               <button
                 onClick={() => (window.location.href = '/login')}
-                className="mt-3 rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+                className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 transition-colors"
               >
                 Go to Login
               </button>
@@ -93,22 +97,25 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-40 flex h-[650px] w-[400px] flex-col overflow-hidden rounded-2xl border border-gray-300 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"
+      className="fixed bottom-6 right-6 z-40 flex h-[650px] w-[400px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300"
       role="dialog"
       aria-label="AI Assistant Chat Panel"
       aria-modal="true"
     >
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-200 bg-blue-600 p-4 text-white">
-        <h2 className="text-lg font-semibold">AI Assistant</h2>
+      {/* Clean minimal header */}
+      <header className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-purple-500 to-blue-500" />
+          <h2 className="text-sm font-semibold text-gray-800">AI Assistant</h2>
+        </div>
         <button
           onClick={onClose}
-          className="rounded-full p-1 transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600"
+          className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
           aria-label="Close chat panel"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
+            className="h-4 w-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

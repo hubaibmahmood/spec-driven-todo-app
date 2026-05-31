@@ -1,0 +1,25 @@
+{$DOMAIN_NAME} {
+    # Next.js Frontend asset routing
+    reverse_proxy /_next/* frontend:3000
+    reverse_proxy /static/* frontend:3000
+    reverse_proxy /public/* frontend:3000
+    reverse_proxy /favicon.ico frontend:3000
+    
+    # Auth Server (Better Auth / Node)
+    reverse_proxy /api/auth/* auth-server:3002
+    
+    # AI Agent (Chat & History)
+    reverse_proxy /api/chat* ai-agent:8002
+    reverse_proxy /api/conversations* ai-agent:8002
+    
+    # Backend API (Tasks & Swagger docs)
+    reverse_proxy /api/v1/* backend:8000
+    reverse_proxy /docs* backend:8000
+    reverse_proxy /openapi.json* backend:8000
+    
+    # Fallback to Next.js Frontend for all other HTML / page routes
+    reverse_proxy /* frontend:3000
+    
+    # Enable Gzip and Zstandard compression
+    encode gzip zstd
+}

@@ -232,6 +232,27 @@ services:
       retries: 3
       start_period: 60s
 
+  # ==========================================================================
+  # Caddy Reverse Proxy & SSL Provider (Unified Entry Point)
+  # ==========================================================================
+  caddy:
+    image: caddy:2-alpine
+    container_name: momentum-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    networks:
+      - momentum-network
+
 # ============================================================================
 # Networks
 # ============================================================================
@@ -239,3 +260,10 @@ networks:
   momentum-network:
     driver: bridge
     name: momentum-network
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  caddy_data:
+  caddy_config:

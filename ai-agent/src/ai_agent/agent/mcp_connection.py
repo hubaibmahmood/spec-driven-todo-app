@@ -27,9 +27,9 @@ class MCPServerAdapter:
         self.name = name
         self.use_structured_content = False
 
-    async def list_tools(self, run_context=None, agent=None):
+    async def list_tools(self, *args, **kwargs):
         """Adapt list_tools call."""
-        # openai-agents passes run_context and agent, but mcp session doesn't need them
+        # openai-agents passes extra args like run_context and agent, but mcp session doesn't need them
         result = await self.session.list_tools()
         # Convert ListToolsResult to what might be expected if necessary,
         # but usually it expects a list of tool schemas.
@@ -38,12 +38,12 @@ class MCPServerAdapter:
             return result.tools
         return result
 
-    async def call_tool(self, name: str, arguments: dict, run_context=None, agent=None):
+    async def call_tool(self, name: str, arguments: dict, *args, **kwargs):
         """Adapt call_tool call."""
-        # openai-agents might pass extra args
+        # openai-agents might pass extra keyword arguments like 'meta'
         return await self.session.call_tool(name, arguments)
 
-    def _get_failure_error_function(self, tool_name: str = None):
+    def _get_failure_error_function(self, tool_name: str = None, *args, **kwargs):
         """Return error function for tool call failures.
 
         This method is required by the OpenAI Agents SDK for error handling.
@@ -59,18 +59,11 @@ class MCPServerAdapter:
             return f"MCP tool call failed: {str(error)}"
         return format_error
 
-    def _get_needs_approval_for_tool(self, tool, agent=None):
+    def _get_needs_approval_for_tool(self, *args, **kwargs):
         """Determine if a tool requires approval before execution.
 
         This method is required by the OpenAI Agents SDK v0.8.0+ for HITL workflows.
         Returns False for all tools as MCP server doesn't implement approval workflows.
-
-        Args:
-            tool: The tool to check for approval requirements
-            agent: Optional agent context (unused in MCP adapter)
-
-        Returns:
-            bool: Always False (no approval needed for MCP tools)
         """
         # MCP tools don't require approval - return False for all
         return False

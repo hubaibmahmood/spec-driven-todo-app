@@ -12,8 +12,9 @@
     reverse_proxy /api/chat* ai-agent:8002
     reverse_proxy /api/conversations* ai-agent:8002
     
-    # Backend API (Tasks & Swagger docs)
+    # Backend API (Tasks & Swagger docs & API Keys)
     reverse_proxy /api/v1/* backend:8000
+    reverse_proxy /api/user-api-keys* backend:8000
     reverse_proxy /docs* backend:8000
     reverse_proxy /openapi.json* backend:8000
     

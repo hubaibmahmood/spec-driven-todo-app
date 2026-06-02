@@ -41,9 +41,8 @@ class GeminiValidator:
         if len(api_key) < 20:
             return False, "API key is too short (minimum 20 characters)"
 
-        if not api_key.startswith("AIza"):
-            return False, "Invalid format. Gemini API keys typically start with 'AIza'"
-
+        # Relaxed prefix check to support newer or alternative Google API key formats.
+        # We rely on the live validate_key test to perform actual connectivity verification.
         return True, None
 
     @staticmethod

@@ -52,7 +52,7 @@ class MCPServerAdapter:
         Args:
             tool_name: Optional tool name for contextualized error messages
         """
-        def format_error(error: Exception) -> str:
+        def format_error(error: Exception, *args, **kwargs) -> str:
             """Format tool call error for agent context."""
             if tool_name:
                 return f"MCP tool '{tool_name}' failed: {str(error)}"
